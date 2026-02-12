@@ -1,0 +1,949 @@
+Project pos_tempest {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # POS Tempest — Restaurant POS System
+    Production-ready ERD for a restaurant POS (dine-in & takeaway).
+    Auth managed by Supabase. Supports weight-based menu pricing,
+    menu customizations/modifiers, table management, kitchen order tickets,
+    and comprehensive audit logging.
+  '''
+}
+
+
+// =========================
+// ENUMS
+// =========================
+
+enum role_type {
+  admin
+  manager
+  cashier
+  chef
+}
+
+enum pricing_type {
+  fixed [note: 'Fixed price per item (e.g., Nasi Goreng Rp 25.000)']
+  weight_based [note: 'Price calculated by weight (e.g., Fish Rp 80.000/kg)']
+}
+
+enum unit_of_measure {
+  piece
+  kg
+  gram
+  ons [note: '1 ons = 100 gram']
+  liter
+  ml
+  portion
+}
+
+enum order_type {
+  dine_in
+  takeaway
+}
+
+enum order_status {
+  pending [note: 'Order just created']
+  confirmed [note: 'Confirmed by kitchen']
+  preparing [note: 'Kitchen is preparing']
+  ready [note: 'Ready to serve / pick up']
+  served [note: 'Served to customer']
+  completed [note: 'Completed and paid']
+  cancelled [note: 'Order cancelled']
+}
+
+enum payment_method_type {
+  cash
+  debit_card
+  credit_card
+  ewallet
+  qris
+  bank_transfer
+}
+
+enum payment_status {
+  unpaid
+  partial
+  paid
+  refunded
+}
+
+enum table_status {
+  available
+  occupied
+  reserved
+  maintenance
+}
+
+enum purchase_status {
+  ordered
+  partial_received
+  received
+  cancelled
+}
+
+enum shift_status {
+  open
+  closed
+}
+
+enum discount_type {
+  percentage
+  fixed_amount
+}
+
+enum kot_status {
+  pending [note: 'Waiting for kitchen']
+  in_progress [note: 'Being prepared']
+  ready [note: 'Ready to serve']
+  served [note: 'Delivered to table']
+  cancelled
+}
+
+enum reservation_status {
+  confirmed
+  seated
+  completed
+  no_show
+  cancelled
+}
+
+enum audit_action {
+  INSERT
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  VOID
+  REFUND
+  PRINT
+  OPEN_DRAWER
+  OVERRIDE
+  STATUS_CHANGE
+}
+
+
+// =========================
+// USERS & ROLES
+// =========================
+
+Table roles {
+  id integer [pk, increment]
+  name role_type [not null, unique]
+  description varchar(255)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Note: 'System roles controlling access and permissions'
+}
+
+Table users {
+  id integer [pk, increment]
+  supabase_auth_id uuid [unique, not null, note: 'References Supabase auth.users.id']
+  role_id integer [not null]
+  branch_id integer [not null]
+  name varchar(100) [not null]
+  email varchar(255) [unique]
+  phone varchar(20)
+  pin_code varchar(6) [note: 'Quick PIN for POS terminal login']
+  avatar_url varchar(500)
+  is_active boolean [not null, default: true]
+  last_login_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    supabase_auth_id [unique]
+    email [unique]
+    pin_code
+    (branch_id, is_active)
+  }
+
+  Note: '''
+    All staff: admins, managers, cashiers, chefs.
+    Authentication is handled by Supabase Auth — supabase_auth_id links to auth.users.id.
+    PIN code is used for quick POS terminal access without full re-authentication.
+  '''
+}
+
+Ref: users.role_id > roles.id [delete: restrict]
+Ref: users.branch_id > branches.id [delete: restrict]
+
+Table shifts {
+  id integer [pk, increment]
+  user_id integer [not null]
+  branch_id integer [not null]
+  status shift_status [not null, default: 'open']
+  opening_cash decimal(14,2) [not null, default: 0]
+  closing_cash decimal(14,2)
+  expected_cash decimal(14,2)
+  cash_difference decimal(14,2)
+  opened_at timestamp [not null, default: `now()`]
+  closed_at timestamp
+  notes text
+
+  indexes {
+    (user_id, branch_id, opened_at)
+    status
+  }
+
+  Note: 'Cashier shift tracking with cash reconciliation'
+}
+
+Ref: shifts.user_id > users.id [delete: restrict]
+Ref: shifts.branch_id > branches.id [delete: restrict]
+
+
+// =========================
+// BRANCH & FLOOR MANAGEMENT
+// =========================
+
+Table branches {
+  id integer [pk, increment]
+  name varchar(100) [not null]
+  address text
+  phone varchar(20)
+  tax_rate decimal(5,2) [not null, default: 0, note: 'Default tax rate e.g. 11% PPN']
+  service_charge_rate decimal(5,2) [not null, default: 0, note: 'e.g. 5% service charge']
+  currency varchar(3) [not null, default: 'IDR']
+  timezone varchar(50) [not null, default: 'Asia/Jakarta']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Note: 'Restaurant branches / outlets'
+}
+
+Table floor_areas {
+  id integer [pk, increment]
+  branch_id integer [not null]
+  name varchar(50) [not null, note: 'e.g. Indoor, Outdoor, VIP, Rooftop']
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (branch_id, name) [unique]
+  }
+
+  Note: 'Sections / areas within a branch'
+}
+
+Ref: floor_areas.branch_id > branches.id [delete: cascade]
+
+Table tables {
+  id integer [pk, increment]
+  branch_id integer [not null]
+  floor_area_id integer [not null]
+  table_number varchar(10) [not null]
+  capacity integer [not null, default: 4]
+  status table_status [not null, default: 'available']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (branch_id, table_number) [unique]
+    (floor_area_id, status)
+  }
+
+  Note: 'Physical dining tables in the restaurant'
+}
+
+Ref: tables.branch_id > branches.id [delete: cascade]
+Ref: tables.floor_area_id > floor_areas.id [delete: restrict]
+
+
+// =========================
+// CUSTOMERS & RESERVATIONS
+// =========================
+
+Table customers {
+  id integer [pk, increment]
+  name varchar(100) [not null]
+  phone varchar(20)
+  email varchar(255)
+  address text
+  loyalty_points integer [not null, default: 0]
+  total_visits integer [not null, default: 0]
+  total_spent decimal(14,2) [not null, default: 0]
+  notes text
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    phone
+    email
+    loyalty_points
+  }
+
+  Note: 'Restaurant customers with loyalty tracking'
+}
+
+Table reservations {
+  id integer [pk, increment]
+  branch_id integer [not null]
+  table_id integer
+  customer_id integer
+  customer_name varchar(100) [not null, note: 'For walk-in reservations without account']
+  customer_phone varchar(20)
+  guest_count integer [not null, default: 1]
+  reservation_datetime timestamp [not null]
+  duration_minutes integer [not null, default: 120]
+  status reservation_status [not null, default: 'confirmed']
+  notes text
+  created_by integer [not null]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (branch_id, reservation_datetime)
+    table_id
+    customer_id
+    status
+  }
+
+  Note: 'Table reservations and booking management'
+}
+
+Ref: reservations.branch_id > branches.id [delete: restrict]
+Ref: reservations.table_id > tables.id [delete: set null]
+Ref: reservations.customer_id > customers.id [delete: set null]
+Ref: reservations.created_by > users.id [delete: restrict]
+
+
+// =========================
+// MENU SYSTEM
+// =========================
+
+Table categories {
+  id integer [pk, increment]
+  parent_id integer [note: 'Self-reference for subcategories']
+  name varchar(100) [not null]
+  description text
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    parent_id
+    sort_order
+  }
+
+  Note: 'Menu categories: Appetizers, Main Course, Beverages, Seafood, Desserts, etc.'
+}
+
+Ref: categories.parent_id > categories.id [delete: set null]
+
+Table menu_items {
+  id integer [pk, increment]
+  category_id integer
+  name varchar(150) [not null]
+  description text
+  sku varchar(50) [unique]
+  barcode varchar(50)
+  image_url varchar(500)
+  pricing_type pricing_type [not null, default: 'fixed']
+  unit_of_measure unit_of_measure [not null, default: 'piece']
+  price decimal(12,2) [not null, note: 'Base price; for weight-based this is price per unit']
+  cost decimal(12,2) [note: 'Cost of goods for margin calculation']
+  min_order_qty decimal(8,3) [not null, default: 1, note: 'Minimum order quantity e.g. 0.1 kg']
+  preparation_time_minutes integer [note: 'Estimated prep time for kitchen']
+  is_available boolean [not null, default: true, note: 'Toggle off when out of stock']
+  is_active boolean [not null, default: true, note: 'Soft delete flag']
+  sort_order integer [not null, default: 0]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    category_id
+    sku [unique]
+    barcode
+    (is_active, is_available)
+    pricing_type
+  }
+
+  Note: '''
+    Restaurant menu items. Supports fixed-price and weight-based pricing.
+    Weight-based example: Grilled Fish priced at Rp 80.000/kg — customer orders 1.2 kg = Rp 96.000.
+    Weight-based example: Fish priced at Rp 50.000/ons — customer orders 0.6 ons = Rp 30.000.
+  '''
+}
+
+Ref: menu_items.category_id > categories.id [delete: set null]
+
+Table modifier_groups {
+  id integer [pk, increment]
+  name varchar(100) [not null, note: 'e.g. Cooking Method, Spice Level, Extras, Side Dish']
+  description text
+  is_required boolean [not null, default: false, note: 'Must the customer pick at least one?']
+  min_selections integer [not null, default: 0]
+  max_selections integer [not null, default: 1, note: '1 = single choice, >1 = multi choice']
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Note: '''
+    Groups of customization options for menu items.
+    Example: "Cooking Method" → Fried, Grilled, Steamed, Raw.
+    Example: "Spice Level" → Mild, Medium, Hot, Extra Hot.
+    Example: "Extras" → Extra Rice (+Rp 5.000), Extra Sambal (+Rp 3.000).
+  '''
+}
+
+Table modifiers {
+  id integer [pk, increment]
+  modifier_group_id integer [not null]
+  name varchar(100) [not null, note: 'e.g. Fried, Grilled, Steamed']
+  extra_price decimal(12,2) [not null, default: 0, note: 'Additional charge for this option']
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    modifier_group_id
+  }
+
+  Note: 'Individual modifier options within a group'
+}
+
+Ref: modifiers.modifier_group_id > modifier_groups.id [delete: cascade]
+
+Table menu_item_modifier_groups {
+  id integer [pk, increment]
+  menu_item_id integer [not null]
+  modifier_group_id integer [not null]
+  sort_order integer [not null, default: 0]
+
+  indexes {
+    (menu_item_id, modifier_group_id) [unique]
+  }
+
+  Note: 'Links which modifier groups are available for which menu items'
+}
+
+Ref: menu_item_modifier_groups.menu_item_id > menu_items.id [delete: cascade]
+Ref: menu_item_modifier_groups.modifier_group_id > modifier_groups.id [delete: cascade]
+
+
+// =========================
+// INVENTORY
+// =========================
+
+Table inventories {
+  id integer [pk, increment]
+  branch_id integer [not null]
+  menu_item_id integer [not null]
+  stock_quantity decimal(12,3) [not null, default: 0, note: 'Supports fractional for weight-based items']
+  low_stock_threshold decimal(12,3) [default: 10]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (branch_id, menu_item_id) [unique]
+  }
+
+  Note: 'Current stock levels per branch per menu item'
+}
+
+Ref: inventories.branch_id > branches.id [delete: cascade]
+Ref: inventories.menu_item_id > menu_items.id [delete: cascade]
+
+Table inventory_movements {
+  id integer [pk, increment]
+  inventory_id integer [not null]
+  user_id integer [not null, note: 'Who performed this movement']
+  movement_type varchar(30) [not null, note: 'purchase_in, sale_out, adjustment, waste, transfer']
+  quantity_change decimal(12,3) [not null, note: 'Positive = in, Negative = out']
+  quantity_before decimal(12,3) [not null]
+  quantity_after decimal(12,3) [not null]
+  reference_type varchar(50) [note: 'order, purchase, manual_adjustment']
+  reference_id integer [note: 'ID of the related order/purchase']
+  reason text
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    inventory_id
+    (reference_type, reference_id)
+    created_at
+    movement_type
+  }
+
+  Note: 'Full audit trail of all stock movements'
+}
+
+Ref: inventory_movements.inventory_id > inventories.id [delete: restrict]
+Ref: inventory_movements.user_id > users.id [delete: restrict]
+
+
+// =========================
+// ORDERS
+// =========================
+
+Table orders {
+  id integer [pk, increment]
+  order_number varchar(30) [unique, not null]
+  branch_id integer [not null]
+  table_id integer [note: 'NULL for takeaway']
+  cashier_id integer [not null]
+  customer_id integer
+  shift_id integer
+  order_type order_type [not null, default: 'dine_in']
+  status order_status [not null, default: 'pending']
+  guest_count integer [default: 1]
+  subtotal decimal(14,2) [not null, default: 0]
+  discount_amount decimal(14,2) [not null, default: 0]
+  tax_amount decimal(14,2) [not null, default: 0]
+  service_charge decimal(14,2) [not null, default: 0]
+  rounding_amount decimal(14,2) [not null, default: 0, note: 'Rounding for cash payments']
+  total decimal(14,2) [not null, default: 0]
+  payment_status payment_status [not null, default: 'unpaid']
+  notes text [note: 'General order notes from customer']
+  voided_by integer [note: 'User who voided the order']
+  voided_at timestamp
+  void_reason text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    order_number [unique]
+    (branch_id, created_at)
+    table_id
+    cashier_id
+    customer_id
+    shift_id
+    status
+    payment_status
+    order_type
+    (branch_id, status, created_at)
+  }
+
+  Note: 'Main order / transaction table for dine-in and takeaway'
+}
+
+Ref: orders.branch_id > branches.id [delete: restrict]
+Ref: orders.table_id > tables.id [delete: set null]
+Ref: orders.cashier_id > users.id [delete: restrict]
+Ref: orders.customer_id > customers.id [delete: set null]
+Ref: orders.shift_id > shifts.id [delete: set null]
+Ref: orders.voided_by > users.id [delete: set null]
+
+Table order_items {
+  id integer [pk, increment]
+  order_id integer [not null]
+  menu_item_id integer [not null]
+  menu_item_name varchar(150) [not null, note: 'Snapshot of name at time of order']
+  quantity decimal(8,3) [not null, note: 'Decimal for weight-based: e.g. 1.2 kg, 0.6 ons']
+  unit_of_measure unit_of_measure [not null, default: 'piece']
+  unit_price decimal(12,2) [not null, note: 'Snapshot of price at time of order']
+  modifier_total decimal(12,2) [not null, default: 0, note: 'Sum of all modifier extra prices']
+  subtotal decimal(12,2) [not null, note: '(quantity * unit_price) + modifier_total']
+  discount_amount decimal(12,2) [not null, default: 0]
+  total decimal(12,2) [not null]
+  notes text [note: 'Special instructions: no onion, extra sauce, etc.']
+  is_voided boolean [not null, default: false]
+  voided_by integer
+  void_reason text
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    order_id
+    menu_item_id
+  }
+
+  Note: '''
+    Individual items within an order.
+    Fixed-price example: Nasi Goreng × 2 = quantity=2, unit=piece, unit_price=25000, subtotal=50000.
+    Weight-based example: Ikan Bakar × 1.2kg = quantity=1.2, unit=kg, unit_price=80000, subtotal=96000.
+  '''
+}
+
+Ref: order_items.order_id > orders.id [delete: cascade]
+Ref: order_items.menu_item_id > menu_items.id [delete: restrict]
+Ref: order_items.voided_by > users.id [delete: set null]
+
+Table order_item_modifiers {
+  id integer [pk, increment]
+  order_item_id integer [not null]
+  modifier_id integer [not null]
+  modifier_name varchar(100) [not null, note: 'Snapshot: e.g. Grilled']
+  modifier_group_name varchar(100) [not null, note: 'Snapshot: e.g. Cooking Method']
+  extra_price decimal(12,2) [not null, default: 0, note: 'Snapshot of extra price at time of order']
+
+  indexes {
+    order_item_id
+  }
+
+  Note: 'Selected customizations per order item (e.g. Fish → Grilled, Spice Level → Hot)'
+}
+
+Ref: order_item_modifiers.order_item_id > order_items.id [delete: cascade]
+Ref: order_item_modifiers.modifier_id > modifiers.id [delete: restrict]
+
+
+// =========================
+// KITCHEN ORDER TICKETS (KOT)
+// =========================
+
+Table kitchen_order_tickets {
+  id integer [pk, increment]
+  order_id integer [not null]
+  ticket_number varchar(30) [not null]
+  status kot_status [not null, default: 'pending']
+  priority integer [not null, default: 0, note: 'Higher = more urgent']
+  printed_at timestamp
+  started_at timestamp
+  completed_at timestamp
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    order_id
+    status
+    (status, priority)
+  }
+
+  Note: 'Kitchen order tickets sent to kitchen display / printer'
+}
+
+Ref: kitchen_order_tickets.order_id > orders.id [delete: cascade]
+
+Table kot_items {
+  id integer [pk, increment]
+  kot_id integer [not null]
+  order_item_id integer [not null]
+  quantity decimal(8,3) [not null]
+  status kot_status [not null, default: 'pending']
+  notes text
+
+  indexes {
+    kot_id
+    order_item_id
+  }
+
+  Note: 'Individual items within a kitchen order ticket'
+}
+
+Ref: kot_items.kot_id > kitchen_order_tickets.id [delete: cascade]
+Ref: kot_items.order_item_id > order_items.id [delete: cascade]
+
+
+// =========================
+// PAYMENTS
+// =========================
+
+Table payments {
+  id integer [pk, increment]
+  order_id integer [not null]
+  shift_id integer
+  payment_method payment_method_type [not null]
+  amount decimal(14,2) [not null]
+  change_amount decimal(14,2) [not null, default: 0, note: 'Change given for cash payments']
+  reference_number varchar(100) [note: 'Card approval code, e-wallet ref, etc.']
+  paid_at timestamp [not null, default: `now()`]
+
+  indexes {
+    order_id
+    shift_id
+    payment_method
+    paid_at
+  }
+
+  Note: 'Payment records. Supports split payments (multiple per order).'
+}
+
+Ref: payments.order_id > orders.id [delete: restrict]
+Ref: payments.shift_id > shifts.id [delete: set null]
+
+
+// =========================
+// DISCOUNTS
+// =========================
+
+Table discounts {
+  id integer [pk, increment]
+  name varchar(100) [not null]
+  description text
+  discount_type discount_type [not null]
+  value decimal(12,2) [not null, note: 'Percentage value (e.g. 10) or fixed amount (e.g. 25000)']
+  min_order_amount decimal(14,2) [default: 0]
+  max_discount_amount decimal(14,2) [note: 'Cap for percentage discounts']
+  valid_from timestamp
+  valid_until timestamp
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    is_active
+    (valid_from, valid_until)
+  }
+
+  Note: 'Predefined discounts and promotions'
+}
+
+Table order_discounts {
+  id integer [pk, increment]
+  order_id integer [not null]
+  discount_id integer [note: 'NULL if manual/ad-hoc discount']
+  discount_name varchar(100) [not null, note: 'Snapshot']
+  discount_type discount_type [not null]
+  discount_value decimal(12,2) [not null]
+  applied_amount decimal(14,2) [not null, note: 'Actual discount amount applied']
+  applied_by integer [not null]
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    order_id
+    discount_id
+  }
+
+  Note: 'Discounts applied to specific orders'
+}
+
+Ref: order_discounts.order_id > orders.id [delete: cascade]
+Ref: order_discounts.discount_id > discounts.id [delete: set null]
+Ref: order_discounts.applied_by > users.id [delete: restrict]
+
+
+// =========================
+// TAX CONFIGURATION
+// =========================
+
+Table tax_configs {
+  id integer [pk, increment]
+  branch_id integer [not null]
+  name varchar(50) [not null, note: 'e.g. PPN, Service Tax, PB1']
+  rate decimal(5,2) [not null, note: 'e.g. 11.00 for 11%']
+  is_inclusive boolean [not null, default: false, note: 'true = tax already included in menu price']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (branch_id, is_active)
+  }
+
+  Note: 'Tax configuration per branch (PPN, PB1 restaurant tax, etc.)'
+}
+
+Ref: tax_configs.branch_id > branches.id [delete: cascade]
+
+
+// =========================
+// SUPPLIERS & PURCHASES
+// =========================
+
+Table suppliers {
+  id integer [pk, increment]
+  name varchar(100) [not null]
+  contact_person varchar(100)
+  phone varchar(20)
+  email varchar(255)
+  address text
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Note: 'Ingredient and supply vendors'
+}
+
+Table purchases {
+  id integer [pk, increment]
+  purchase_number varchar(30) [unique, not null]
+  supplier_id integer [not null]
+  branch_id integer [not null]
+  ordered_by integer [not null]
+  received_by integer
+  subtotal decimal(14,2) [not null, default: 0]
+  tax_amount decimal(14,2) [not null, default: 0]
+  total decimal(14,2) [not null, default: 0]
+  status purchase_status [not null, default: 'ordered']
+  notes text
+  ordered_at timestamp [not null, default: `now()`]
+  received_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    purchase_number [unique]
+    supplier_id
+    branch_id
+    status
+    ordered_at
+  }
+
+  Note: 'Purchase orders to suppliers for ingredients and supplies'
+}
+
+Ref: purchases.supplier_id > suppliers.id [delete: restrict]
+Ref: purchases.branch_id > branches.id [delete: restrict]
+Ref: purchases.ordered_by > users.id [delete: restrict]
+Ref: purchases.received_by > users.id [delete: set null]
+
+Table purchase_items {
+  id integer [pk, increment]
+  purchase_id integer [not null]
+  menu_item_id integer [not null]
+  quantity decimal(12,3) [not null]
+  unit_of_measure unit_of_measure [not null, default: 'piece']
+  cost_per_unit decimal(12,2) [not null]
+  total decimal(14,2) [not null]
+
+  indexes {
+    purchase_id
+    menu_item_id
+  }
+
+  Note: 'Line items within a purchase order'
+}
+
+Ref: purchase_items.purchase_id > purchases.id [delete: cascade]
+Ref: purchase_items.menu_item_id > menu_items.id [delete: restrict]
+
+
+// =========================
+// AUDIT LOGGING
+// =========================
+
+Table audit_logs {
+  id bigint [pk, increment]
+  user_id integer [note: 'Who performed the action (NULL for system)']
+  branch_id integer
+  action audit_action [not null]
+  table_name varchar(100) [not null, note: 'Database table affected']
+  record_id integer [note: 'Primary key of the affected record']
+  old_values jsonb [note: 'Previous state (UPDATE / DELETE)']
+  new_values jsonb [note: 'New state (INSERT / UPDATE)']
+  description text [note: 'Human-readable action description']
+  ip_address varchar(45)
+  user_agent text
+  session_id varchar(255)
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    user_id
+    branch_id
+    action
+    table_name
+    record_id
+    created_at
+    (table_name, record_id)
+    (user_id, created_at)
+    (branch_id, action, created_at)
+  }
+
+  Note: '''
+    Comprehensive audit log for every system action.
+    Tracks all INSERT, UPDATE, DELETE operations on every table,
+    plus login/logout, voids, refunds, receipt prints,
+    cash drawer opens, and manager overrides.
+    old_values and new_values store full JSON snapshots for traceability.
+  '''
+}
+
+Ref: audit_logs.user_id > users.id [delete: set null]
+Ref: audit_logs.branch_id > branches.id [delete: set null]
+
+
+// =========================
+// TABLE GROUPS
+// =========================
+
+TableGroup "User Management" [color: #3498DB] {
+  roles
+  users
+  shifts
+
+  Note: '''
+    Staff accounts and shift management.
+    Authentication handled by Supabase Auth — users table links via supabase_auth_id.
+    PIN code provides quick POS terminal access.
+  '''
+}
+
+TableGroup "Restaurant Setup" [color: #2ECC71] {
+  branches
+  floor_areas
+  tables
+  tax_configs
+
+  Note: '''
+    Branch configuration, floor layout, table management, and tax settings.
+    Each branch operates independently with its own tax rates and service charges.
+  '''
+}
+
+TableGroup "Menu System" [color: #E67E22] {
+  categories
+  menu_items
+  modifier_groups
+  modifiers
+  menu_item_modifier_groups
+
+  Note: '''
+    Full menu catalog with category hierarchy.
+    Supports fixed-price and weight-based pricing (e.g. fish per kg/ons).
+    Modifier system for customizations (e.g. Fried, Grilled, Steamed).
+  '''
+}
+
+TableGroup "Order Management" [color: #E74C3C] {
+  orders
+  order_items
+  order_item_modifiers
+  kitchen_order_tickets
+  kot_items
+
+  Note: '''
+    Order lifecycle for dine-in and takeaway.
+    Includes kitchen order tickets (KOT) for kitchen display/printer.
+    Weight-based items use decimal quantities (e.g. 1.2 kg, 0.6 ons).
+  '''
+}
+
+TableGroup "Payments & Discounts" [color: #9B59B6] {
+  payments
+  discounts
+  order_discounts
+
+  Note: '''
+    Payment processing with split-payment support.
+    Predefined and ad-hoc discounts with audit trail.
+  '''
+}
+
+TableGroup "Inventory & Purchasing" [color: #1ABC9C] {
+  inventories
+  inventory_movements
+  suppliers
+  purchases
+  purchase_items
+
+  Note: '''
+    Stock tracking with full movement audit trail.
+    Purchase orders to suppliers with receiving workflow.
+  '''
+}
+
+TableGroup "Customers & Reservations" [color: #F39C12] {
+  customers
+  reservations
+
+  Note: '''
+    Customer database with loyalty points.
+    Table reservation management with status tracking.
+  '''
+}
+
+TableGroup "Audit & Logging" [color: #7F8C8D] {
+  audit_logs
+
+  Note: '''
+    Comprehensive audit log capturing every system action.
+    Tracks data changes (INSERT/UPDATE/DELETE), login/logout,
+    voids, refunds, receipt prints, and cash drawer opens.
+  '''
+}

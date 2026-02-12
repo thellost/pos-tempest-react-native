@@ -1,0 +1,887 @@
+-- ============================================================
+-- POS TEMPEST — Seed Data (Indonesian Restaurant)
+-- Assumes all tables and enums already exist.
+-- Run this AFTER your migration / DDL script.
+-- ============================================================
+
+BEGIN;
+
+-- =============================
+-- 1. BRANCHES
+-- =============================
+INSERT INTO branches (id, name, address, phone, tax_rate, service_charge_rate, currency, timezone, is_active) VALUES
+(1, 'Warung Terapung - Kemang',      'Jl. Kemang Raya No. 12, Jakarta Selatan',    '021-7181234', 11.00, 5.00, 'IDR', 'Asia/Jakarta', true),
+(2, 'Warung Terapung - Senopati',     'Jl. Senopati No. 45, Jakarta Selatan',       '021-7265678', 11.00, 5.00, 'IDR', 'Asia/Jakarta', true),
+(3, 'Warung Terapung - BSD',          'Ruko CBD Lot VII No. 8, BSD City, Tangerang', '021-5371234', 11.00, 0.00, 'IDR', 'Asia/Jakarta', true);
+
+
+-- =============================
+-- 2. ROLES
+-- =============================
+INSERT INTO roles (id, name, description) VALUES
+(1, 'admin',   'Administrator — full system access'),
+(2, 'manager', 'Manajer Cabang — manage branch operations, void orders, view reports'),
+(3, 'cashier', 'Kasir — create orders, process payments'),
+(4, 'chef',    'Koki — view and manage kitchen order tickets');
+
+
+-- =============================
+-- 3. USERS (supabase_auth_id are placeholders)
+-- =============================
+INSERT INTO users (id, supabase_auth_id, role_id, branch_id, name, email, phone, pin_code, is_active) VALUES
+-- Kemang branch
+(1,  'a1b2c3d4-0001-4000-8000-000000000001', 1, 1, 'Budi Santoso',     'budi@postempest.id',     '081234567890', '111111', true),
+(2,  'a1b2c3d4-0002-4000-8000-000000000002', 2, 1, 'Siti Rahayu',      'siti@postempest.id',     '081234567891', '222222', true),
+(3,  'a1b2c3d4-0003-4000-8000-000000000003', 3, 1, 'Andi Pratama',     'andi@postempest.id',     '081234567892', '333333', true),
+(4,  'a1b2c3d4-0004-4000-8000-000000000004', 3, 1, 'Dewi Lestari',     'dewi@postempest.id',     '081234567893', '444444', true),
+(5,  'a1b2c3d4-0005-4000-8000-000000000005', 4, 1, 'Agus Wibowo',      'agus@postempest.id',     '081234567894', '555555', true),
+(6,  'a1b2c3d4-0006-4000-8000-000000000006', 4, 1, 'Rina Marlina',     'rina@postempest.id',     '081234567895', '666666', true),
+-- Senopati branch
+(7,  'a1b2c3d4-0007-4000-8000-000000000007', 2, 2, 'Hendra Gunawan',   'hendra@postempest.id',   '081234567896', '777777', true),
+(8,  'a1b2c3d4-0008-4000-8000-000000000008', 3, 2, 'Fitri Handayani',  'fitri@postempest.id',    '081234567897', '888888', true),
+(9,  'a1b2c3d4-0009-4000-8000-000000000009', 4, 2, 'Joko Susanto',     'joko@postempest.id',     '081234567898', '999999', true),
+-- BSD branch
+(10, 'a1b2c3d4-0010-4000-8000-000000000010', 2, 3, 'Mega Putri',       'mega@postempest.id',     '081234567899', '101010', true),
+(11, 'a1b2c3d4-0011-4000-8000-000000000011', 3, 3, 'Rizky Aditya',     'rizky@postempest.id',    '081234567800', '121212', true),
+(12, 'a1b2c3d4-0012-4000-8000-000000000012', 4, 3, 'Nurul Hidayah',    'nurul@postempest.id',    '081234567801', '131313', true);
+
+
+-- =============================
+-- 4. FLOOR AREAS
+-- =============================
+INSERT INTO floor_areas (id, branch_id, name, sort_order, is_active) VALUES
+-- Kemang
+(1, 1, 'Indoor',   1, true),
+(2, 1, 'Outdoor',  2, true),
+(3, 1, 'VIP',      3, true),
+-- Senopati
+(4, 2, 'Indoor',   1, true),
+(5, 2, 'Rooftop',  2, true),
+-- BSD
+(6, 3, 'Indoor',   1, true),
+(7, 3, 'Outdoor',  2, true);
+
+
+-- =============================
+-- 5. TABLES
+-- =============================
+INSERT INTO tables (id, branch_id, floor_area_id, table_number, capacity, status, is_active) VALUES
+-- Kemang Indoor (1-6)
+(1,  1, 1, 'A1', 2, 'available',  true),
+(2,  1, 1, 'A2', 2, 'available',  true),
+(3,  1, 1, 'A3', 4, 'available',  true),
+(4,  1, 1, 'A4', 4, 'available',  true),
+(5,  1, 1, 'A5', 6, 'available',  true),
+(6,  1, 1, 'A6', 8, 'available',  true),
+-- Kemang Outdoor (7-10)
+(7,  1, 2, 'B1', 2, 'available',  true),
+(8,  1, 2, 'B2', 4, 'available',  true),
+(9,  1, 2, 'B3', 4, 'available',  true),
+(10, 1, 2, 'B4', 6, 'available',  true),
+-- Kemang VIP (11-13)
+(11, 1, 3, 'V1', 6,  'available', true),
+(12, 1, 3, 'V2', 8,  'available', true),
+(13, 1, 3, 'V3', 12, 'available', true),
+-- Senopati Indoor (14-19)
+(14, 2, 4, 'A1', 2, 'available',  true),
+(15, 2, 4, 'A2', 4, 'available',  true),
+(16, 2, 4, 'A3', 4, 'available',  true),
+(17, 2, 4, 'A4', 6, 'available',  true),
+(18, 2, 4, 'A5', 6, 'available',  true),
+(19, 2, 4, 'A6', 8, 'available',  true),
+-- Senopati Rooftop (20-23)
+(20, 2, 5, 'R1', 2, 'available',  true),
+(21, 2, 5, 'R2', 4, 'available',  true),
+(22, 2, 5, 'R3', 4, 'available',  true),
+(23, 2, 5, 'R4', 8, 'available',  true),
+-- BSD Indoor (24-29)
+(24, 3, 6, 'A1', 2, 'available',  true),
+(25, 3, 6, 'A2', 4, 'available',  true),
+(26, 3, 6, 'A3', 4, 'available',  true),
+(27, 3, 6, 'A4', 6, 'available',  true),
+(28, 3, 6, 'A5', 6, 'available',  true),
+(29, 3, 6, 'A6', 8, 'available',  true),
+-- BSD Outdoor (30-33)
+(30, 3, 7, 'B1', 2, 'available',  true),
+(31, 3, 7, 'B2', 4, 'available',  true),
+(32, 3, 7, 'B3', 4, 'available',  true),
+(33, 3, 7, 'B4', 6, 'available',  true);
+
+
+-- =============================
+-- 6. CUSTOMERS
+-- =============================
+INSERT INTO customers (id, name, phone, email, address, loyalty_points, total_visits, total_spent) VALUES
+(1, 'Pak Harto',          '081300000001', 'harto@gmail.com',       'Jl. Sudirman No. 1, Jakarta',    1500,  25, 5750000.00),
+(2, 'Bu Ani',             '081300000002', 'ani.w@gmail.com',       'Jl. Gatot Subroto No. 5, Jakarta', 800, 12, 2880000.00),
+(3, 'Mas Doni',           '081300000003', NULL,                    NULL,                               200,   5,  925000.00),
+(4, 'Mbak Tika',          '081300000004', 'tika.sari@yahoo.com',   'BSD City, Tangerang',              350,   8, 1600000.00),
+(5, 'Keluarga Wijaya',    '081300000005', 'wijaya.fam@gmail.com',  'Kemang Pratama, Bekasi',          2200,  35, 12500000.00),
+(6, 'Rombongan Kantor A', '081300000006', NULL,                    NULL,                                50,   2,  1800000.00),
+(7, 'Ibu Ratna',          '081300000007', 'ratna.d@outlook.com',   'Pondok Indah, Jakarta Selatan',    900,  15, 4200000.00),
+(8, 'Bang Jali',          '081300000008', NULL,                    'Pasar Minggu, Jakarta Selatan',    100,   3,  450000.00);
+
+
+-- =============================
+-- 7. CATEGORIES (with hierarchy)
+-- =============================
+INSERT INTO categories (id, parent_id, name, description, sort_order, is_active) VALUES
+-- Top-level
+(1,  NULL, 'Makanan',      'Semua jenis makanan',                      1, true),
+(2,  NULL, 'Minuman',      'Semua jenis minuman',                      2, true),
+(3,  NULL, 'Camilan',      'Snack dan makanan ringan',                 3, true),
+-- Sub-categories: Makanan
+(4,  1, 'Nasi & Mie',      'Menu berbasis nasi dan mie',               1, true),
+(5,  1, 'Lauk Pauk',       'Ayam, daging, tahu, tempe',                2, true),
+(6,  1, 'Ikan & Seafood',  'Ikan, udang, cumi, kepiting',              3, true),
+(7,  1, 'Sayuran',         'Aneka sayur dan tumisan',                  4, true),
+(8,  1, 'Sop & Soto',      'Sop, soto, rawon, bakso',                 5, true),
+(9,  1, 'Sambal',          'Berbagai jenis sambal',                    6, true),
+-- Sub-categories: Minuman
+(10, 2, 'Minuman Dingin',  'Es teh, jus, kelapa muda',                1, true),
+(11, 2, 'Minuman Panas',   'Teh, kopi, wedang',                       2, true),
+-- Sub-categories: Camilan
+(12, 3, 'Gorengan',        'Tahu goreng, tempe goreng, pisang goreng', 1, true),
+(13, 3, 'Dessert',         'Kue dan makanan penutup',                  2, true);
+
+
+-- =============================
+-- 8. MENU ITEMS
+-- =============================
+INSERT INTO menu_items (id, category_id, name, description, sku, pricing_type, unit_of_measure, price, cost, min_order_qty, preparation_time_minutes, is_available, is_active, sort_order) VALUES
+-- === Nasi & Mie (category 4) ===
+(1,  4, 'Nasi Putih',              'Nasi putih hangat porsi reguler',                      'NSI-001', 'fixed',        'portion', 8000.00,    3000.00,  1,  2,  true, true, 1),
+(2,  4, 'Nasi Goreng Spesial',     'Nasi goreng dengan telur, ayam suwir, dan kerupuk',    'NSI-002', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 2),
+(3,  4, 'Nasi Goreng Seafood',     'Nasi goreng dengan udang, cumi, dan sayuran',          'NSI-003', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 3),
+(4,  4, 'Nasi Goreng Kampung',     'Nasi goreng petai, teri medan, dan sambal terasi',     'NSI-004', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 4),
+(5,  4, 'Mie Goreng Jawa',         'Mie goreng bumbu kecap manis dengan sayuran',          'MIE-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 5),
+(6,  4, 'Mie Goreng Seafood',      'Mie goreng dengan udang dan cumi',                     'MIE-002', 'fixed',        'portion', 35000.00,  15000.00,  1, 12,  true, true, 6),
+(7,  4, 'Kwetiau Goreng',          'Kwetiau goreng dengan tauge dan ayam',                 'MIE-003', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 7),
+(8,  4, 'Nasi Uduk',               'Nasi uduk komplit dengan lauk',                        'NSI-005', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 8),
+(9,  4, 'Nasi Kuning',             'Nasi kuning tumpeng mini',                             'NSI-006', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 9),
+(10, 4, 'Lontong Sayur',           'Lontong dengan sayur labu dan santan',                 'NSI-007', 'fixed',        'portion', 20000.00,   8000.00,  1,  8,  true, true, 10),
+
+-- === Lauk Pauk (category 5) ===
+(11, 5, 'Ayam Goreng Kremes',      'Ayam goreng renyah dengan kremesan gurih',             'LUK-001', 'fixed',        'piece',   30000.00,  14000.00,  1, 15,  true, true, 1),
+(12, 5, 'Ayam Bakar Madu',         'Ayam bakar bumbu madu kecap',                         'LUK-002', 'fixed',        'piece',   32000.00,  15000.00,  1, 20,  true, true, 2),
+(13, 5, 'Ayam Penyet',             'Ayam goreng penyet dengan sambal bawang',              'LUK-003', 'fixed',        'piece',   28000.00,  13000.00,  1, 15,  true, true, 3),
+(14, 5, 'Bebek Goreng Sambal Ijo', 'Bebek goreng krispi dengan sambal hijau',              'LUK-004', 'fixed',        'piece',   38000.00,  18000.00,  1, 20,  true, true, 4),
+(15, 5, 'Rendang Sapi',            'Rendang daging sapi empuk bumbu Padang',               'LUK-005', 'fixed',        'portion', 40000.00,  20000.00,  1, 15,  true, true, 5),
+(16, 5, 'Empal Gepuk',             'Daging sapi gepuk goreng berbumbu',                    'LUK-006', 'fixed',        'portion', 35000.00,  17000.00,  1, 15,  true, true, 6),
+(17, 5, 'Telur Dadar Padang',      'Telur dadar tebal isi daun bawang dan cabai',          'LUK-007', 'fixed',        'piece',   12000.00,   4000.00,  1,  8,  true, true, 7),
+(18, 5, 'Tahu Bacem',              'Tahu bacem goreng khas Jogja (2 potong)',              'LUK-008', 'fixed',        'portion', 10000.00,   3000.00,  1,  5,  true, true, 8),
+(19, 5, 'Tempe Goreng Tepung',     'Tempe goreng tepung crispy (4 potong)',                'LUK-009', 'fixed',        'portion', 12000.00,   4000.00,  1,  5,  true, true, 9),
+(20, 5, 'Perkedel Kentang',        'Perkedel kentang goreng (2 buah)',                     'LUK-010', 'fixed',        'portion', 10000.00,   4000.00,  1,  8,  true, true, 10),
+
+-- === Ikan & Seafood — WEIGHT-BASED (category 6) ===
+(21, 6, 'Ikan Gurame',             'Ikan gurame segar — pilih cara masak',                 'IKN-001', 'weight_based', 'kg',      90000.00,  45000.00,  0.3, 25, true, true, 1),
+(22, 6, 'Ikan Nila',               'Ikan nila segar — pilih cara masak',                   'IKN-002', 'weight_based', 'kg',      65000.00,  30000.00,  0.3, 20, true, true, 2),
+(23, 6, 'Ikan Kakap Merah',        'Kakap merah segar — pilih cara masak',                 'IKN-003', 'weight_based', 'kg',     120000.00,  60000.00,  0.3, 25, true, true, 3),
+(24, 6, 'Ikan Bawal Bakar',        'Ikan bawal segar untuk dibakar',                       'IKN-004', 'weight_based', 'kg',      85000.00,  40000.00,  0.3, 25, true, true, 4),
+(25, 6, 'Udang Segar',             'Udang segar pilihan — pilih cara masak',               'IKN-005', 'weight_based', 'ons',     18000.00,   9000.00,  1,   15, true, true, 5),
+(26, 6, 'Cumi Segar',              'Cumi-cumi segar — pilih cara masak',                   'IKN-006', 'weight_based', 'ons',     15000.00,   7000.00,  1,   15, true, true, 6),
+(27, 6, 'Kepiting Saus Padang',    'Kepiting saos Padang pedas (per ekor)',                'IKN-007', 'weight_based', 'kg',     150000.00,  75000.00,  0.5, 30, true, true, 7),
+-- Fixed-price seafood
+(28, 6, 'Udang Goreng Tepung',     'Udang goreng tepung crispy (8 ekor)',                  'IKN-008', 'fixed',        'portion', 45000.00,  22000.00,  1, 12,  true, true, 8),
+(29, 6, 'Cumi Goreng Tepung',      'Cumi goreng tepung (1 porsi)',                         'IKN-009', 'fixed',        'portion', 38000.00,  18000.00,  1, 12,  true, true, 9),
+(30, 6, 'Kerang Saus Tiram',       'Kerang hijau saus tiram (1 porsi)',                    'IKN-010', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 10),
+
+-- === Sayuran (category 7) ===
+(31, 7, 'Kangkung Belacan',        'Tumis kangkung dengan belacan/terasi',                 'SYR-001', 'fixed',        'portion', 18000.00,   6000.00,  1,  8, true, true, 1),
+(32, 7, 'Capcay Goreng',           'Capcay sayuran campur dengan saus tiram',              'SYR-002', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 2),
+(33, 7, 'Tumis Tauge Tahu',        'Tumis tauge dan tahu dengan bawang putih',             'SYR-003', 'fixed',        'portion', 15000.00,   5000.00,  1,  8, true, true, 3),
+(34, 7, 'Urap Sayuran',            'Sayuran rebus dengan bumbu kelapa parut',              'SYR-004', 'fixed',        'portion', 15000.00,   5000.00,  1, 10, true, true, 4),
+(35, 7, 'Terong Balado',           'Terong goreng dengan sambal balado',                   'SYR-005', 'fixed',        'portion', 18000.00,   6000.00,  1, 10, true, true, 5),
+(36, 7, 'Gado-Gado',               'Sayuran rebus dengan bumbu kacang, lontong, kerupuk', 'SYR-006', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 6),
+
+-- === Sop & Soto (category 8) ===
+(37, 8, 'Soto Ayam',               'Soto ayam kuning dengan bihun dan telur',              'SOP-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 12, true, true, 1),
+(38, 8, 'Soto Betawi',             'Soto santan khas Betawi dengan daging sapi',           'SOP-002', 'fixed',        'portion', 35000.00,  16000.00,  1, 15, true, true, 2),
+(39, 8, 'Rawon',                    'Rawon daging sapi hitam khas Jawa Timur',             'SOP-003', 'fixed',        'portion', 38000.00,  18000.00,  1, 15, true, true, 3),
+(40, 8, 'Sop Buntut',              'Sop buntut sapi bening dengan kentang dan wortel',     'SOP-004', 'fixed',        'portion', 55000.00,  28000.00,  1, 20, true, true, 4),
+(41, 8, 'Bakso Sapi',              'Bakso sapi dengan mie, bihun, dan tahu',               'SOP-005', 'fixed',        'portion', 25000.00,  10000.00,  1, 10, true, true, 5),
+(42, 8, 'Tongseng Kambing',        'Tongseng kambing berkuah santan pedas',                 'SOP-006', 'fixed',        'portion', 42000.00,  20000.00,  1, 15, true, true, 6),
+
+-- === Sambal (category 9) ===
+(43, 9, 'Sambal Terasi',           'Sambal terasi ulek pedas',                              'SBL-001', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 1),
+(44, 9, 'Sambal Matah',            'Sambal matah khas Bali dengan sereh dan bawang merah',  'SBL-002', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 2),
+(45, 9, 'Sambal Ijo',              'Sambal hijau dari cabai rawit hijau',                   'SBL-003', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 3),
+(46, 9, 'Sambal Dabu-Dabu',        'Sambal segar khas Manado',                              'SBL-004', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 4),
+(47, 9, 'Sambal Mangga Muda',      'Sambal mangga muda asam pedas',                         'SBL-005', 'fixed',       'portion',  8000.00,   3000.00, 1, 5, true, true, 5),
+
+-- === Minuman Dingin (category 10) ===
+(48, 10, 'Es Teh Manis',           'Es teh manis segar',                                    'MNM-001', 'fixed',       'piece',   8000.00,   2000.00, 1, 3, true, true, 1),
+(49, 10, 'Es Jeruk',               'Es jeruk peras segar',                                  'MNM-002', 'fixed',       'piece',  10000.00,   3000.00, 1, 3, true, true, 2),
+(50, 10, 'Es Kelapa Muda',         'Kelapa muda segar dengan es',                           'MNM-003', 'fixed',       'piece',  15000.00,   6000.00, 1, 3, true, true, 3),
+(51, 10, 'Jus Alpukat',            'Jus alpukat dengan susu coklat',                        'MNM-004', 'fixed',       'piece',  18000.00,   7000.00, 1, 5, true, true, 4),
+(52, 10, 'Jus Mangga',             'Jus mangga segar',                                      'MNM-005', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 5),
+(53, 10, 'Es Cendol',              'Es cendol dengan gula merah dan santan',                'MNM-006', 'fixed',       'piece',  12000.00,   4000.00, 1, 5, true, true, 6),
+(54, 10, 'Es Campur',              'Es campur dengan buah-buahan dan sirup',                'MNM-007', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 7),
+(55, 10, 'Air Mineral',            'Air mineral botol 600ml',                                'MNM-008', 'fixed',       'piece',   5000.00,   2000.00, 1, 1, true, true, 8),
+
+-- === Minuman Panas (category 11) ===
+(56, 11, 'Teh Tawar Panas',        'Teh panas tanpa gula',                                  'MNM-009', 'fixed',       'piece',   5000.00,   1500.00, 1, 3, true, true, 1),
+(57, 11, 'Teh Manis Panas',        'Teh manis panas',                                       'MNM-010', 'fixed',       'piece',   7000.00,   2000.00, 1, 3, true, true, 2),
+(58, 11, 'Kopi Hitam',             'Kopi tubruk hitam panas',                                'MNM-011', 'fixed',       'piece',   8000.00,   2500.00, 1, 5, true, true, 3),
+(59, 11, 'Kopi Susu',              'Kopi susu gula aren panas',                              'MNM-012', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 4),
+(60, 11, 'Wedang Jahe',            'Wedang jahe hangat dengan gula merah',                   'MNM-013', 'fixed',       'piece',  10000.00,   3000.00, 1, 5, true, true, 5),
+(61, 11, 'Wedang Ronde',           'Wedang ronde dengan kacang dan bola ketan',              'MNM-014', 'fixed',       'piece',  12000.00,   4000.00, 1, 8, true, true, 6),
+
+-- === Gorengan (category 12) ===
+(62, 12, 'Pisang Goreng',          'Pisang goreng kipas (3 buah)',                           'CMI-001', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 1),
+(63, 12, 'Bakwan Sayur',           'Bakwan sayur goreng (4 buah)',                           'CMI-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 2),
+(64, 12, 'Tahu Isi',               'Tahu isi sayuran goreng (4 buah)',                      'CMI-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
+(65, 12, 'Risoles Mayo',           'Risoles isi ragout dan mayones (3 buah)',                'CMI-004', 'fixed',       'portion', 15000.00,  5000.00, 1, 8, true, true, 4),
+(66, 12, 'Lumpia Semarang',        'Lumpia isi rebung dan udang (3 buah)',                   'CMI-005', 'fixed',       'portion', 18000.00,  7000.00, 1, 8, true, true, 5),
+(67, 12, 'Kerupuk Udang',          'Kerupuk udang (1 porsi)',                                'CMI-006', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 6),
+(68, 12, 'Emping Melinjo',         'Emping melinjo (1 porsi)',                               'CMI-007', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 7),
+
+-- === Dessert (category 13) ===
+(69, 13, 'Klepon',                  'Klepon isi gula merah (5 butir)',                       'DSR-001', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 1),
+(70, 13, 'Dadar Gulung',           'Dadar gulung isi kelapa gula merah (2 buah)',            'DSR-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 2),
+(71, 13, 'Kolak Pisang',           'Kolak pisang dengan ubi dan santan',                     'DSR-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
+(72, 13, 'Bubur Sumsum',           'Bubur sumsum dengan kuah gula merah',                    'DSR-004', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 4),
+(73, 13, 'Es Krim Kelapa',         'Es krim rasa kelapa buatan sendiri',                     'DSR-005', 'fixed',       'piece',  15000.00,  5000.00, 1, 3, true, true, 5);
+
+
+-- =============================
+-- 9. MODIFIER GROUPS
+-- =============================
+INSERT INTO modifier_groups (id, name, description, is_required, min_selections, max_selections, sort_order, is_active) VALUES
+(1, 'Cara Masak',         'Pilih cara memasak',                         true,  1, 1, 1, true),
+(2, 'Tingkat Pedas',      'Pilih tingkat kepedasan',                    false, 0, 1, 2, true),
+(3, 'Sambal Pilihan',     'Pilih sambal pendamping',                    false, 0, 2, 3, true),
+(4, 'Topping Tambahan',   'Tambahan topping (bisa pilih lebih dari 1)', false, 0, 5, 4, true),
+(5, 'Saus Seafood',       'Pilih jenis saus untuk seafood',             false, 0, 1, 5, true),
+(6, 'Ukuran Porsi',       'Pilih ukuran porsi',                         false, 0, 1, 6, true),
+(7, 'Jenis Nasi',         'Pilih jenis nasi pendamping',                false, 0, 1, 7, true),
+(8, 'Level Gula',         'Pilih tingkat kemanisan',                    false, 0, 1, 8, true),
+(9, 'Suhu Minuman',       'Pilih suhu penyajian',                       false, 0, 1, 9, true);
+
+
+-- =============================
+-- 10. MODIFIERS
+-- =============================
+INSERT INTO modifiers (id, modifier_group_id, name, extra_price, sort_order, is_active) VALUES
+-- Cara Masak (group 1)
+(1,  1, 'Goreng',          0.00, 1, true),
+(2,  1, 'Bakar',           0.00, 2, true),
+(3,  1, 'Kukus / Steam',   0.00, 3, true),
+(4,  1, 'Asam Manis',      5000.00, 4, true),
+(5,  1, 'Saus Padang',     5000.00, 5, true),
+(6,  1, 'Saus Tiram',      5000.00, 6, true),
+(7,  1, 'Bumbu Bali',      5000.00, 7, true),
+
+-- Tingkat Pedas (group 2)
+(8,  2, 'Tidak Pedas',     0.00, 1, true),
+(9,  2, 'Pedas Sedikit',   0.00, 2, true),
+(10, 2, 'Pedas Sedang',    0.00, 3, true),
+(11, 2, 'Pedas',           0.00, 4, true),
+(12, 2, 'Ekstra Pedas',    0.00, 5, true),
+
+-- Sambal Pilihan (group 3)
+(13, 3, 'Sambal Terasi',   3000.00, 1, true),
+(14, 3, 'Sambal Matah',    5000.00, 2, true),
+(15, 3, 'Sambal Ijo',      3000.00, 3, true),
+(16, 3, 'Sambal Dabu-Dabu',5000.00, 4, true),
+(17, 3, 'Sambal Mangga',   5000.00, 5, true),
+
+-- Topping Tambahan (group 4)
+(18, 4, 'Telur Ceplok',    5000.00, 1, true),
+(19, 4, 'Telur Dadar',     5000.00, 2, true),
+(20, 4, 'Ayam Suwir',      8000.00, 3, true),
+(21, 4, 'Kerupuk',         3000.00, 4, true),
+(22, 4, 'Emping',          3000.00, 5, true),
+(23, 4, 'Nasi Tambah',     5000.00, 6, true),
+(24, 4, 'Acar',            3000.00, 7, true),
+
+-- Saus Seafood (group 5)
+(25, 5, 'Saus Padang',     0.00, 1, true),
+(26, 5, 'Saus Tiram',      0.00, 2, true),
+(27, 5, 'Saus Lada Hitam', 0.00, 3, true),
+(28, 5, 'Saus Mentega',    0.00, 4, true),
+(29, 5, 'Saus Asam Manis', 0.00, 5, true),
+
+-- Ukuran Porsi (group 6)
+(30, 6, 'Reguler',         0.00, 1, true),
+(31, 6, 'Besar / Jumbo',   10000.00, 2, true),
+
+-- Jenis Nasi (group 7)
+(32, 7, 'Nasi Putih',      0.00, 1, true),
+(33, 7, 'Nasi Uduk',       3000.00, 2, true),
+(34, 7, 'Nasi Merah',      5000.00, 3, true),
+
+-- Level Gula (group 8)
+(35, 8, 'Tanpa Gula',      0.00, 1, true),
+(36, 8, 'Sedikit Manis',   0.00, 2, true),
+(37, 8, 'Normal',          0.00, 3, true),
+(38, 8, 'Ekstra Manis',    0.00, 4, true),
+
+-- Suhu Minuman (group 9)
+(39, 9, 'Dingin / Es',     0.00, 1, true),
+(40, 9, 'Panas',           0.00, 2, true);
+
+
+-- =============================
+-- 11. MENU ITEM ↔ MODIFIER GROUP LINKS
+-- =============================
+INSERT INTO menu_item_modifier_groups (id, menu_item_id, modifier_group_id, sort_order) VALUES
+-- Nasi Goreng variants → Tingkat Pedas, Topping Tambahan
+(1,  2,  2, 1),   -- Nasi Goreng Spesial → Tingkat Pedas
+(2,  2,  4, 2),   -- Nasi Goreng Spesial → Topping Tambahan
+(3,  3,  2, 1),   -- Nasi Goreng Seafood → Tingkat Pedas
+(4,  3,  4, 2),   -- Nasi Goreng Seafood → Topping Tambahan
+(5,  4,  2, 1),   -- Nasi Goreng Kampung → Tingkat Pedas
+(6,  4,  4, 2),   -- Nasi Goreng Kampung → Topping Tambahan
+-- Mie → Tingkat Pedas, Topping Tambahan
+(7,  5,  2, 1),   -- Mie Goreng Jawa → Tingkat Pedas
+(8,  5,  4, 2),
+(9,  6,  2, 1),   -- Mie Goreng Seafood → Tingkat Pedas
+(10, 6,  4, 2),
+(11, 7,  2, 1),   -- Kwetiau Goreng → Tingkat Pedas
+(12, 7,  4, 2),
+-- Ayam / Bebek → Cara Masak (goreng/bakar), Tingkat Pedas, Sambal Pilihan, Jenis Nasi
+(13, 11, 2, 1),   -- Ayam Goreng Kremes → Tingkat Pedas
+(14, 11, 3, 2),   -- Ayam Goreng Kremes → Sambal Pilihan
+(15, 11, 7, 3),   -- Ayam Goreng Kremes → Jenis Nasi
+(16, 12, 2, 1),   -- Ayam Bakar Madu → Tingkat Pedas
+(17, 12, 3, 2),
+(18, 12, 7, 3),
+(19, 13, 2, 1),   -- Ayam Penyet → Tingkat Pedas
+(20, 13, 3, 2),
+(21, 13, 7, 3),
+(22, 14, 2, 1),   -- Bebek Goreng Sambal Ijo → Tingkat Pedas
+(23, 14, 3, 2),
+(24, 14, 7, 3),
+-- Rendang, Empal → Tingkat Pedas, Jenis Nasi
+(25, 15, 2, 1),   -- Rendang Sapi → Tingkat Pedas
+(26, 15, 7, 2),
+(27, 16, 2, 1),   -- Empal Gepuk → Tingkat Pedas
+(28, 16, 7, 2),
+-- Ikan weight-based → Cara Masak, Tingkat Pedas, Sambal Pilihan
+(29, 21, 1, 1),   -- Ikan Gurame → Cara Masak
+(30, 21, 2, 2),
+(31, 21, 3, 3),
+(32, 22, 1, 1),   -- Ikan Nila → Cara Masak
+(33, 22, 2, 2),
+(34, 22, 3, 3),
+(35, 23, 1, 1),   -- Ikan Kakap Merah → Cara Masak
+(36, 23, 2, 2),
+(37, 23, 3, 3),
+(38, 24, 1, 1),   -- Ikan Bawal → Cara Masak
+(39, 24, 2, 2),
+(40, 24, 3, 3),
+-- Udang & Cumi weight-based → Cara Masak, Saus Seafood, Tingkat Pedas
+(41, 25, 1, 1),   -- Udang Segar → Cara Masak
+(42, 25, 5, 2),   -- Udang Segar → Saus Seafood
+(43, 25, 2, 3),
+(44, 26, 1, 1),   -- Cumi Segar → Cara Masak
+(45, 26, 5, 2),
+(46, 26, 2, 3),
+-- Kepiting → Tingkat Pedas
+(47, 27, 2, 1),
+-- Sayuran → Tingkat Pedas
+(48, 31, 2, 1),   -- Kangkung Belacan → Tingkat Pedas
+(49, 32, 2, 1),   -- Capcay Goreng → Tingkat Pedas
+(50, 35, 2, 1),   -- Terong Balado → Tingkat Pedas
+-- Sop & Soto → Tingkat Pedas, Jenis Nasi
+(51, 37, 2, 1),   -- Soto Ayam
+(52, 37, 7, 2),
+(53, 38, 2, 1),   -- Soto Betawi
+(54, 38, 7, 2),
+(55, 39, 2, 1),   -- Rawon
+(56, 39, 7, 2),
+(57, 40, 2, 1),   -- Sop Buntut
+(58, 40, 7, 2),
+(59, 41, 2, 1),   -- Bakso Sapi
+(60, 42, 2, 1),   -- Tongseng Kambing
+(61, 42, 7, 2),
+-- Minuman → Level Gula
+(62, 48, 8, 1),   -- Es Teh Manis → Level Gula
+(63, 49, 8, 1),   -- Es Jeruk → Level Gula
+(64, 51, 8, 1),   -- Jus Alpukat → Level Gula
+(65, 52, 8, 1),   -- Jus Mangga → Level Gula
+(66, 53, 8, 1),   -- Es Cendol → Level Gula
+(67, 57, 8, 1),   -- Teh Manis Panas → Level Gula
+(68, 59, 8, 1),   -- Kopi Susu → Level Gula
+-- Nasi Goreng & Mie → Ukuran Porsi
+(69, 2,  6, 3),   -- Nasi Goreng Spesial → Ukuran Porsi
+(70, 3,  6, 3),   -- Nasi Goreng Seafood → Ukuran Porsi
+(71, 5,  6, 3),   -- Mie Goreng Jawa → Ukuran Porsi
+(72, 6,  6, 3);   -- Mie Goreng Seafood → Ukuran Porsi
+
+
+-- =============================
+-- 12. TAX CONFIGS
+-- =============================
+INSERT INTO tax_configs (id, branch_id, name, rate, is_inclusive, is_active) VALUES
+(1, 1, 'PPN',              11.00, false, true),
+(2, 1, 'PB1',              10.00, false, false),  -- Pajak restoran (off for now)
+(3, 1, 'Service Charge',    5.00, false, true),
+(4, 2, 'PPN',              11.00, false, true),
+(5, 2, 'Service Charge',    5.00, false, true),
+(6, 3, 'PPN',              11.00, false, true);
+-- BSD no service charge
+
+
+-- =============================
+-- 13. SUPPLIERS
+-- =============================
+INSERT INTO suppliers (id, name, contact_person, phone, email, address, is_active) VALUES
+(1, 'PT Ikan Segar Nusantara',  'Pak Rudi',    '021-5551001', 'rudi@ikansegar.co.id',    'Muara Baru, Jakarta Utara',              true),
+(2, 'CV Sayur Tani Makmur',     'Bu Lastri',   '021-5551002', 'lastri@sayurtani.co.id',  'Pasar Induk Kramat Jati, Jakarta Timur', true),
+(3, 'UD Daging Prima',          'Pak Hasan',   '021-5551003', 'hasan@dagingprima.co.id', 'Tanah Abang, Jakarta Pusat',             true),
+(4, 'PT Bumbu Dapur Indonesia', 'Mbak Yuni',   '021-5551004', 'yuni@bumbuin.co.id',     'Cibitung, Bekasi',                       true),
+(5, 'CV Beras Subur Jaya',      'Pak Maman',   '021-5551005', 'maman@berassubur.co.id', 'Karawang, Jawa Barat',                   true),
+(6, 'PT Minuman Segar Abadi',   'Koh Aling',   '021-5551006', 'aling@segarabadi.co.id', 'Cakung, Jakarta Timur',                  true);
+
+
+-- =============================
+-- 14. DISCOUNTS
+-- =============================
+INSERT INTO discounts (id, name, description, discount_type, value, min_order_amount, max_discount_amount, valid_from, valid_until, is_active) VALUES
+(1, 'Grand Opening 20%',           'Diskon grand opening 20% semua menu',                 'percentage',   20.00,  50000.00,  100000.00, '2026-02-01 00:00:00', '2026-03-31 23:59:59', true),
+(2, 'Happy Hour 10%',              'Diskon 10% jam 14:00-17:00',                          'percentage',   10.00,      0.00,   50000.00, '2026-01-01 00:00:00', '2026-12-31 23:59:59', true),
+(3, 'Diskon Pelanggan Setia',      'Diskon Rp 25.000 untuk pelanggan loyalty 1000+ poin', 'fixed_amount', 25000.00, 100000.00, NULL,    '2026-01-01 00:00:00', '2026-12-31 23:59:59', true),
+(4, 'Paket Keluarga 15%',          'Diskon 15% untuk pesanan di atas Rp 300.000',         'percentage',   15.00, 300000.00,  150000.00, '2026-01-01 00:00:00', '2026-12-31 23:59:59', true),
+(5, 'Diskon Takeaway Rp 10.000',   'Potongan Rp 10.000 untuk semua pesanan bungkus',     'fixed_amount', 10000.00,  50000.00, NULL,    '2026-01-01 00:00:00', '2026-12-31 23:59:59', true);
+
+
+-- =============================
+-- 15. SHIFTS
+-- =============================
+INSERT INTO shifts (id, user_id, branch_id, status, opening_cash, closing_cash, expected_cash, cash_difference, opened_at, closed_at, notes) VALUES
+-- Kemang — closed shift yesterday
+(1, 3, 1, 'closed', 500000.00, 2850000.00, 2870000.00, -20000.00,
+   '2026-02-11 08:00:00', '2026-02-11 21:00:00', 'Shift pagi-malam Andi. Selisih -20rb, kemungkinan salah kembalian.'),
+-- Kemang — open shift today
+(2, 4, 1, 'open', 500000.00, NULL, NULL, NULL,
+   '2026-02-12 08:00:00', NULL, 'Shift pagi Dewi'),
+-- Senopati — closed shift yesterday
+(3, 8, 2, 'closed', 500000.00, 1950000.00, 1950000.00, 0.00,
+   '2026-02-11 08:00:00', '2026-02-11 21:00:00', 'Shift Fitri, pas tidak ada selisih.'),
+-- Senopati — open shift today
+(4, 8, 2, 'open', 500000.00, NULL, NULL, NULL,
+   '2026-02-12 08:00:00', NULL, 'Shift pagi Fitri'),
+-- BSD — open shift today
+(5, 11, 3, 'open', 300000.00, NULL, NULL, NULL,
+   '2026-02-12 08:00:00', NULL, 'Shift pagi Rizky');
+
+
+-- =============================
+-- 16. RESERVATIONS
+-- =============================
+INSERT INTO reservations (id, branch_id, table_id, customer_id, customer_name, customer_phone, guest_count, reservation_datetime, duration_minutes, status, notes, created_by) VALUES
+(1, 1, 12, 5, 'Keluarga Wijaya',    '081300000005', 8, '2026-02-12 18:30:00', 120, 'confirmed', 'Ulang tahun anak, minta hiasan balon',          2),
+(2, 1, 13, 6, 'Rombongan Kantor A', '081300000006', 10, '2026-02-12 12:00:00', 90, 'confirmed', 'Meeting lunch kantor, minta projector',         2),
+(3, 2, 23, 7, 'Ibu Ratna',          '081300000007', 6, '2026-02-12 19:00:00', 120, 'confirmed', 'Dinner keluarga, ada anak kecil, minta high chair', 7);
+
+
+-- =============================
+-- 17. ORDERS (today's transactions)
+-- =============================
+
+-- === ORDER 1: Dine-in, Kemang, Table A3, completed ===
+INSERT INTO orders (id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id, order_type, status, guest_count, subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total, payment_status, notes, created_at) VALUES
+(1, 'ORD-20260212-001', 1, 3, 4, 1, 2, 'dine_in', 'completed', 2,
+  173000.00, 0.00, 19030.00, 8650.00, -680.00, 200000.00, 'paid',
+  NULL, '2026-02-12 09:15:00');
+
+INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure, unit_price, modifier_total, subtotal, discount_amount, total, notes, created_at) VALUES
+(1, 1, 2,  'Nasi Goreng Spesial',     2.000, 'piece',   28000.00,  5000.00,  61000.00, 0.00, 61000.00, NULL,                    '2026-02-12 09:15:00'),
+(2, 1, 11, 'Ayam Goreng Kremes',      2.000, 'piece',   30000.00,  0.00,     60000.00, 0.00, 60000.00, NULL,                    '2026-02-12 09:15:00'),
+(3, 1, 48, 'Es Teh Manis',            2.000, 'piece',    8000.00,  0.00,     16000.00, 0.00, 16000.00, 'Es-nya sedikit saja',   '2026-02-12 09:15:00'),
+(4, 1, 21, 'Ikan Gurame',             0.400, 'kg',      90000.00,  0.00,     36000.00, 0.00, 36000.00, NULL,                    '2026-02-12 09:15:00');
+
+INSERT INTO order_item_modifiers (id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price) VALUES
+-- Nasi Goreng Spesial #1 → Pedas Sedang + Telur Ceplok
+(1, 1, 10, 'Pedas Sedang', 'Tingkat Pedas',    0.00),
+(2, 1, 18, 'Telur Ceplok', 'Topping Tambahan', 5000.00),
+-- Ikan Gurame → Bakar
+(3, 4, 2,  'Bakar',         'Cara Masak',       0.00);
+
+
+-- === ORDER 2: Dine-in, Kemang, Table V1, completed (big table, Keluarga Wijaya) ===
+INSERT INTO orders (id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id, order_type, status, guest_count, subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total, payment_status, notes, created_at) VALUES
+(2, 'ORD-20260212-002', 1, 11, 4, 5, 2, 'dine_in', 'completed', 6,
+  478000.00, 71700.00, 44693.00, 20315.00, -308.00, 471000.00, 'paid',
+  'Meja keluarga Wijaya, diskon 15% paket keluarga', '2026-02-12 11:30:00');
+
+INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure, unit_price, modifier_total, subtotal, discount_amount, total, notes, created_at) VALUES
+(5,  2, 1,  'Nasi Putih',              6.000, 'piece',    8000.00,  0.00,     48000.00, 0.00, 48000.00, NULL,                       '2026-02-12 11:30:00'),
+(6,  2, 15, 'Rendang Sapi',            2.000, 'portion', 40000.00,  0.00,     80000.00, 0.00, 80000.00, NULL,                       '2026-02-12 11:30:00'),
+(7,  2, 11, 'Ayam Goreng Kremes',      3.000, 'piece',   30000.00,  0.00,     90000.00, 0.00, 90000.00, NULL,                       '2026-02-12 11:30:00'),
+(8,  2, 23, 'Ikan Kakap Merah',        1.200, 'kg',     120000.00,  0.00,    144000.00, 0.00,144000.00, 'Bakar, pedas sedang',      '2026-02-12 11:30:00'),
+(9,  2, 31, 'Kangkung Belacan',        1.000, 'portion', 18000.00,  0.00,     18000.00, 0.00, 18000.00, NULL,                       '2026-02-12 11:30:00'),
+(10, 2, 32, 'Capcay Goreng',           1.000, 'portion', 22000.00,  0.00,     22000.00, 0.00, 22000.00, NULL,                       '2026-02-12 11:30:00'),
+(11, 2, 48, 'Es Teh Manis',            4.000, 'piece',    8000.00,  0.00,     32000.00, 0.00, 32000.00, NULL,                       '2026-02-12 11:30:00'),
+(12, 2, 50, 'Es Kelapa Muda',          2.000, 'piece',   15000.00,  0.00,     30000.00, 0.00, 30000.00, NULL,                       '2026-02-12 11:30:00'),
+(13, 2, 71, 'Kolak Pisang',            1.000, 'portion', 12000.00,  0.00,     12000.00, 0.00, 12000.00, NULL,                       '2026-02-12 11:30:00'),
+(14, 2, 67, 'Kerupuk Udang',           2.000, 'portion',  5000.00,  0.00,     10000.00, 0.00, 10000.00, NULL,                       '2026-02-12 11:30:00');
+
+INSERT INTO order_item_modifiers (id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price) VALUES
+-- Rendang → Pedas
+(4, 6,  11, 'Pedas',         'Tingkat Pedas', 0.00),
+-- Ikan Kakap → Bakar, Pedas Sedang, Sambal Matah
+(5, 8,  2,  'Bakar',         'Cara Masak',      0.00),
+(6, 8,  10, 'Pedas Sedang',  'Tingkat Pedas',   0.00),
+(7, 8,  14, 'Sambal Matah',  'Sambal Pilihan',  5000.00),
+-- Kangkung → Ekstra Pedas
+(8, 9,  12, 'Ekstra Pedas',  'Tingkat Pedas',   0.00);
+
+
+-- === ORDER 3: Takeaway, Kemang, completed ===
+INSERT INTO orders (id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id, order_type, status, guest_count, subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total, payment_status, notes, created_at) VALUES
+(3, 'ORD-20260212-003', 1, NULL, 4, NULL, 2, 'takeaway', 'completed', 1,
+  91000.00, 10000.00, 8910.00, 0.00, 90.00, 90000.00, 'paid',
+  'Bungkus, diskon takeaway', '2026-02-12 12:05:00');
+
+INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure, unit_price, modifier_total, subtotal, discount_amount, total, notes, created_at) VALUES
+(15, 3, 4,  'Nasi Goreng Kampung',     1.000, 'piece',   25000.00, 0.00,  25000.00, 0.00, 25000.00, NULL,                      '2026-02-12 12:05:00'),
+(16, 3, 14, 'Bebek Goreng Sambal Ijo', 1.000, 'piece',   38000.00, 0.00,  38000.00, 0.00, 38000.00, 'Sambal pisah ya',         '2026-02-12 12:05:00'),
+(17, 3, 1,  'Nasi Putih',              1.000, 'piece',    8000.00, 0.00,   8000.00, 0.00,  8000.00, NULL,                      '2026-02-12 12:05:00'),
+(18, 3, 48, 'Es Teh Manis',            1.000, 'piece',    8000.00, 0.00,   8000.00, 0.00,  8000.00, 'Gak pakai es',            '2026-02-12 12:05:00'),
+(19, 3, 53, 'Es Cendol',               1.000, 'piece',   12000.00, 0.00,  12000.00, 0.00, 12000.00, NULL,                      '2026-02-12 12:05:00');
+
+INSERT INTO order_item_modifiers (id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price) VALUES
+(9,  15, 12, 'Ekstra Pedas',  'Tingkat Pedas', 0.00),
+(10, 16, 11, 'Pedas',         'Tingkat Pedas', 0.00);
+
+
+-- === ORDER 4: Dine-in, Senopati, Table A2, currently being prepared ===
+INSERT INTO orders (id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id, order_type, status, guest_count, subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total, payment_status, notes, created_at) VALUES
+(4, 'ORD-20260212-004', 2, 15, 8, NULL, 4, 'dine_in', 'preparing', 3,
+  216000.00, 0.00, 23760.00, 10800.00, -560.00, 250000.00, 'unpaid',
+  NULL, '2026-02-12 12:30:00');
+
+INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure, unit_price, modifier_total, subtotal, discount_amount, total, notes, created_at) VALUES
+(20, 4, 37, 'Soto Ayam',              3.000, 'portion', 25000.00, 0.00,  75000.00, 0.00, 75000.00, NULL,                   '2026-02-12 12:30:00'),
+(21, 4, 25, 'Udang Segar',            5.000, 'ons',     18000.00, 0.00,  90000.00, 0.00, 90000.00, 'Goreng tepung',        '2026-02-12 12:30:00'),
+(22, 4, 35, 'Terong Balado',          1.000, 'portion', 18000.00, 0.00,  18000.00, 0.00, 18000.00, NULL,                   '2026-02-12 12:30:00'),
+(23, 4, 49, 'Es Jeruk',               3.000, 'piece',   10000.00, 0.00,  30000.00, 0.00, 30000.00, 'Sedikit manis saja',  '2026-02-12 12:30:00'),
+(24, 4, 67, 'Kerupuk Udang',          1.000, 'portion',  5000.00, 0.00,   5000.00, 0.00,  5000.00, NULL,                   '2026-02-12 12:30:00');
+
+INSERT INTO order_item_modifiers (id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price) VALUES
+(11, 20, 11, 'Pedas',           'Tingkat Pedas', 0.00),
+(12, 21, 1,  'Goreng',          'Cara Masak',    0.00),
+(13, 21, 27, 'Saus Lada Hitam', 'Saus Seafood',  0.00),
+(14, 22, 12, 'Ekstra Pedas',    'Tingkat Pedas', 0.00),
+(15, 23, 36, 'Sedikit Manis',   'Level Gula',    0.00);
+
+
+-- === ORDER 5: Dine-in, BSD, Table A4, pending (just ordered) ===
+INSERT INTO orders (id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id, order_type, status, guest_count, subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total, payment_status, notes, created_at) VALUES
+(5, 'ORD-20260212-005', 3, 27, 11, 4, 5, 'dine_in', 'pending', 4,
+  244000.00, 0.00, 26840.00, 0.00, 160.00, 271000.00, 'unpaid',
+  'Mbak Tika dan keluarga', '2026-02-12 12:45:00');
+
+INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure, unit_price, modifier_total, subtotal, discount_amount, total, notes, created_at) VALUES
+(25, 5, 8,  'Nasi Uduk',               4.000, 'piece',   22000.00, 0.00,  88000.00, 0.00, 88000.00, NULL,                   '2026-02-12 12:45:00'),
+(26, 5, 12, 'Ayam Bakar Madu',         2.000, 'piece',   32000.00, 0.00,  64000.00, 0.00, 64000.00, NULL,                   '2026-02-12 12:45:00'),
+(27, 5, 22, 'Ikan Nila',               0.800, 'kg',      65000.00, 0.00,  52000.00, 0.00, 52000.00, 'Goreng krispi',        '2026-02-12 12:45:00'),
+(28, 5, 36, 'Gado-Gado',               2.000, 'portion', 22000.00, 0.00,  44000.00, 0.00, 44000.00, 'Bumbu kacang pisah',   '2026-02-12 12:45:00');
+
+INSERT INTO order_item_modifiers (id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price) VALUES
+(16, 26, 10, 'Pedas Sedang',   'Tingkat Pedas', 0.00),
+(17, 26, 14, 'Sambal Matah',   'Sambal Pilihan', 5000.00),
+(18, 27, 1,  'Goreng',         'Cara Masak',     0.00),
+(19, 27, 10, 'Pedas Sedang',   'Tingkat Pedas',  0.00);
+
+
+-- =============================
+-- 18. KITCHEN ORDER TICKETS
+-- =============================
+
+-- KOT for Order 1 (completed)
+INSERT INTO kitchen_order_tickets (id, order_id, ticket_number, status, priority, printed_at, started_at, completed_at, created_at) VALUES
+(1, 1, 'KOT-20260212-001', 'served',      0, '2026-02-12 09:15:00', '2026-02-12 09:17:00', '2026-02-12 09:35:00', '2026-02-12 09:15:00');
+
+INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes) VALUES
+(1, 1, 1, 2.000, 'served', NULL),
+(2, 1, 2, 2.000, 'served', NULL),
+(3, 1, 3, 2.000, 'served', 'Es sedikit'),
+(4, 1, 4, 0.400, 'served', 'Gurame bakar');
+
+-- KOT for Order 2 (completed)
+INSERT INTO kitchen_order_tickets (id, order_id, ticket_number, status, priority, printed_at, started_at, completed_at, created_at) VALUES
+(2, 2, 'KOT-20260212-002', 'served',      1, '2026-02-12 11:30:00', '2026-02-12 11:33:00', '2026-02-12 12:00:00', '2026-02-12 11:30:00');
+
+INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes) VALUES
+(5,  2, 5,  6.000, 'served', NULL),
+(6,  2, 6,  2.000, 'served', 'Rendang pedas'),
+(7,  2, 7,  3.000, 'served', NULL),
+(8,  2, 8,  1.200, 'served', 'Kakap bakar sambal matah'),
+(9,  2, 9,  1.000, 'served', 'Ekstra pedas'),
+(10, 2, 10, 1.000, 'served', NULL),
+(11, 2, 11, 4.000, 'served', NULL),
+(12, 2, 12, 2.000, 'served', NULL),
+(13, 2, 13, 1.000, 'served', NULL),
+(14, 2, 14, 2.000, 'served', NULL);
+
+-- KOT for Order 3 (completed / takeaway)
+INSERT INTO kitchen_order_tickets (id, order_id, ticket_number, status, priority, printed_at, started_at, completed_at, created_at) VALUES
+(3, 3, 'KOT-20260212-003', 'served',      0, '2026-02-12 12:05:00', '2026-02-12 12:07:00', '2026-02-12 12:20:00', '2026-02-12 12:05:00');
+
+INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes) VALUES
+(15, 3, 15, 1.000, 'served', 'Bungkus, ekstra pedas'),
+(16, 3, 16, 1.000, 'served', 'Bungkus, sambal pisah'),
+(17, 3, 17, 1.000, 'served', 'Bungkus'),
+(18, 3, 18, 1.000, 'served', 'Bungkus, tanpa es'),
+(19, 3, 19, 1.000, 'served', 'Bungkus');
+
+-- KOT for Order 4 (in_progress at kitchen)
+INSERT INTO kitchen_order_tickets (id, order_id, ticket_number, status, priority, printed_at, started_at, completed_at, created_at) VALUES
+(4, 4, 'KOT-20260212-004', 'in_progress', 0, '2026-02-12 12:30:00', '2026-02-12 12:32:00', NULL, '2026-02-12 12:30:00');
+
+INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes) VALUES
+(20, 4, 20, 3.000, 'in_progress', 'Soto pedas'),
+(21, 4, 21, 5.000, 'in_progress', 'Udang goreng saus lada hitam'),
+(22, 4, 22, 1.000, 'ready',       'Terong balado ekstra pedas'),
+(23, 4, 23, 3.000, 'ready',       'Es jeruk sedikit manis'),
+(24, 4, 24, 1.000, 'ready',       NULL);
+
+-- KOT for Order 5 (pending — just ordered)
+INSERT INTO kitchen_order_tickets (id, order_id, ticket_number, status, priority, printed_at, started_at, completed_at, created_at) VALUES
+(5, 5, 'KOT-20260212-005', 'pending',     0, '2026-02-12 12:45:00', NULL, NULL, '2026-02-12 12:45:00');
+
+INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes) VALUES
+(25, 5, 25, 4.000, 'pending', NULL),
+(26, 5, 26, 2.000, 'pending', 'Ayam bakar sambal matah'),
+(27, 5, 27, 0.800, 'pending', 'Nila goreng krispi'),
+(28, 5, 28, 2.000, 'pending', 'Bumbu kacang pisah');
+
+
+-- =============================
+-- 19. PAYMENTS
+-- =============================
+INSERT INTO payments (id, order_id, shift_id, payment_method, amount, change_amount, reference_number, paid_at) VALUES
+-- Order 1: cash
+(1, 1, 2, 'cash',    200000.00, 0.00,    NULL,               '2026-02-12 09:45:00'),
+-- Order 2: split payment — QRIS + cash
+(2, 2, 2, 'qris',    400000.00, 0.00,    'QRIS-20260212-001', '2026-02-12 12:10:00'),
+(3, 2, 2, 'cash',     71000.00, 29000.00, NULL,               '2026-02-12 12:10:00'),
+-- Order 3: ewallet (GoPay)
+(4, 3, 2, 'ewallet',  90000.00, 0.00,    'GOPAY-XYZ789',     '2026-02-12 12:25:00');
+
+
+-- =============================
+-- 20. ORDER DISCOUNTS
+-- =============================
+INSERT INTO order_discounts (id, order_id, discount_id, discount_name, discount_type, discount_value, applied_amount, applied_by, created_at) VALUES
+-- Order 2: Paket Keluarga 15%
+(1, 2, 4, 'Paket Keluarga 15%',        'percentage',   15.00,   71700.00, 4, '2026-02-12 12:08:00'),
+-- Order 3: Diskon Takeaway Rp 10.000
+(2, 3, 5, 'Diskon Takeaway Rp 10.000', 'fixed_amount', 10000.00, 10000.00, 4, '2026-02-12 12:23:00');
+
+
+-- =============================
+-- 21. INVENTORIES (Kemang branch only as sample)
+-- =============================
+INSERT INTO inventories (id, branch_id, menu_item_id, stock_quantity, low_stock_threshold) VALUES
+-- Nasi & staples
+(1,  1, 1,  200.000, 50),    -- Nasi Putih: 200 porsi
+(2,  1, 2,  100.000, 20),    -- Nasi Goreng Spesial
+(3,  1, 3,   80.000, 15),    -- Nasi Goreng Seafood
+(4,  1, 4,   90.000, 20),    -- Nasi Goreng Kampung
+(5,  1, 5,   80.000, 15),    -- Mie Goreng Jawa
+-- Protein
+(6,  1, 11,  60.000, 10),    -- Ayam Goreng Kremes: 60 potong
+(7,  1, 12,  50.000, 10),    -- Ayam Bakar Madu
+(8,  1, 14,  30.000,  8),    -- Bebek Goreng
+(9,  1, 15,  40.000, 10),    -- Rendang Sapi: 40 porsi
+-- Seafood (kg/ons based)
+(10, 1, 21,  15.000,  3),    -- Ikan Gurame: 15 kg
+(11, 1, 22,  20.000,  5),    -- Ikan Nila: 20 kg
+(12, 1, 23,   8.000,  2),    -- Ikan Kakap: 8 kg
+(13, 1, 25,  80.000, 20),    -- Udang: 80 ons
+(14, 1, 26,  60.000, 15),    -- Cumi: 60 ons
+(15, 1, 27,   5.000,  2),    -- Kepiting: 5 kg
+-- Drinks
+(16, 1, 48, 500.000, 50),    -- Es Teh Manis
+(17, 1, 55, 200.000, 30),    -- Air Mineral
+(18, 1, 50,  40.000, 10);    -- Es Kelapa Muda
+
+
+-- =============================
+-- 22. PURCHASES (sample PO)
+-- =============================
+INSERT INTO purchases (id, purchase_number, supplier_id, branch_id, ordered_by, received_by, subtotal, tax_amount, total, status, notes, ordered_at, received_at) VALUES
+(1, 'PO-20260210-001', 1, 1, 2, 2, 4500000.00, 495000.00, 4995000.00, 'received',
+   'Ikan segar mingguan untuk cabang Kemang',
+   '2026-02-10 08:00:00', '2026-02-11 06:00:00'),
+(2, 'PO-20260211-001', 2, 1, 2, NULL, 1800000.00, 198000.00, 1998000.00, 'ordered',
+   'Sayuran harian',
+   '2026-02-11 14:00:00', NULL),
+(3, 'PO-20260211-002', 5, 1, 2, 2, 2000000.00, 220000.00, 2220000.00, 'received',
+   'Beras premium 100kg',
+   '2026-02-11 08:00:00', '2026-02-12 06:00:00');
+
+INSERT INTO purchase_items (id, purchase_id, menu_item_id, quantity, unit_of_measure, cost_per_unit, total) VALUES
+-- PO-1: Ikan segar
+(1, 1, 21, 10.000, 'kg',  45000.00, 450000.00),   -- Gurame 10 kg
+(2, 1, 22, 15.000, 'kg',  30000.00, 450000.00),   -- Nila 15 kg
+(3, 1, 23,  8.000, 'kg',  60000.00, 480000.00),   -- Kakap 8 kg
+(4, 1, 25, 80.000, 'ons',  9000.00, 720000.00),   -- Udang 80 ons
+(5, 1, 26, 60.000, 'ons',  7000.00, 420000.00),   -- Cumi 60 ons
+(6, 1, 27,  5.000, 'kg',  75000.00, 375000.00),   -- Kepiting 5 kg
+-- PO-3: Beras
+(7, 3, 1,  100.000, 'kg', 12000.00, 1200000.00);  -- Beras untuk nasi putih
+
+
+-- =============================
+-- 23. INVENTORY MOVEMENTS (from PO-1 receiving)
+-- =============================
+INSERT INTO inventory_movements (id, inventory_id, user_id, movement_type, quantity_change, quantity_before, quantity_after, reference_type, reference_id, reason, created_at) VALUES
+(1, 10, 2, 'purchase_in', 10.000,  5.000, 15.000, 'purchase', 1, 'Terima PO-20260210-001: Gurame 10kg',  '2026-02-11 06:00:00'),
+(2, 11, 2, 'purchase_in', 15.000,  5.000, 20.000, 'purchase', 1, 'Terima PO-20260210-001: Nila 15kg',    '2026-02-11 06:00:00'),
+(3, 12, 2, 'purchase_in',  8.000,  0.000,  8.000, 'purchase', 1, 'Terima PO-20260210-001: Kakap 8kg',    '2026-02-11 06:00:00'),
+(4, 13, 2, 'purchase_in', 80.000,  0.000, 80.000, 'purchase', 1, 'Terima PO-20260210-001: Udang 80 ons', '2026-02-11 06:00:00'),
+(5, 14, 2, 'purchase_in', 60.000,  0.000, 60.000, 'purchase', 1, 'Terima PO-20260210-001: Cumi 60 ons',  '2026-02-11 06:00:00'),
+(6, 15, 2, 'purchase_in',  5.000,  0.000,  5.000, 'purchase', 1, 'Terima PO-20260210-001: Kepiting 5kg', '2026-02-11 06:00:00'),
+-- Stock out from Order 1 (Gurame 0.4 kg)
+(7, 10, 4, 'sale_out',    -0.400, 15.000, 14.600, 'order',    1, 'Order ORD-20260212-001: Gurame 0.4kg', '2026-02-12 09:15:00'),
+-- Stock out from Order 2 (Kakap 1.2 kg)
+(8, 12, 4, 'sale_out',    -1.200,  8.000,  6.800, 'order',    2, 'Order ORD-20260212-002: Kakap 1.2kg',  '2026-02-12 11:30:00');
+
+
+-- =============================
+-- 24. AUDIT LOGS (sample entries)
+-- =============================
+INSERT INTO audit_logs (id, user_id, branch_id, action, table_name, record_id, old_values, new_values, description, ip_address, session_id, created_at) VALUES
+-- Shift opened
+(1, 4, 1, 'INSERT', 'shifts', 2, NULL,
+  '{"id":2,"user_id":4,"branch_id":1,"status":"open","opening_cash":500000}',
+  'Dewi Lestari membuka shift pagi dengan kas Rp 500.000',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 08:00:00'),
+
+-- Login
+(2, 4, 1, 'LOGIN', 'users', 4, NULL, NULL,
+  'Login: Dewi Lestari (Kasir) via PIN',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 08:00:00'),
+
+-- Order 1 created
+(3, 4, 1, 'INSERT', 'orders', 1, NULL,
+  '{"id":1,"order_number":"ORD-20260212-001","order_type":"dine_in","total":200000}',
+  'Order baru ORD-20260212-001 dine-in meja A3',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 09:15:00'),
+
+-- Order 1 status → completed
+(4, 4, 1, 'STATUS_CHANGE', 'orders', 1,
+  '{"status":"served"}',
+  '{"status":"completed"}',
+  'Order ORD-20260212-001 selesai',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 09:45:00'),
+
+-- Payment for Order 1
+(5, 4, 1, 'INSERT', 'payments', 1, NULL,
+  '{"id":1,"order_id":1,"payment_method":"cash","amount":200000}',
+  'Pembayaran tunai Rp 200.000 untuk ORD-20260212-001',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 09:45:00'),
+
+-- Receipt printed
+(6, 4, 1, 'PRINT', 'orders', 1, NULL, NULL,
+  'Cetak struk ORD-20260212-001',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 09:46:00'),
+
+-- Order 2 created (big family order)
+(7, 4, 1, 'INSERT', 'orders', 2, NULL,
+  '{"id":2,"order_number":"ORD-20260212-002","order_type":"dine_in","total":471000}',
+  'Order baru ORD-20260212-002 dine-in meja V1 (Keluarga Wijaya)',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 11:30:00'),
+
+-- Discount applied to Order 2
+(8, 4, 1, 'INSERT', 'order_discounts', 1, NULL,
+  '{"discount_name":"Paket Keluarga 15%","applied_amount":71700}',
+  'Diskon Paket Keluarga 15% diterapkan ke ORD-20260212-002, potongan Rp 71.700',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 12:08:00'),
+
+-- Order 2 paid (split)
+(9, 4, 1, 'INSERT', 'payments', 2, NULL,
+  '{"id":2,"order_id":2,"payment_method":"qris","amount":400000}',
+  'Pembayaran QRIS Rp 400.000 untuk ORD-20260212-002',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 12:10:00'),
+
+(10, 4, 1, 'INSERT', 'payments', 3, NULL,
+  '{"id":3,"order_id":2,"payment_method":"cash","amount":71000,"change_amount":29000}',
+  'Pembayaran tunai Rp 71.000 (kembalian Rp 29.000) untuk ORD-20260212-002',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 12:10:00'),
+
+-- Cash drawer opened
+(11, 4, 1, 'OPEN_DRAWER', 'shifts', 2, NULL, NULL,
+  'Buka laci kas untuk kembalian ORD-20260212-002',
+  '192.168.1.10', 'sess_dewi_20260212', '2026-02-12 12:10:00'),
+
+-- Senopati login
+(12, 8, 2, 'LOGIN', 'users', 8, NULL, NULL,
+  'Login: Fitri Handayani (Kasir) via PIN',
+  '192.168.2.10', 'sess_fitri_20260212', '2026-02-12 08:00:00'),
+
+-- Senopati shift opened
+(13, 8, 2, 'INSERT', 'shifts', 4, NULL,
+  '{"id":4,"user_id":8,"branch_id":2,"status":"open","opening_cash":500000}',
+  'Fitri Handayani membuka shift pagi dengan kas Rp 500.000',
+  '192.168.2.10', 'sess_fitri_20260212', '2026-02-12 08:00:00'),
+
+-- Order 4 created (Senopati, currently preparing)
+(14, 8, 2, 'INSERT', 'orders', 4, NULL,
+  '{"id":4,"order_number":"ORD-20260212-004","order_type":"dine_in","table_id":15}',
+  'Order baru ORD-20260212-004 dine-in meja A2 (Senopati)',
+  '192.168.2.10', 'sess_fitri_20260212', '2026-02-12 12:30:00'),
+
+-- BSD login + shift
+(15, 11, 3, 'LOGIN', 'users', 11, NULL, NULL,
+  'Login: Rizky Aditya (Kasir) via PIN',
+  '192.168.3.10', 'sess_rizky_20260212', '2026-02-12 08:00:00'),
+
+(16, 11, 3, 'INSERT', 'shifts', 5, NULL,
+  '{"id":5,"user_id":11,"branch_id":3,"status":"open","opening_cash":300000}',
+  'Rizky Aditya membuka shift pagi dengan kas Rp 300.000',
+  '192.168.3.10', 'sess_rizky_20260212', '2026-02-12 08:00:00'),
+
+-- Order 5 (BSD, pending)
+(17, 11, 3, 'INSERT', 'orders', 5, NULL,
+  '{"id":5,"order_number":"ORD-20260212-005","order_type":"dine_in","table_id":27}',
+  'Order baru ORD-20260212-005 dine-in meja A4 (BSD)',
+  '192.168.3.10', 'sess_rizky_20260212', '2026-02-12 12:45:00');
+
+
+-- =============================
+-- Update table statuses for occupied tables
+-- =============================
+UPDATE tables SET status = 'occupied' WHERE id IN (15, 27);  -- Order 4 (Senopati A2), Order 5 (BSD A4)
+UPDATE tables SET status = 'reserved' WHERE id IN (12, 13, 23);  -- Reservations
+
+
+-- =============================
+-- Reset sequences to continue after seed data
+-- =============================
+SELECT setval('branches_id_seq',             (SELECT MAX(id) FROM branches));
+SELECT setval('roles_id_seq',                (SELECT MAX(id) FROM roles));
+SELECT setval('users_id_seq',                (SELECT MAX(id) FROM users));
+SELECT setval('shifts_id_seq',               (SELECT MAX(id) FROM shifts));
+SELECT setval('floor_areas_id_seq',          (SELECT MAX(id) FROM floor_areas));
+SELECT setval('tables_id_seq',               (SELECT MAX(id) FROM tables));
+SELECT setval('customers_id_seq',            (SELECT MAX(id) FROM customers));
+SELECT setval('reservations_id_seq',         (SELECT MAX(id) FROM reservations));
+SELECT setval('categories_id_seq',           (SELECT MAX(id) FROM categories));
+SELECT setval('menu_items_id_seq',           (SELECT MAX(id) FROM menu_items));
+SELECT setval('modifier_groups_id_seq',      (SELECT MAX(id) FROM modifier_groups));
+SELECT setval('modifiers_id_seq',            (SELECT MAX(id) FROM modifiers));
+SELECT setval('menu_item_modifier_groups_id_seq', (SELECT MAX(id) FROM menu_item_modifier_groups));
+SELECT setval('inventories_id_seq',          (SELECT MAX(id) FROM inventories));
+SELECT setval('inventory_movements_id_seq',  (SELECT MAX(id) FROM inventory_movements));
+SELECT setval('orders_id_seq',               (SELECT MAX(id) FROM orders));
+SELECT setval('order_items_id_seq',          (SELECT MAX(id) FROM order_items));
+SELECT setval('order_item_modifiers_id_seq', (SELECT MAX(id) FROM order_item_modifiers));
+SELECT setval('kitchen_order_tickets_id_seq',(SELECT MAX(id) FROM kitchen_order_tickets));
+SELECT setval('kot_items_id_seq',            (SELECT MAX(id) FROM kot_items));
+SELECT setval('payments_id_seq',             (SELECT MAX(id) FROM payments));
+SELECT setval('discounts_id_seq',            (SELECT MAX(id) FROM discounts));
+SELECT setval('order_discounts_id_seq',      (SELECT MAX(id) FROM order_discounts));
+SELECT setval('tax_configs_id_seq',          (SELECT MAX(id) FROM tax_configs));
+SELECT setval('suppliers_id_seq',            (SELECT MAX(id) FROM suppliers));
+SELECT setval('purchases_id_seq',            (SELECT MAX(id) FROM purchases));
+SELECT setval('purchase_items_id_seq',       (SELECT MAX(id) FROM purchase_items));
+SELECT setval('audit_logs_id_seq',           (SELECT MAX(id) FROM audit_logs));
+
+COMMIT;
