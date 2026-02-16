@@ -38,7 +38,7 @@ export default function LoginScreen() {
               <Text className="text-pos-sm text-pos-muted">User ID: {claims.sub}</Text>
               <Pressable
                 className="mt-4 rounded-lg bg-brand p-3"
-                onPress={() => router.replace({ pathname: '/(app)/floor/index' } as any)}>
+                onPress={() => router.replace('/floor')}>
                 <Text className="text-center text-pos-base font-semibold text-white">
                   Go to Floor Plan
                 </Text>

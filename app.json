@@ -6,7 +6,7 @@
     "orientation": "landscape",
     "icon": "./assets/images/icon.png",
     "scheme": "postempest",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
