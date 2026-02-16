@@ -1,14 +1,14 @@
 ## Plan: POS Tempest — Restaurant POS Development
 
-**TL;DR:** Build an offline-first restaurant POS app on Android tablets using Expo + PowerSync + SQLite + Supabase + Tamagui. The app supports open tables/bills, kitchen & cashier Bluetooth thermal printing, PIN-based quick auth, and is structured for long-term maintainability. 13 steps, executed sequentially.
+**TL;DR:** Build an offline-first restaurant POS app on Android tablets using Expo + PowerSync + SQLite + Supabase + NativeWind. The app supports open tables/bills, kitchen & cashier Bluetooth thermal printing, PIN-based quick auth, and is structured for long-term maintainability. 13 steps, executed sequentially.
 
 The UI will follow a **Toast POS-inspired** aesthetic: dark theme, large touch targets, grid-based menu, split-panel order view, minimal visual noise.
 
 ---
 
-### Step 1 — Project Structure & Tamagui Setup
+### Step 1 — Project Structure & NativeWind Setup
 
-**Goal:** Replace the Expo boilerplate with a scalable folder structure and wire up Tamagui.
+**Goal:** Replace the Expo boilerplate with a scalable folder structure and wire up NativeWind (Tailwind CSS for React Native).
 
 Restructure the project to:
 
@@ -72,7 +72,8 @@ src/
     date.ts                 ← Timezone-aware date helpers (Asia/Jakarta)
     order-number.ts         ← ORD-YYYYMMDD-XXX generator
   constants/
-    theme.ts                ← Tamagui config: dark/light tokens, Toast POS palette
+    theme.ts                ← Color constants & dark/light tokens, Toast POS palette
+    global.css              ← Tailwind directives + custom dark theme CSS variables
     enums.ts                ← Mirrored enums from ERD
     config.ts               ← App-wide constants (timeouts, limits)
 ```
@@ -80,7 +81,7 @@ src/
 **Actions:**
 - Remove all Expo boilerplate screens (`app/(tabs)/index.tsx`, `app/(tabs)/explore.tsx`, `app/modal.tsx`)
 - Remove unused boilerplate components (`components/hello-wave.tsx`, `components/parallax-scroll-view.tsx`, etc.)
-- Install & configure Tamagui (`tamagui`, `@tamagui/config`, `@tamagui/babel-plugin`) with a dark-first Toast POS-inspired theme
+- Install & configure NativeWind v4 (`nativewind`, `tailwindcss`) with the Expo preset. Create `tailwind.config.ts` with a dark-first Toast POS-inspired theme extending Tailwind colors (slate-900 backgrounds, blue-500 primary, large spacing). Create `global.css` with `@tailwind` directives. Add `nativewind/babel` to `babel.config.js`. All components use `className` prop for styling
 - Update `tsconfig.json` path aliases: `@/src/*` → `src/*`
 - Set orientation to `landscape` in `app.json` config (remove the programmatic lock)
 
@@ -326,7 +327,7 @@ Full workflow test:
 10. Turn on Wi-Fi → data syncs to Supabase
 
 **Decisions**
-- **Tamagui** over NativeWind — user preference, gives us a compiled universal UI kit
+- **NativeWind (Tailwind CSS)** — zero-runtime, utility-first styling via `className` prop, trivial Expo setup, built-in dark mode, familiar Tailwind DX
 - **Branch locked per device** — simplifies data scoping and sync rules
 - **Bluetooth thermal printers** — ESC/POS protocol, most common in Indonesian restaurants
 - **Email + PIN auth** — Supabase handles email auth, PIN validated locally for offline quick-unlock

@@ -1,53 +1,44 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Toast POS-inspired color tokens.
+ * Used alongside NativeWind/Tailwind — these constants are for JS-side usage
+ * (e.g. StatusBar, navigation headers, dynamic styles).
+ * The primary styling approach is Tailwind utility classes via `className`.
  */
-
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: '#0F172A',
+    background: '#F8FAFC',
+    backgroundSoft: '#FFFFFF',
+    tint: '#2A7FFF',
+    icon: '#475569',
+    tabIconDefault: '#475569',
+    tabIconSelected: '#2A7FFF',
+    border: '#CBD5E1',
+    muted: '#475569',
+    success: '#16A34A',
+    warning: '#D97706',
+    danger: '#DC2626',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#E2E8F0',
+    background: '#0B1220',
+    backgroundSoft: '#121C2E',
+    tint: '#2A7FFF',
+    icon: '#94A3B8',
+    tabIconDefault: '#94A3B8',
+    tabIconSelected: '#2A7FFF',
+    border: '#1E293B',
+    muted: '#94A3B8',
+    success: '#18A957',
+    warning: '#F59E0B',
+    danger: '#EF4444',
   },
-};
+} as const;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+/** Shared brand colors (theme-independent) */
+export const Brand = {
+  primary: '#2A7FFF',
+  primaryHover: '#3F8CFF',
+  primaryPress: '#1F6AE0',
+} as const;

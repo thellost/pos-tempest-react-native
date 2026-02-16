@@ -1,6 +1,6 @@
 import { useQuery, useStatus } from '@powersync/react';
 import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 type BranchRow = {
   id: string;
@@ -33,6 +33,27 @@ export default function ExploreScreen() {
   const status = useStatus();
   const downloadError = status.dataFlowStatus.downloadError?.message;
   const uploadError = status.dataFlowStatus.uploadError?.message;
+  const hasSyncError = Boolean(downloadError || uploadError);
+
+  const connectionBadge = hasSyncError
+    ? { label: 'Error', dot: 'bg-red-500', chip: 'bg-red-500/15 border-red-500/30 text-red-300' }
+    : status.dataFlowStatus.downloading || status.dataFlowStatus.uploading || status.connecting
+      ? {
+          label: 'Syncing',
+          dot: 'bg-amber-400',
+          chip: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
+        }
+      : status.connected
+        ? {
+            label: 'Online',
+            dot: 'bg-emerald-400',
+            chip: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
+          }
+        : {
+            label: 'Offline',
+            dot: 'bg-slate-400',
+            chip: 'bg-slate-500/15 border-slate-500/30 text-slate-300',
+          };
 
   const statusSnapshot = useMemo(
     () => ({
@@ -57,7 +78,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     console.log('[PowerSync][status][ExploreScreen]', statusSnapshot);
-  }, [statusSignature, statusSnapshot]);
+  }, [statusSnapshot, statusSignature]);
 
   const { data: branches } = useQuery<BranchRow>(
     "SELECT id, name FROM branches WHERE is_active = 'true' ORDER BY id"
@@ -96,117 +117,123 @@ export default function ExploreScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>PowerSync POS Demo</Text>
-      <Text style={styles.subtitle}>
-        Connected: {String(status.connected)} · Connecting: {String(status.connecting)} · Downloading:{' '}
-        {String(status.dataFlowStatus.downloading)} · Uploading: {String(status.dataFlowStatus.uploading)}
-      </Text>
-      <Text style={styles.subtitle}>Status: {status.getMessage()}</Text>
-      <Text style={styles.subtitle}>hasSynced: {String(status.hasSynced)}</Text>
-      <Text style={styles.subtitle}>
-        lastSyncedAt: {status.lastSyncedAt ? status.lastSyncedAt.toISOString() : 'null'}
-      </Text>
-      {downloadError ? <Text style={styles.error}>Download error: {downloadError}</Text> : null}
-      {uploadError ? <Text style={styles.error}>Upload error: {uploadError}</Text> : null}
+    <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <View className="mb-4 rounded-2xl border border-white/10 bg-surface-soft p-4">
+        <View className="mb-3 flex-row items-center justify-between">
+          <View>
+            <Text className="text-pos-2xl font-bold text-pos-text-strong">Operations Overview</Text>
+            <Text className="mt-1 text-pos-sm text-pos-muted">
+              Live branch, order, kitchen, and payment snapshot
+            </Text>
+          </View>
+          <View className={`flex-row items-center gap-2 rounded-full border px-3 py-1 ${connectionBadge.chip}`}>
+            <View className={`h-2.5 w-2.5 rounded-full ${connectionBadge.dot}`} />
+            <Text className="text-pos-sm font-semibold">{connectionBadge.label}</Text>
+          </View>
+        </View>
 
-      <View style={styles.debugCard}>
-        <Text style={styles.cardTitle}>Debug Snapshot</Text>
-        <Text style={styles.debugText}>{statusSignature}</Text>
+        <Text className="text-pos-sm text-pos-muted">
+          Connected: {String(status.connected)} · Connecting: {String(status.connecting)} · Downloading:{' '}
+          {String(status.dataFlowStatus.downloading)} · Uploading: {String(status.dataFlowStatus.uploading)}
+        </Text>
+        <Text className="mt-1 text-pos-sm text-pos-muted">Status: {status.getMessage()}</Text>
+        <Text className="mt-1 text-pos-sm text-pos-muted">
+          Last Synced: {status.lastSyncedAt ? status.lastSyncedAt.toISOString() : 'Never'}
+        </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Active Branches</Text>
+      <View className="mb-4 flex-row flex-wrap gap-3">
+        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
+          <Text className="text-pos-sm text-pos-muted">Active Branches</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{branches.length}</Text>
+        </View>
+        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
+          <Text className="text-pos-sm text-pos-muted">Recent Orders</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{orders.length}</Text>
+        </View>
+        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
+          <Text className="text-pos-sm text-pos-muted">Kitchen Tickets</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{tickets.length}</Text>
+        </View>
+      </View>
+
+      {downloadError ? (
+        <View className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+          <Text className="text-pos-sm text-red-300">Download error: {downloadError}</Text>
+        </View>
+      ) : null}
+
+      {uploadError ? (
+        <View className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+          <Text className="text-pos-sm text-red-300">Upload error: {uploadError}</Text>
+        </View>
+      ) : null}
+
+      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Active Branches</Text>
         {branches.map((b) => (
-          <Text key={b.id} style={styles.rowText}>
+          <Text key={b.id} className="mb-1 text-pos-sm text-pos-text">
             • {b.name}
           </Text>
         ))}
-        {branches.length === 0 ? <Text style={styles.empty}>No branch rows yet.</Text> : null}
+        {branches.length === 0 ? <Text className="text-pos-sm text-pos-muted">No branch rows yet.</Text> : null}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Recent Orders</Text>
+      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Recent Orders</Text>
         {orders.map((o) => (
-          <Text key={o.id} style={styles.rowText}>
-            {o.order_number} · {o.branch_name} · Table {o.table_number ?? '-'} · {o.status} · Rp
-            {Math.round(Number(o.total ?? 0)).toLocaleString('id-ID')} · {o.payment_status}
-          </Text>
+          <View key={o.id} className="mb-2 rounded-lg bg-white/5 p-3">
+            <Text className="text-pos-sm font-semibold text-pos-text-strong">
+              {o.order_number ?? '-'} · Table {o.table_number ?? '-'}
+            </Text>
+            <Text className="mt-1 text-pos-sm text-pos-muted">
+              {o.branch_name ?? '-'} · {o.status ?? '-'} · {o.payment_status ?? '-'}
+            </Text>
+            <Text className="mt-1 text-pos-sm font-semibold text-brand">
+              Rp{Math.round(Number(o.total ?? 0)).toLocaleString('id-ID')}
+            </Text>
+          </View>
         ))}
-        {orders.length === 0 ? <Text style={styles.empty}>No order rows yet.</Text> : null}
+        {orders.length === 0 ? <Text className="text-pos-sm text-pos-muted">No order rows yet.</Text> : null}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Kitchen Tickets</Text>
+      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Kitchen Tickets</Text>
         {tickets.map((k) => (
-          <Text key={k.id} style={styles.rowText}>
-            {k.ticket_number} · {k.order_number} · {k.status}
-          </Text>
+          <View key={k.id} className="mb-2 flex-row items-center justify-between rounded-lg bg-white/5 p-3">
+            <View className="flex-1 pr-3">
+              <Text className="text-pos-sm font-semibold text-pos-text-strong">{k.ticket_number ?? '-'}</Text>
+              <Text className="text-pos-sm text-pos-muted">{k.order_number ?? '-'}</Text>
+            </View>
+            <Text className="rounded-full bg-brand/20 px-2 py-1 text-pos-xs font-semibold uppercase tracking-wide text-brand">
+              {k.status ?? '-'}
+            </Text>
+          </View>
         ))}
-        {tickets.length === 0 ? <Text style={styles.empty}>No kitchen ticket rows yet.</Text> : null}
+        {tickets.length === 0 ? (
+          <Text className="text-pos-sm text-pos-muted">No kitchen ticket rows yet.</Text>
+        ) : null}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Payment Summary</Text>
+      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Payment Summary</Text>
         {paymentSummary.map((p) => (
-          <Text key={`${p.payment_method}`} style={styles.rowText}>
-            {p.payment_method}: Rp{Math.round(Number(p.total ?? 0)).toLocaleString('id-ID')}
-          </Text>
+          <View
+            key={`${p.payment_method}`}
+            className="mb-2 flex-row items-center justify-between rounded-lg bg-white/5 p-3">
+            <Text className="text-pos-sm text-pos-text">{p.payment_method}</Text>
+            <Text className="text-pos-sm font-semibold text-pos-text-strong">
+              Rp{Math.round(Number(p.total ?? 0)).toLocaleString('id-ID')}
+            </Text>
+          </View>
         ))}
-        {paymentSummary.length === 0 ? <Text style={styles.empty}>No payment rows yet.</Text> : null}
+        {paymentSummary.length === 0 ? <Text className="text-pos-sm text-pos-muted">No payment rows yet.</Text> : null}
+      </View>
+
+      <View className="rounded-xl border border-white/10 bg-black/20 p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Debug Snapshot</Text>
+        <Text className="text-pos-xs text-pos-muted">{statusSignature}</Text>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    gap: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  subtitle: {
-    opacity: 0.8,
-  },
-  error: {
-    color: '#B91C1C',
-    fontSize: 12,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
-    backgroundColor: '#FFFFFF',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  debugCard: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: '#F8FAFC',
-    gap: 8,
-  },
-  debugText: {
-    fontSize: 12,
-    opacity: 0.85,
-  },
-  rowText: {
-    fontSize: 14,
-  },
-  empty: {
-    fontSize: 13,
-    opacity: 0.65,
-  },
-});
