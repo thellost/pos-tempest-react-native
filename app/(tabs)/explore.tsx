@@ -1,5 +1,5 @@
-import { usePowerSyncRuntime } from '@/components/powersync-provider';
 import { useQuery, useStatus } from '@powersync/react';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type BranchRow = {
@@ -30,29 +30,37 @@ type PaymentSummary = {
 };
 
 export default function ExploreScreen() {
-  const runtime = usePowerSyncRuntime();
-
-  if (!runtime.ready) {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>PowerSync POS Demo</Text>
-        <Text style={styles.subtitle}>Initializing…</Text>
-      </ScrollView>
-    );
-  }
-
-  if (!runtime.available) {
-    return <FallbackDemo reason={runtime.reason} />;
-  }
-
-  return <PowerSyncLiveDemo />;
-}
-
-function PowerSyncLiveDemo() {
   const status = useStatus();
+  const downloadError = status.dataFlowStatus.downloadError?.message;
+  const uploadError = status.dataFlowStatus.uploadError?.message;
+
+  const statusSnapshot = useMemo(
+    () => ({
+      connected: status.connected,
+      connecting: status.connecting,
+      hasSynced: status.hasSynced,
+      lastSyncedAt: status.lastSyncedAt ? status.lastSyncedAt.toISOString() : null,
+      downloadProgress: status.downloadProgress,
+      dataFlowStatus: {
+        downloading: status.dataFlowStatus.downloading,
+        uploading: status.dataFlowStatus.uploading,
+        downloadError: status.dataFlowStatus.downloadError?.message,
+        uploadError: status.dataFlowStatus.uploadError?.message,
+      },
+      statusMessage: status.getMessage(),
+      rawStatus: status.toJSON(),
+    }),
+    [status]
+  );
+
+  const statusSignature = JSON.stringify(statusSnapshot);
+
+  useEffect(() => {
+    console.log('[PowerSync][status][ExploreScreen]', statusSnapshot);
+  }, [statusSignature, statusSnapshot]);
 
   const { data: branches } = useQuery<BranchRow>(
-    'SELECT id, name FROM branches WHERE is_active = 1 ORDER BY id'
+    "SELECT id, name FROM branches WHERE is_active = 'true' ORDER BY id"
   );
 
   const { data: orders } = useQuery<OrderRow>(
@@ -87,13 +95,25 @@ function PowerSyncLiveDemo() {
     'SELECT payment_method, SUM(amount) as total FROM payments GROUP BY payment_method ORDER BY total DESC'
   );
 
-   return (
+  return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>PowerSync POS Demo</Text>
       <Text style={styles.subtitle}>
-        Connected: {String(status.connected)} · Downloading: {String(status.dataFlowStatus.downloading)} ·
-        Uploading: {String(status.dataFlowStatus.uploading)}
+        Connected: {String(status.connected)} · Connecting: {String(status.connecting)} · Downloading:{' '}
+        {String(status.dataFlowStatus.downloading)} · Uploading: {String(status.dataFlowStatus.uploading)}
       </Text>
+      <Text style={styles.subtitle}>Status: {status.getMessage()}</Text>
+      <Text style={styles.subtitle}>hasSynced: {String(status.hasSynced)}</Text>
+      <Text style={styles.subtitle}>
+        lastSyncedAt: {status.lastSyncedAt ? status.lastSyncedAt.toISOString() : 'null'}
+      </Text>
+      {downloadError ? <Text style={styles.error}>Download error: {downloadError}</Text> : null}
+      {uploadError ? <Text style={styles.error}>Upload error: {uploadError}</Text> : null}
+
+      <View style={styles.debugCard}>
+        <Text style={styles.cardTitle}>Debug Snapshot</Text>
+        <Text style={styles.debugText}>{statusSignature}</Text>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Active Branches</Text>
@@ -139,75 +159,6 @@ function PowerSyncLiveDemo() {
   );
 }
 
-function FallbackDemo({ reason }: { reason: string | null }) {
-  const branches = [
-    'Warung Terapung - Kemang',
-    'Warung Terapung - Senopati',
-    'Warung Terapung - BSD',
-  ];
-
-  const recentOrders = [
-    'ORD-20260212-005 · BSD · Table A4 · pending · Rp271.000 · unpaid',
-    'ORD-20260212-004 · Senopati · Table A2 · preparing · Rp250.000 · unpaid',
-    'ORD-20260212-001 · Kemang · Table A3 · completed · Rp200.000 · paid',
-  ];
-
-  const tickets = [
-    'KOT-20260212-005 · ORD-20260212-005 · pending',
-    'KOT-20260212-004 · ORD-20260212-004 · in_progress',
-  ];
-
-  const paymentSummary = ['qris: Rp400.000', 'cash: Rp271.000'];
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>PowerSync POS Demo</Text>
-      <Text style={styles.subtitle}>Fallback preview (using PopulatedSQL sample rows)</Text>
-
-      <View style={styles.noticeCard}>
-        <Text style={styles.noticeTitle}>Live sync is disabled in this runtime</Text>
-        <Text style={styles.noticeText}>{reason ?? 'Please run a development build.'}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Active Branches</Text>
-        {branches.map((b) => (
-          <Text key={b} style={styles.rowText}>
-            • {b}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Recent Orders</Text>
-        {recentOrders.map((o) => (
-          <Text key={o} style={styles.rowText}>
-            {o}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Kitchen Tickets</Text>
-        {tickets.map((k) => (
-          <Text key={k} style={styles.rowText}>
-            {k}
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Payment Summary</Text>
-        {paymentSummary.map((p) => (
-          <Text key={p} style={styles.rowText}>
-            {p}
-          </Text>
-        ))}
-      </View>
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -223,6 +174,10 @@ const styles = StyleSheet.create({
   subtitle: {
     opacity: 0.8,
   },
+  error: {
+    color: '#B91C1C',
+    fontSize: 12,
+  },
   card: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -231,25 +186,21 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFFFF',
   },
-  noticeCard: {
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
-    padding: 12,
-    gap: 6,
-  },
-  noticeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#92400E',
-  },
-  noticeText: {
-    color: '#78350F',
-  },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  debugCard: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    gap: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    opacity: 0.85,
   },
   rowText: {
     fontSize: 14,
