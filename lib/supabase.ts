@@ -6,13 +6,17 @@ import 'react-native-url-polyfill/auto'
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 
+const lock: typeof processLock = (name, acquireTimeout, fn) => {
+  return processLock(name, Math.max(acquireTimeout, 5000), fn)
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    lock: processLock,
+    lock,
   },
 })
 
