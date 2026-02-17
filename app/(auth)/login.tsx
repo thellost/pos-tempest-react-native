@@ -1,9 +1,7 @@
-import Auth from '@/components/Auth';
-import { supabase } from '@/lib/supabase';
-import { JwtPayload } from '@supabase/supabase-js';
+import { useAuth } from '@/hooks/use-auth';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
 /**
@@ -11,19 +9,34 @@ import 'react-native-url-polyfill/auto';
  * To be fully implemented in Step 3.
  */
 export default function LoginScreen() {
-  const [claims, setClaims] = useState<JwtPayload | null>(null);
+  const { isAuthenticated, isLocked, signIn } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getClaims().then(({ data }) => {
-      setClaims(data?.claims ?? null);
-    });
+    if (isAuthenticated && !isLocked) {
+      router.replace('/(app)/floor');
+    }
+  }, [isAuthenticated, isLocked]);
 
-    supabase.auth.onAuthStateChange(() => {
-      supabase.auth.getClaims().then(({ data }) => {
-        setClaims(data?.claims ?? null);
-      });
-    });
-  }, []);
+  async function handleSignIn() {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing info', 'Please enter both email and password.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await signIn(email.trim(), password);
+      router.replace('/(app)/floor');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      Alert.alert('Sign in failed', message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <View className="flex-1 bg-surface">
@@ -32,19 +45,37 @@ export default function LoginScreen() {
           <Text className="mb-6 text-center text-pos-2xl font-bold text-pos-text-strong">
             POS Tempest Login
           </Text>
-          <Auth />
-          {claims && (
-            <View className="mt-4">
-              <Text className="text-pos-sm text-pos-muted">User ID: {claims.sub}</Text>
-              <Pressable
-                className="mt-4 rounded-lg bg-brand p-3"
-                onPress={() => router.replace('/floor')}>
-                <Text className="text-center text-pos-base font-semibold text-white">
-                  Go to Floor Plan
-                </Text>
-              </Pressable>
-            </View>
-          )}
+
+          <Text className="mb-2 text-pos-sm font-semibold text-pos-muted">Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="email@address.com"
+            placeholderTextColor="#94a3b8"
+            className="mb-4 rounded-lg border border-white/10 bg-surface px-4 py-3 text-pos-base text-pos-text-strong"
+          />
+
+          <Text className="mb-2 text-pos-sm font-semibold text-pos-muted">Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            placeholder="Password"
+            placeholderTextColor="#94a3b8"
+            className="mb-6 rounded-lg border border-white/10 bg-surface px-4 py-3 text-pos-base text-pos-text-strong"
+          />
+
+          <Pressable
+            className={`rounded-lg p-3 ${loading ? 'bg-brand/50' : 'bg-brand'}`}
+            onPress={handleSignIn}
+            disabled={loading}>
+            <Text className="text-center text-pos-base font-semibold text-white">
+              {loading ? 'Signing in...' : 'Sign in'}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>

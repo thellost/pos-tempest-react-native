@@ -10,7 +10,7 @@ export const Config = {
   ORDER_PREFIX: 'ORD',
   
   /** Kitchen ticket prefix */
-  TICKET_PREFIX: 'KOT',
+  TICKET_PREFIX: 'TIKET',
   
   /** Max items per order */
   MAX_ORDER_ITEMS: 100,

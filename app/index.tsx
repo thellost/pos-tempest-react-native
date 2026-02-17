@@ -1,4 +1,6 @@
+import { useAuth } from '@/hooks/use-auth';
 import { Redirect } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
 /**
  * Root index - initial route handler.
@@ -6,10 +8,23 @@ import { Redirect } from 'expo-router';
  * Will be updated in Step 3 to check auth state properly.
  */
 export default function Index() {
-  // TODO Step 3: Check if user is authenticated
-  // const { isAuthenticated } = useAuth();
-  // if (isAuthenticated) return <Redirect href="/(app)/floor" />;
-  
-  // For now, show login screen
-  return <Redirect href="/(auth)/login" />;
+  const { loading, isAuthenticated, isLocked } = useAuth();
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (isLocked) {
+    return <Redirect href="/(auth)/pin" />;
+  }
+
+  return <Redirect href="/(app)/floor" />;
 }

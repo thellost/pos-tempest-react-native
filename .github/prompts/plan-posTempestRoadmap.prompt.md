@@ -92,13 +92,10 @@ src/
 **Goal:** Define the local SQLite schema via PowerSync and create the Supabase connector so the app syncs offline-first.
 
 **Actions:**
-- Create `src/db/schema.ts` — define all 27 tables from the ERD as PowerSync `Table` definitions with correct column types. Map enums to `TEXT`, decimals to `REAL`, booleans to `INTEGER`, timestamps to `TEXT`
-- Create `src/db/connector.ts` — implement `PowerSyncBackendConnector` with:
-  - `fetchCredentials()` — get JWT from Supabase session, return PowerSync endpoint + token
-  - `uploadData()` — push local writes to Supabase via `supabase.from('pos_tempest.table').upsert/delete`
+- Create `src/db/schema.ts` — define only the needed tables from the ERD as PowerSync `Table` definitions with correct column types. Map enums to `TEXT`, decimals to `REAL`, booleans to `INTEGER`, timestamps to `TEXT` , for now ive completed that task you can just refactor it to differenty folder structure
 - Create `src/db/provider.tsx` — initialize `PowerSyncDatabase` with the schema, wrap app in `PowerSyncContext.Provider`
-- Create `src/models/` — TypeScript interfaces for every table (strictly typed, matching ERD)
-- Create `src/constants/enums.ts` — all 13 enum types as `const` objects with TypeScript literal types
+- Create `src/models/` — TypeScript interfaces for every table (strictly typed, matching ERD) , refer to the exisiting powersync.ts definition of the each tables
+- Create `src/constants/enums.ts` — all 13 enum types as `const` objects with TypeScript literal types . refer to documentation POS-TEMPEST.SQL
 - Update `app/_layout.tsx` to wrap the app in `<PowerSyncProvider>`
 
 **Verification:** App boots, connects to PowerSync, syncs seed data to local SQLite. Verify with `usePowerSync()` hook + a test query.

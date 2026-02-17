@@ -23,21 +23,21 @@ export default function FloorScreen() {
 
         <Pressable
           className="rounded-xl border border-white/10 bg-surface-soft p-4"
-          onPress={() => router.push({ pathname: '/(app)/kitchen/index' } as any)}>
+          onPress={() => router.push({ pathname: '/(app)/kitchen' } as any)}>
           <Text className="text-pos-lg font-semibold text-pos-text-strong">Kitchen Display</Text>
           <Text className="text-pos-sm text-pos-muted">View active tickets</Text>
         </Pressable>
 
         <Pressable
           className="rounded-xl border border-white/10 bg-surface-soft p-4"
-          onPress={() => router.push({ pathname: '/(app)/shifts/index' } as any)}>
+          onPress={() => router.push({ pathname: '/(app)/shifts' } as any)}>
           <Text className="text-pos-lg font-semibold text-pos-text-strong">Shift Management</Text>
           <Text className="text-pos-sm text-pos-muted">Open/close shift</Text>
         </Pressable>
 
         <Pressable
           className="rounded-xl border border-white/10 bg-surface-soft p-4"
-          onPress={() => router.push({ pathname: '/(app)/settings/index' } as any)}>
+          onPress={() => router.push({ pathname: '/(app)/settings' } as any)}>
           <Text className="text-pos-lg font-semibold text-pos-text-strong">Settings</Text>
           <Text className="text-pos-sm text-pos-muted">Branch & printer config</Text>
         </Pressable>

@@ -81,7 +81,7 @@ export default function ExploreScreen() {
   }, [statusSnapshot, statusSignature]);
 
   const { data: branches } = useQuery<BranchRow>(
-    "SELECT id, name FROM branches WHERE is_active = 'true' ORDER BY id"
+    "SELECT id, name FROM branches WHERE is_active = true ORDER BY id"
   );
 
   const { data: orders } = useQuery<OrderRow>(
