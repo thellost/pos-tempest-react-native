@@ -32,50 +32,49 @@ app/                        ← Expo Router screens only (thin)
     customers/index.tsx     ← Customer lookup
     reports/index.tsx       ← Sales reports
 
-src/
-  db/
-    schema.ts               ← PowerSync table definitions
-    connector.ts            ← Supabase ↔ PowerSync connector
-    provider.tsx            ← PowerSyncDatabase init + React provider
-    migrations/             ← Future local schema migrations
-  models/                   ← TypeScript types mirroring ERD
-    index.ts
-    branch.ts, order.ts, menu-item.ts, ...
-  services/                 ← Business logic (pure functions, testable)
-    order.service.ts
-    payment.service.ts
-    kitchen.service.ts
-    inventory.service.ts
-    shift.service.ts
-    print.service.ts
-  hooks/                    ← React hooks (thin wrappers over services + db)
-    use-auth.ts
-    use-orders.ts
-    use-menu.ts
-    use-tables.ts
-    use-printer.ts
-    use-shift.ts
-  components/               ← Shared reusable UI
-    ui/                     ← Primitives: Button, Card, Badge, Modal, NumPad
-    order/                  ← OrderPanel, OrderItemRow, ModifierPicker
-    menu/                   ← MenuGrid, MenuItemCard, CategoryTabs
-    floor/                  ← TableCard, FloorAreaTabs
-    kitchen/                ← KOTCard, KOTItemRow
-    payment/                ← PaymentMethodSelector, SplitPayment, ChangeCalc
-    print/                  ← ReceiptPreview
-  lib/
-    supabase.ts             ← (existing, keep)
-    powersync.ts            ← PowerSync instance export
-    printer.ts              ← Bluetooth + ESC/POS abstraction
-  utils/
-    currency.ts             ← IDR formatting helpers
-    date.ts                 ← Timezone-aware date helpers (Asia/Jakarta)
-    order-number.ts         ← ORD-YYYYMMDD-XXX generator
-  constants/
-    theme.ts                ← Color constants & dark/light tokens, Toast POS palette
-    global.css              ← Tailwind directives + custom dark theme CSS variables
-    enums.ts                ← Mirrored enums from ERD
-    config.ts               ← App-wide constants (timeouts, limits)
+db/
+  schema.ts               ← PowerSync table definitions
+  connector.ts            ← Supabase ↔ PowerSync connector
+  provider.tsx            ← PowerSyncDatabase init + React provider
+  migrations/             ← Future local schema migrations
+models/                   ← TypeScript types mirroring ERD
+  index.ts
+  branch.ts, order.ts, menu-item.ts, ...
+services/                 ← Business logic (pure functions, testable)
+  order.service.ts
+  payment.service.ts
+  kitchen.service.ts
+  inventory.service.ts
+  shift.service.ts
+  print.service.ts
+hooks/                    ← React hooks (thin wrappers over services + db)
+  use-auth.ts
+  use-orders.ts
+  use-menu.ts
+  use-tables.ts
+  use-printer.ts
+  use-shift.ts
+components/               ← Shared reusable UI
+  ui/                     ← Primitives: Button, Card, Badge, Modal, NumPad
+  order/                  ← OrderPanel, OrderItemRow, ModifierPicker
+  menu/                   ← MenuGrid, MenuItemCard, CategoryTabs
+  floor/                  ← TableCard, FloorAreaTabs
+  kitchen/                ← KOTCard, KOTItemRow
+  payment/                ← PaymentMethodSelector, SplitPayment, ChangeCalc
+  print/                  ← ReceiptPreview
+lib/
+  supabase.ts             ← (existing, keep)
+  powersync.ts            ← PowerSync instance export
+  printer.ts              ← Bluetooth + ESC/POS abstraction
+utils/
+  currency.ts             ← IDR formatting helpers
+  date.ts                 ← Timezone-aware date helpers (Asia/Jakarta)
+  order-number.ts         ← ORD-YYYYMMDD-XXX generator
+constants/
+  theme.ts                ← Color constants & dark/light tokens, Toast POS palette
+  global.css              ← Tailwind directives + custom dark theme CSS variables
+  enums.ts                ← Mirrored enums from ERD
+  config.ts               ← App-wide constants (timeouts, limits)
 ```
 
 **Actions:**

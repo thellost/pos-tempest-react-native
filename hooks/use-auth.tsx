@@ -3,9 +3,22 @@ import { createContext, PropsWithChildren, useCallback, useContext, useEffect, u
 import { AppState, AppStateStatus } from 'react-native';
 
 import { powersync } from '@/db/provider';
+import {
+  AuditEventType,
+  getSafeErrorMessage,
+  logAuditEvent,
+  loginRateLimiter,
+  pinRateLimiter,
+  sanitizeInput,
+  validateEmail,
+  validatePinFormat,
+  validateSession,
+  verifyPin,
+} from '@/lib/security';
 import { supabase } from '@/lib/supabase';
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const MAX_SESSION_DURATION_HOURS = 12;
 
 type UserRow = {
   id: number;
@@ -32,6 +45,12 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isLocked: boolean;
   idleTimeoutMs: number;
+  loginAttempts: number;
+  pinAttempts: number;
+  isLoginLocked: boolean;
+  isPinLocked: boolean;
+  loginResetInMs: number;
+  pinResetInMs: number;
   setIdleTimeoutMs: (value: number) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -68,7 +87,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<UserRow | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [idleTimeoutMs, setIdleTimeoutMs] = useState(DEFAULT_IDLE_TIMEOUT_MS);
+  const [sessionLoginTime, setSessionLoginTime] = useState<number | null>(null);
   const lastActivityRef = useRef(Date.now());
+  
+  // Rate limiting state
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [pinAttempts, setPinAttempts] = useState(0);
+  const [isLoginLocked, setIsLoginLocked] = useState(false);
+  const [isPinLocked, setIsPinLocked] = useState(false);
+  const [loginResetInMs, setLoginResetInMs] = useState(0);
+  const [pinResetInMs, setPinResetInMs] = useState(0);
 
   const refreshProfile = useCallback(async () => {
     const authUserId = session?.user?.id;
@@ -79,6 +107,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const profile = await fetchUserProfile(authUserId);
+    
+    // Security: Validate user is active
+    if (profile && !profile.is_active) {
+      await signOut();
+      throw new Error('Account is inactive. Please contact administrator.');
+    }
+    
+    // Update last login timestamp
+    if (profile) {
+      await powersync.execute(
+        'UPDATE users SET last_login_at = ? WHERE id = ?',
+        [new Date().toISOString(), profile.id],
+      );
+    }
+    
     setUser(profile);
   }, [session?.user?.id]);
 
@@ -92,59 +135,262 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        throw error;
+      // Input validation
+      if (!email || !password) {
+        throw new Error('Email and password are required');
       }
 
-      markActivity();
-      setIsLocked(false);
+      const sanitizedEmail = sanitizeInput(email);
+      
+      if (!validateEmail(sanitizedEmail)) {
+        throw new Error('Invalid email format');
+      }
+
+      // Rate limiting check
+      const rateLimitCheck = loginRateLimiter.check(sanitizedEmail);
+      
+      setLoginAttempts(rateLimitCheck.remainingAttempts);
+      setIsLoginLocked(rateLimitCheck.isLocked);
+      setLoginResetInMs(rateLimitCheck.resetInMs);
+
+      if (!rateLimitCheck.allowed) {
+        const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
+        logAuditEvent({
+          type: AuditEventType.ACCOUNT_LOCKED,
+          metadata: { email: sanitizedEmail, reason: 'Too many login attempts' },
+          timestamp: Date.now(),
+        });
+        throw new Error(`Too many login attempts. Please try again in ${minutes} minutes.`);
+      }
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: sanitizedEmail,
+          password: password,
+        });
+
+        if (error) {
+          // Record failed attempt
+          loginRateLimiter.recordAttempt(sanitizedEmail);
+          const updatedCheck = loginRateLimiter.check(sanitizedEmail);
+          setLoginAttempts(updatedCheck.remainingAttempts);
+          
+          logAuditEvent({
+            type: AuditEventType.LOGIN_FAILED,
+            metadata: { email: sanitizedEmail, error: error.message },
+            timestamp: Date.now(),
+          });
+
+          throw new Error(getSafeErrorMessage(error));
+        }
+
+        // Validate session
+        if (!data.session) {
+          throw new Error('Failed to establish session');
+        }
+
+        const sessionValidation = validateSession(data.session.expires_at);
+        if (!sessionValidation.valid) {
+          throw new Error(sessionValidation.reason || 'Invalid session');
+        }
+
+        // Success - reset rate limiter
+        loginRateLimiter.reset(sanitizedEmail);
+        setLoginAttempts(0);
+        setIsLoginLocked(false);
+        setLoginResetInMs(0);
+        setSessionLoginTime(Date.now());
+
+        logAuditEvent({
+          type: AuditEventType.LOGIN_SUCCESS,
+          userId: data.session.user.id,
+          timestamp: Date.now(),
+        });
+
+        markActivity();
+        setIsLocked(false);
+      } catch (error) {
+        // Update rate limiting state even on errors
+        const updatedCheck = loginRateLimiter.check(sanitizedEmail);
+        setLoginAttempts(updatedCheck.remainingAttempts);
+        setIsLoginLocked(updatedCheck.isLocked);
+        setLoginResetInMs(updatedCheck.resetInMs);
+        throw error;
+      }
     },
     [markActivity],
   );
 
   const signOut = useCallback(async () => {
+    const userId = session?.user?.id;
+    
     const { error } = await supabase.auth.signOut();
 
     if (error) {
       throw error;
     }
 
+    logAuditEvent({
+      type: AuditEventType.LOGOUT,
+      userId,
+      timestamp: Date.now(),
+    });
+
     setUser(null);
     setSession(null);
     setIsLocked(false);
-  }, []);
+    setSessionLoginTime(null);
+    
+    // Reset rate limiting
+    setLoginAttempts(0);
+    setPinAttempts(0);
+    setIsLoginLocked(false);
+    setIsPinLocked(false);
+  }, [session?.user?.id]);
 
   const unlockWithPin = useCallback(
     async (pin: string) => {
       const authUserId = session?.user?.id;
+      const userEmail = session?.user?.email || 'unknown';
 
       if (!authUserId) {
         return false;
       }
 
-      const result = await powersync.getOptional<{ id: number }>(
-        `
-          SELECT id
-          FROM users
-          WHERE supabase_auth_id = ?
-            AND pin_code = ?
-            AND is_active = 1
-          LIMIT 1
-        `,
-        [authUserId, pin],
-      );
-
-      const valid = Boolean(result);
-      if (valid) {
-        setIsLocked(false);
-        markActivity();
+      // Input validation
+      if (!validatePinFormat(pin)) {
+        logAuditEvent({
+          type: AuditEventType.PIN_UNLOCK_FAILED,
+          userId: authUserId,
+          metadata: { reason: 'Invalid PIN format' },
+          timestamp: Date.now(),
+        });
+        return false;
       }
 
-      return valid;
+      // Rate limiting check
+      const rateLimitCheck = pinRateLimiter.check(authUserId);
+      
+      setPinAttempts(rateLimitCheck.remainingAttempts);
+      setIsPinLocked(rateLimitCheck.isLocked);
+      setPinResetInMs(rateLimitCheck.resetInMs);
+
+      if (!rateLimitCheck.allowed) {
+        const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
+        logAuditEvent({
+          type: AuditEventType.ACCOUNT_LOCKED,
+          userId: authUserId,
+          metadata: { reason: `Too many PIN attempts. Locked for ${minutes} minutes` },
+          timestamp: Date.now(),
+        });
+        return false;
+      }
+
+      try {
+        // Fetch user with PIN from database
+        const userWithPin = await powersync.getOptional<{
+          id: number;
+          pin_code: string | null;
+          is_active: number;
+        }>(
+          `
+            SELECT id, pin_code, is_active
+            FROM users
+            WHERE supabase_auth_id = ?
+            LIMIT 1
+          `,
+          [authUserId],
+        );
+
+        // Security checks
+        if (!userWithPin) {
+          pinRateLimiter.recordAttempt(authUserId);
+          logAuditEvent({
+            type: AuditEventType.PIN_UNLOCK_FAILED,
+            userId: authUserId,
+            metadata: { reason: 'User not found' },
+            timestamp: Date.now(),
+          });
+          return false;
+        }
+
+        if (!userWithPin.is_active) {
+          logAuditEvent({
+            type: AuditEventType.PIN_UNLOCK_FAILED,
+            userId: authUserId,
+            metadata: { reason: 'User inactive' },
+            timestamp: Date.now(),
+          });
+          return false;
+        }
+
+        if (!userWithPin.pin_code) {
+          logAuditEvent({
+            type: AuditEventType.PIN_UNLOCK_FAILED,
+            userId: authUserId,
+            metadata: { reason: 'No PIN set' },
+            timestamp: Date.now(),
+          });
+          return false;
+        }
+
+        // Verify PIN (using constant-time comparison via verifyPin)
+        const valid = await verifyPin(pin, userWithPin.pin_code);
+
+        if (!valid) {
+          // Record failed attempt
+          pinRateLimiter.recordAttempt(authUserId);
+          const updatedCheck = pinRateLimiter.check(authUserId);
+          setPinAttempts(updatedCheck.remainingAttempts);
+          
+          logAuditEvent({
+            type: AuditEventType.PIN_UNLOCK_FAILED,
+            userId: authUserId,
+            metadata: { 
+              remainingAttempts: updatedCheck.remainingAttempts,
+              isLocked: updatedCheck.isLocked,
+            },
+            timestamp: Date.now(),
+          });
+          
+          return false;
+        }
+
+        // Success - reset rate limiter
+        pinRateLimiter.reset(authUserId);
+        setPinAttempts(0);
+        setIsPinLocked(false);
+        setPinResetInMs(0);
+        
+        setIsLocked(false);
+        markActivity();
+
+        logAuditEvent({
+          type: AuditEventType.PIN_UNLOCK_SUCCESS,
+          userId: authUserId,
+          timestamp: Date.now(),
+        });
+
+        return true;
+      } catch (error) {
+        // Record attempt even on errors
+        pinRateLimiter.recordAttempt(authUserId);
+        const updatedCheck = pinRateLimiter.check(authUserId);
+        setPinAttempts(updatedCheck.remainingAttempts);
+        setIsPinLocked(updatedCheck.isLocked);
+        setPinResetInMs(updatedCheck.resetInMs);
+        
+        logAuditEvent({
+          type: AuditEventType.PIN_UNLOCK_FAILED,
+          userId: authUserId,
+          metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
+          timestamp: Date.now(),
+        });
+        
+        return false;
+      }
     },
-    [markActivity, session?.user?.id],
+    [markActivity, session?.user?.id, session?.user?.email],
   );
 
   useEffect(() => {
@@ -184,11 +430,49 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    // Check session expiration and maximum session duration
+    const checkSessionValidity = () => {
+      const sessionValidation = validateSession(session.expires_at);
+      
+      if (!sessionValidation.valid) {
+        logAuditEvent({
+          type: AuditEventType.SESSION_EXPIRED,
+          userId: session.user.id,
+          metadata: { reason: sessionValidation.reason },
+          timestamp: Date.now(),
+        });
+        signOut();
+        return;
+      }
+
+      // Check max session duration (force re-login after X hours)
+      if (sessionLoginTime) {
+        const sessionDurationMs = Date.now() - sessionLoginTime;
+        const maxSessionMs = MAX_SESSION_DURATION_HOURS * 60 * 60 * 1000;
+        
+        if (sessionDurationMs > maxSessionMs) {
+          logAuditEvent({
+            type: AuditEventType.SESSION_EXPIRED,
+            userId: session.user.id,
+            metadata: { reason: 'Maximum session duration exceeded' },
+            timestamp: Date.now(),
+          });
+          signOut();
+          return;
+        }
+      }
+    };
+
+    // Check immediately and then every minute
+    checkSessionValidity();
+    const sessionCheckInterval = setInterval(checkSessionValidity, 60 * 1000);
+
     const appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state !== 'active') {
         setIsLocked(true);
       } else {
         markActivity();
+        checkSessionValidity();
       }
     });
 
@@ -206,8 +490,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       appStateSubscription.remove();
       clearInterval(intervalId);
+      clearInterval(sessionCheckInterval);
     };
-  }, [idleTimeoutMs, isLocked, markActivity, session]);
+  }, [idleTimeoutMs, isLocked, markActivity, session, sessionLoginTime, signOut]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -218,6 +503,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthenticated: Boolean(session),
       isLocked,
       idleTimeoutMs,
+      loginAttempts,
+      pinAttempts,
+      isLoginLocked,
+      isPinLocked,
+      loginResetInMs,
+      pinResetInMs,
       setIdleTimeoutMs,
       signIn,
       signOut,
@@ -226,7 +517,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
       markActivity,
       refreshProfile,
     }),
-    [idleTimeoutMs, isLocked, loading, lock, markActivity, refreshProfile, session, signIn, signOut, unlockWithPin, user],
+    [
+      idleTimeoutMs,
+      isLocked,
+      loading,
+      lock,
+      markActivity,
+      refreshProfile,
+      session,
+      signIn,
+      signOut,
+      unlockWithPin,
+      user,
+      loginAttempts,
+      pinAttempts,
+      isLoginLocked,
+      isPinLocked,
+      loginResetInMs,
+      pinResetInMs,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
