@@ -19,6 +19,8 @@ export const Colors = {
     success: '#16A34A',
     warning: '#D97706',
     danger: '#DC2626',
+    white: '#FFFFFF',
+    yellow: '#FACC15',
   },
   dark: {
     text: '#E2E8F0',
@@ -33,6 +35,8 @@ export const Colors = {
     success: '#18A957',
     warning: '#F59E0B',
     danger: '#EF4444',
+    white: '#FFFFFF',
+    yellow: '#FACC15',
   },
 } as const;
 
@@ -41,10 +45,4 @@ export const Brand = {
   primary: '#2A7FFF',
   primaryHover: '#3F8CFF',
   primaryPress: '#1F6AE0',
-} as const;
-
-/** Common UI colors */
-export const UI = {
-  white: '#FFFFFF',
-  yellow: '#FACC15', // For warnings/special actions
 } as const;
