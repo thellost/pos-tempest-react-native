@@ -3,6 +3,7 @@
  * Handles PIN hashing, rate limiting, session validation, and security policies
  */
 
+import { Config } from '@/constants/config';
 import * as Crypto from 'expo-crypto';
 
 // ============================================================================
@@ -201,8 +202,16 @@ class RateLimiter {
 }
 
 // Global rate limiters for different operations
-export const loginRateLimiter = new RateLimiter(5, 15 * 60 * 1000, 30 * 60 * 1000);
-export const pinRateLimiter = new RateLimiter(3, 5 * 60 * 1000, 15 * 60 * 1000);
+export const loginRateLimiter = new RateLimiter(
+  Config.LOGIN_MAX_ATTEMPTS,
+  Config.LOGIN_WINDOW_MS,
+  Config.LOGIN_LOCKOUT_MS,
+);
+export const pinRateLimiter = new RateLimiter(
+  Config.PIN_MAX_ATTEMPTS,
+  Config.PIN_WINDOW_MS,
+  Config.PIN_LOCKOUT_MS,
+);
 
 // ============================================================================
 // SESSION VALIDATION
@@ -235,9 +244,8 @@ export function validateSession(
   // Check last activity (optional)
   if (metadata?.lastActivity) {
     const inactiveForMs = Date.now() - metadata.lastActivity;
-    const maxInactiveMs = 24 * 60 * 60 * 1000; // 24 hours
 
-    if (inactiveForMs > maxInactiveMs) {
+    if (inactiveForMs > Config.MAX_INACTIVE_SESSION_MS) {
       return { valid: false, reason: 'Session inactive too long' };
     }
   }
@@ -410,8 +418,8 @@ export function logAuditEvent(event: AuditEvent): void {
 // CLEANUP SCHEDULER
 // ============================================================================
 
-// Clean up rate limiter entries every 5 minutes
+// Clean up rate limiter entries periodically
 setInterval(() => {
   loginRateLimiter.cleanup();
   pinRateLimiter.cleanup();
-}, 5 * 60 * 1000);
+}, Config.RATE_LIMITER_CLEANUP_INTERVAL_MS);

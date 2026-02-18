@@ -2,6 +2,7 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
+import { Config } from '@/constants/config';
 import { powersync } from '@/db/provider';
 import {
   AuditEventType,
@@ -16,9 +17,6 @@ import {
   verifyPin,
 } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
-
-const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
-const MAX_SESSION_DURATION_HOURS = 12;
 
 type UserRow = {
   id: number;
@@ -86,7 +84,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<UserRow | null>(null);
   const [isLocked, setIsLocked] = useState(false);
-  const [idleTimeoutMs, setIdleTimeoutMs] = useState(DEFAULT_IDLE_TIMEOUT_MS);
+  const [idleTimeoutMs, setIdleTimeoutMs] = useState(Config.IDLE_TIMEOUT_MS);
   const [sessionLoginTime, setSessionLoginTime] = useState<number | null>(null);
   const lastActivityRef = useRef(Date.now());
   
@@ -448,7 +446,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Check max session duration (force re-login after X hours)
       if (sessionLoginTime) {
         const sessionDurationMs = Date.now() - sessionLoginTime;
-        const maxSessionMs = MAX_SESSION_DURATION_HOURS * 60 * 60 * 1000;
+        const maxSessionMs = Config.MAX_SESSION_DURATION_HOURS * 60 * 60 * 1000;
         
         if (sessionDurationMs > maxSessionMs) {
           logAuditEvent({
@@ -465,7 +463,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     // Check immediately and then every minute
     checkSessionValidity();
-    const sessionCheckInterval = setInterval(checkSessionValidity, 60 * 1000);
+    const sessionCheckInterval = setInterval(checkSessionValidity, Config.SESSION_CHECK_INTERVAL_MS);
 
     const appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state !== 'active') {
