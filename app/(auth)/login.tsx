@@ -1,4 +1,4 @@
-import { UI } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -214,7 +214,7 @@ export default function LoginScreen() {
             onPress={handleSignIn}
             disabled={loading || isLoginLocked || !email.trim() || !password.trim()}>
             <View className="flex-row items-center justify-center">
-              {loading && <ActivityIndicator size="small" color={UI.white} className="mr-2" />}
+              {loading && <ActivityIndicator size="small" color={Colors.light.white} className="mr-2" />}
               <Text className="text-center text-pos-base font-semibold text-white">
                 {loading ? 'Signing in...' : isLoginLocked ? 'Locked' : 'Sign in'}
               </Text>
