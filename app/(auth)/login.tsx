@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -103,7 +104,7 @@ export default function LoginScreen() {
     }
   }
 
-  function handleKeyPress() {
+  function onSubmitEditing() {
     if (email.trim() && password.trim() && !loading && !isLoginLocked) {
       handleSignIn();
     }
@@ -185,7 +186,7 @@ export default function LoginScreen() {
               placeholderTextColor="#94a3b8"
               editable={!loading && !isLoginLocked}
               returnKeyType="go"
-              onSubmitEditing={handleKeyPress}
+              onSubmitEditing={onSubmitEditing}
               className={`rounded-lg border px-4 py-3 pr-12 text-pos-base ${
                 isLoginLocked
                   ? 'border-white/5 bg-surface/50 text-pos-muted'
@@ -195,12 +196,13 @@ export default function LoginScreen() {
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading || isLoginLocked}
-              className="absolute right-3 top-3">
+              className="absolute right-3 top-3"
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
               <Text className="text-pos-sm text-pos-muted">
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </Text>
-            </Pressable>
-          </View>
+            </Pressable>          </View>
 
           {/* Sign In Button */}
           <Pressable
@@ -212,7 +214,7 @@ export default function LoginScreen() {
             onPress={handleSignIn}
             disabled={loading || isLoginLocked || !email.trim() || !password.trim()}>
             <View className="flex-row items-center justify-center">
-              {loading && <ActivityIndicator size="small" color="#ffffff" className="mr-2" />}
+              {loading && <ActivityIndicator size="small" color={UI.white} className="mr-2" />}
               <Text className="text-center text-pos-base font-semibold text-white">
                 {loading ? 'Signing in...' : isLoginLocked ? 'Locked' : 'Sign in'}
               </Text>

@@ -18,6 +18,7 @@ export const appSchema = new Schema({
 		avatar_url: column.text,
 		is_active: column.integer,
 		last_login_at: column.text,
+		retry_attempts: column.integer,
 		created_at: column.text,
 		updated_at: column.text,
 	}),

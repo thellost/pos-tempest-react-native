@@ -56,20 +56,22 @@ Step 3 has been successfully implemented with **comprehensive security features*
 - ✅ Error handling
 - ✅ Automatic cleanup
 
-### 3. Security Utilities ([src/lib/security.ts](../src/lib/security.ts))
+### 3. Security Utilities ([lib/security.ts](../lib/security.ts))
 
 #### PIN Security
 - ✅ **SHA-256 hashing** with upgrade path to bcrypt/Argon2
 - ✅ **Constant-time comparison** to prevent timing attacks
 - ✅ Format validation (6 digits only)
 
-#### Rate Limiting
-- ✅ **Generic RateLimiter class** (reusable)
-- ✅ **Per-key tracking** (by email or user ID)
+#### Rate Limiting (DB-Backed)
+- ✅ **DB-backed RateLimiter class** (persistent across restarts)
+- ✅ **Per-user tracking** using retry_attempts column
 - ✅ **Configurable limits**, windows, and lockout durations
-- ✅ **Automatic cleanup** of expired entries
-- ✅ **Lock status checking**
-- ✅ **Remaining attempts tracking**
+- ✅ **Automatic cleanup** via expired lock detection
+- ✅ **Lock status checking** from database
+- ✅ **Remaining attempts tracking** from database
+- ✅ **Multi-instance support** (shared state via database)
+- ✅ **Atomic operations** for consistency
 
 #### Input Validation
 - ✅ Email format validation
@@ -169,13 +171,15 @@ Step 3 has been successfully implemented with **comprehensive security features*
 ## 📋 Files Modified/Created
 
 ### Core Implementation
-1. ✅ [src/lib/security.ts](../src/lib/security.ts) - **NEW** - Security utilities
-2. ✅ [hooks/use-auth.tsx](../hooks/use-auth.tsx) - **ENHANCED** - Auth hook with security
+1. ✅ [lib/security.ts](../lib/security.ts) - **ENHANCED** - DB-backed security utilities
+2. ✅ [hooks/use-auth.tsx](../hooks/use-auth.tsx) - **ENHANCED** - Auth hook with DB-backed rate limiting
 3. ✅ [app/(auth)/login.tsx](../app/(auth)/login.tsx) - **ENHANCED** - Secure login screen
 4. ✅ [app/(auth)/pin.tsx](../app/(auth)/pin.tsx) - **ENHANCED** - Secure PIN screen
 5. ✅ [app/(auth)/_layout.tsx](../app/(auth)/_layout.tsx) - **ENHANCED** - Auth layout with guards
 6. ✅ [app/(app)/_layout.tsx](../app/(app)/_layout.tsx) - **ENHANCED** - App layout with guards
 7. ✅ [app/index.tsx](../app/index.tsx) - **ENHANCED** - Smart routing
+8. ✅ [db/schema.ts](../db/schema.ts) - **ENHANCED** - Added retry_attempts column
+9. ✅ [documentation/POS-TEMPEST.sql](../documentation/POS-TEMPEST.sql) - **ENHANCED** - Added retry_attempts column
 
 ### Migration & Tools
 8. ✅ [src/lib/migrate-pins.ts](../src/lib/migrate-pins.ts) - **NEW** - PIN migration script
@@ -226,14 +230,15 @@ pinRateLimiter = new RateLimiter(3, 5 * 60 * 1000, 15 * 60 * 1000);
 
 ### Current (Production Ready)
 - ✅ SHA-256 PIN hashing
-- ✅ In-memory rate limiting
+- ✅ **Database-backed rate limiting** (supports multi-instance)
+- ✅ **Persistent rate limits** (survives restarts)
 - ✅ Console audit logging (dev)
 
 ### Phase 2 (Recommended for High-Security)
 - [ ] Upgrade to bcrypt/Argon2 via Supabase Edge Functions
-- [ ] Redis-backed rate limiting (for multi-device)
-- [ ] Database-backed audit logging
+- [ ] Database-backed audit logging (currently console in dev)
 - [ ] Biometric authentication option
+- [ ] Enhanced session anomaly detection
 
 ### Phase 3 (Enterprise)
 - [ ] Hardware Security Modules (HSM)
@@ -268,7 +273,7 @@ pinRateLimiter = new RateLimiter(3, 5 * 60 * 1000, 15 * 60 * 1000);
 
 ### Security Considerations
 1. **PIN Storage**: PINs are hashed with SHA-256. For production, consider upgrading to bcrypt or Argon2 via Supabase Edge Functions.
-2. **Rate Limiting**: Currently in-memory. For multi-device deployments, consider Redis-backed rate limiting.
+2. **Rate Limiting**: **Database-backed** using retry_attempts column - supports multi-instance deployments and persists across restarts.
 3. **Audit Logs**: Currently console-only in dev. Implement database persistence for production.
 4. **Session Storage**: Sessions are managed by Supabase Auth. Ensure proper RLS policies.
 

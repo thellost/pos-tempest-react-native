@@ -121,10 +121,11 @@ CREATE TABLE "users" (
   "name" varchar(100) NOT NULL,
   "email" varchar(255) UNIQUE,
   "phone" varchar(20),
-  "pin_code" varchar(6),
+  "pin_code" TEXT,
   "avatar_url" varchar(500),
   "is_active" boolean NOT NULL DEFAULT true,
   "last_login_at" timestamp,
+  "retry_attempts" bigint NOT NULL DEFAULT 0,
   "created_at" timestamp NOT NULL DEFAULT (now()),
   "updated_at" timestamp NOT NULL DEFAULT (now())
 );

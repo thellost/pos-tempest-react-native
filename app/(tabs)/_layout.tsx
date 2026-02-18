@@ -6,13 +6,17 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
+import { ActivityIndicator, View } from 'react-native';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { loading, isAuthenticated, isLocked } = useAuth();
 
   if (loading) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   if (!isAuthenticated) {

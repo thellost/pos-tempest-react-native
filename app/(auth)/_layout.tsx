@@ -1,3 +1,4 @@
+import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -16,7 +17,7 @@ export default function AuthLayout() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color={Brand.primary} />
         <Text className="mt-4 text-pos-sm text-pos-muted">Loading...</Text>
       </View>
     );

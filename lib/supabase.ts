@@ -5,7 +5,7 @@ import 'react-native-url-polyfill/auto'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
-
+// Enforce minimum 5000ms lock timeout to prevent race conditions during auth token refresh
 const lock: typeof processLock = (name, acquireTimeout, fn) => {
   return processLock(name, Math.max(acquireTimeout, 5000), fn)
 }

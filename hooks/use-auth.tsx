@@ -52,7 +52,12 @@ type AuthContextValue = {
   setIdleTimeoutMs: (value: number) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  unlockWithPin: (pin: string) => Promise<boolean>;
+  unlockWithPin: (pin: string) => Promise<{
+    success: boolean;
+    isLocked: boolean;
+    remainingAttempts: number;
+    resetInMs: number;
+  }>;
   lock: () => void;
   markActivity: () => void;
   refreshProfile: () => Promise<void>;
@@ -144,8 +149,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw new Error('Invalid email format');
       }
 
-      // Rate limiting check
-      const rateLimitCheck = loginRateLimiter.check(sanitizedEmail);
+      // Fetch user ID for DB-backed rate limiting
+      const userRow = await powersync.getOptional<{ id: number; retry_attempts: number }>(
+        'SELECT id, retry_attempts FROM users WHERE email = ? LIMIT 1',
+        [sanitizedEmail],
+      );
+
+      if (!userRow) {
+        // User doesn't exist - but don't reveal this for security
+        throw new Error('Invalid email or password');
+      }
+
+      // Rate limiting check (DB-backed)
+      const rateLimitCheck = await loginRateLimiter.check(userRow.id, powersync);
       
       setLoginAttempts(rateLimitCheck.remainingAttempts);
       setIsLoginLocked(rateLimitCheck.isLocked);
@@ -168,10 +184,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
-          // Record failed attempt
-          loginRateLimiter.recordAttempt(sanitizedEmail);
-          const updatedCheck = loginRateLimiter.check(sanitizedEmail);
+          // Record failed attempt (DB-backed)
+          await loginRateLimiter.recordAttempt(userRow.id, powersync);
+          const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
           setLoginAttempts(updatedCheck.remainingAttempts);
+          setIsLoginLocked(updatedCheck.isLocked);
+          setLoginResetInMs(updatedCheck.resetInMs);
           
           logAuditEvent({
             type: AuditEventType.LOGIN_FAILED,
@@ -192,8 +210,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           throw new Error(sessionValidation.reason || 'Invalid session');
         }
 
-        // Success - reset rate limiter
-        loginRateLimiter.reset(sanitizedEmail);
+        // Success - reset rate limiter (DB-backed)
+        await loginRateLimiter.reset(userRow.id, powersync);
         setLoginAttempts(0);
         setIsLoginLocked(false);
         setLoginResetInMs(0);
@@ -208,11 +226,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         markActivity();
         setIsLocked(false);
       } catch (error) {
-        // Update rate limiting state even on errors
-        const updatedCheck = loginRateLimiter.check(sanitizedEmail);
-        setLoginAttempts(updatedCheck.remainingAttempts);
-        setIsLoginLocked(updatedCheck.isLocked);
-        setLoginResetInMs(updatedCheck.resetInMs);
+        // Update rate limiting state even on errors (DB-backed)
+        if (userRow) {
+          const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
+          setLoginAttempts(updatedCheck.remainingAttempts);
+          setIsLoginLocked(updatedCheck.isLocked);
+          setLoginResetInMs(updatedCheck.resetInMs);
+        }
         throw error;
       }
     },
@@ -224,15 +244,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     
     const { error } = await supabase.auth.signOut();
 
-    if (error) {
-      throw error;
-    }
-
     logAuditEvent({
       type: AuditEventType.LOGOUT,
       userId,
       timestamp: Date.now(),
     });
+
+    if (error) {
+      throw error;
+    }
+
+    
 
     setUser(null);
     setSession(null);
@@ -249,10 +271,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const unlockWithPin = useCallback(
     async (pin: string) => {
       const authUserId = session?.user?.id;
-      const userEmail = session?.user?.email || 'unknown';
 
       if (!authUserId) {
-        return false;
+        return {
+          success: false,
+          isLocked: isPinLocked,
+          remainingAttempts: pinAttempts,
+          resetInMs: pinResetInMs,
+        };
       }
 
       // Input validation
@@ -263,25 +289,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           metadata: { reason: 'Invalid PIN format' },
           timestamp: Date.now(),
         });
-        return false;
-      }
-
-      // Rate limiting check
-      const rateLimitCheck = pinRateLimiter.check(authUserId);
-      
-      setPinAttempts(rateLimitCheck.remainingAttempts);
-      setIsPinLocked(rateLimitCheck.isLocked);
-      setPinResetInMs(rateLimitCheck.resetInMs);
-
-      if (!rateLimitCheck.allowed) {
-        const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
-        logAuditEvent({
-          type: AuditEventType.ACCOUNT_LOCKED,
-          userId: authUserId,
-          metadata: { reason: `Too many PIN attempts. Locked for ${minutes} minutes` },
-          timestamp: Date.now(),
-        });
-        return false;
+        return {
+          success: false,
+          isLocked: isPinLocked,
+          remainingAttempts: pinAttempts,
+          resetInMs: pinResetInMs,
+        };
       }
 
       try {
@@ -290,9 +303,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           id: number;
           pin_code: string | null;
           is_active: number;
+          retry_attempts: number;
         }>(
           `
-            SELECT id, pin_code, is_active
+            SELECT id, pin_code, is_active, retry_attempts
             FROM users
             WHERE supabase_auth_id = ?
             LIMIT 1
@@ -302,14 +316,41 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         // Security checks
         if (!userWithPin) {
-          pinRateLimiter.recordAttempt(authUserId);
           logAuditEvent({
             type: AuditEventType.PIN_UNLOCK_FAILED,
             userId: authUserId,
             metadata: { reason: 'User not found' },
             timestamp: Date.now(),
           });
-          return false;
+          return {
+            success: false,
+            isLocked: false,
+            remainingAttempts: 0,
+            resetInMs: 0,
+          };
+        }
+
+        // Rate limiting check (DB-backed)
+        const rateLimitCheck = await pinRateLimiter.check(userWithPin.id, powersync);
+        
+        setPinAttempts(rateLimitCheck.remainingAttempts);
+        setIsPinLocked(rateLimitCheck.isLocked);
+        setPinResetInMs(rateLimitCheck.resetInMs);
+
+        if (!rateLimitCheck.allowed) {
+          const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
+          logAuditEvent({
+            type: AuditEventType.ACCOUNT_LOCKED,
+            userId: authUserId,
+            metadata: { reason: `Too many PIN attempts. Locked for ${minutes} minutes` },
+            timestamp: Date.now(),
+          });
+          return {
+            success: false,
+            isLocked: rateLimitCheck.isLocked,
+            remainingAttempts: rateLimitCheck.remainingAttempts,
+            resetInMs: rateLimitCheck.resetInMs,
+          };
         }
 
         if (!userWithPin.is_active) {
@@ -319,7 +360,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
             metadata: { reason: 'User inactive' },
             timestamp: Date.now(),
           });
-          return false;
+          return {
+            success: false,
+            isLocked: rateLimitCheck.isLocked,
+            remainingAttempts: rateLimitCheck.remainingAttempts,
+            resetInMs: rateLimitCheck.resetInMs,
+          };
         }
 
         if (!userWithPin.pin_code) {
@@ -329,17 +375,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
             metadata: { reason: 'No PIN set' },
             timestamp: Date.now(),
           });
-          return false;
+          return {
+            success: false,
+            isLocked: rateLimitCheck.isLocked,
+            remainingAttempts: rateLimitCheck.remainingAttempts,
+            resetInMs: rateLimitCheck.resetInMs,
+          };
         }
 
         // Verify PIN (using constant-time comparison via verifyPin)
         const valid = await verifyPin(pin, userWithPin.pin_code);
 
         if (!valid) {
-          // Record failed attempt
-          pinRateLimiter.recordAttempt(authUserId);
-          const updatedCheck = pinRateLimiter.check(authUserId);
+          // Record failed attempt (DB-backed)
+          await pinRateLimiter.recordAttempt(userWithPin.id, powersync);
+          const updatedCheck = await pinRateLimiter.check(userWithPin.id, powersync);
           setPinAttempts(updatedCheck.remainingAttempts);
+          setIsPinLocked(updatedCheck.isLocked);
+          setPinResetInMs(updatedCheck.resetInMs);
           
           logAuditEvent({
             type: AuditEventType.PIN_UNLOCK_FAILED,
@@ -351,11 +404,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
             timestamp: Date.now(),
           });
           
-          return false;
+          return {
+            success: false,
+            isLocked: updatedCheck.isLocked,
+            remainingAttempts: updatedCheck.remainingAttempts,
+            resetInMs: updatedCheck.resetInMs,
+          };
         }
 
-        // Success - reset rate limiter
-        pinRateLimiter.reset(authUserId);
+        // Success - reset rate limiter (DB-backed)
+        await pinRateLimiter.reset(userWithPin.id, powersync);
         setPinAttempts(0);
         setIsPinLocked(false);
         setPinResetInMs(0);
@@ -369,15 +427,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
           timestamp: Date.now(),
         });
 
-        return true;
+        return {
+          success: true,
+          isLocked: false,
+          remainingAttempts: 0,
+          resetInMs: 0,
+        };
       } catch (error) {
-        // Record attempt even on errors
-        pinRateLimiter.recordAttempt(authUserId);
-        const updatedCheck = pinRateLimiter.check(authUserId);
-        setPinAttempts(updatedCheck.remainingAttempts);
-        setIsPinLocked(updatedCheck.isLocked);
-        setPinResetInMs(updatedCheck.resetInMs);
-        
         logAuditEvent({
           type: AuditEventType.PIN_UNLOCK_FAILED,
           userId: authUserId,
@@ -385,7 +441,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           timestamp: Date.now(),
         });
         
-        return false;
+        return {
+          success: false,
+          isLocked: isPinLocked,
+          remainingAttempts: pinAttempts,
+          resetInMs: pinResetInMs,
+        };
       }
     },
     [markActivity, session?.user?.id, session?.user?.email],

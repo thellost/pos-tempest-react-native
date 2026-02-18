@@ -1,3 +1,4 @@
+import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -11,13 +12,13 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
  * - Session validation
  */
 export default function AppLayout() {
-  const { loading, isAuthenticated, isLocked, markActivity, user } = useAuth();
+  const { loading, isAuthenticated, isLocked, markActivity, user, signOut } = useAuth();
 
   // Show loading while checking session
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color={Brand.primary} />
         <Text className="mt-4 text-pos-sm text-pos-muted">Loading...</Text>
       </View>
     );
@@ -62,9 +63,16 @@ export default function AppLayout() {
         <Text className="mb-4 text-center text-pos-lg font-semibold text-pos-text-strong">
           Account Inactive
         </Text>
-        <Text className="text-center text-pos-sm text-pos-muted">
+        <Text className="mb-6 text-center text-pos-sm text-pos-muted">
           Your account has been deactivated. Please contact your administrator.
         </Text>
+        <Pressable
+          className="rounded-lg border border-white/10 bg-surface-soft px-6 py-3"
+          onPress={async () => {
+            await signOut();
+          }}>
+          <Text className="text-pos-base font-semibold text-pos-text-strong">Sign Out</Text>
+        </Pressable>
       </View>
     );
   }

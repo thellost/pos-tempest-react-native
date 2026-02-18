@@ -1,3 +1,4 @@
+import { UI } from '@/constants/theme';
 import { runPinMigration } from '@/lib/migrate-pins';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -77,7 +78,7 @@ export default function FloorScreen() {
                 {migrating ? 'Running...' : 'One-time setup (remove after)'}
               </Text>
             </View>
-            {migrating && <ActivityIndicator color="#facc15" />}
+            {migrating && <ActivityIndicator color={UI.yellow} />}
           </View>
         </Pressable>
       </View>

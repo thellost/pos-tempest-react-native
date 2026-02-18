@@ -20,11 +20,9 @@
 - [ ] **RLS Enabled**: Row Level Security enabled on all tables
 - [ ] **RLS Policies**: Policies configured for users, orders, etc.
 - [ ] **Auth Settings**: Email confirmation required (if applicable)
-- [ ] **Password Policy**: Minimum 6 characters enforced
-- [ ] **API Keys**: Anon key is not leaked in client code
+- [ ] **Password Policy**: Minimum 8 characters enforced (12+ recommended)- [ ] **API Keys**: Anon key is not leaked in client code
 - [ ] **Service Role**: Service role key never exposed to client
-- [ ] **JWT Expiry**: Session expiry time configured (default: 1 week)
-
+- [ ] **JWT Expiry**: Session expiry time configured to 12 hours (matches session timeout requirement)
 ### Database Security
 - [ ] **User Permissions**: Database users have minimal required permissions
 - [ ] **Foreign Keys**: All foreign key constraints in place

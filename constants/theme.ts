@@ -42,3 +42,9 @@ export const Brand = {
   primaryHover: '#3F8CFF',
   primaryPress: '#1F6AE0',
 } as const;
+
+/** Common UI colors */
+export const UI = {
+  white: '#FFFFFF',
+  yellow: '#FACC15', // For warnings/special actions
+} as const;

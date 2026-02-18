@@ -1,3 +1,4 @@
+import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -77,14 +78,15 @@ export default function PinScreen() {
       setLoading(true);
       setError(null);
       
-      const ok = await unlockWithPin(candidate);
+      const result = await unlockWithPin(candidate);
 
-      if (!ok) {
-        if (isPinLocked) {
-          const minutes = Math.ceil(pinResetInMs / 60000);
+      if (!result.success) {
+        // Use fresh state from the returned object, not stale hook values
+        if (result.isLocked) {
+          const minutes = Math.ceil(result.resetInMs / 60000);
           setError(`Too many attempts. Locked for ${minutes} minutes.`);
-        } else if (pinAttempts > 0) {
-          setError(`Wrong PIN. ${pinAttempts} ${pinAttempts === 1 ? 'attempt' : 'attempts'} left.`);
+        } else if (result.remainingAttempts > 0) {
+          setError(`Wrong PIN. ${result.remainingAttempts} ${result.remainingAttempts === 1 ? 'attempt' : 'attempts'} left.`);
         } else {
           setError('Wrong PIN. Try again.');
         }
@@ -138,11 +140,10 @@ export default function PinScreen() {
     try {
       await signOut();
       router.replace('/(auth)/login');
-    } catch (error) {
+    } catch (err) {
       setError('Sign out failed. Try again.');
     }
   }
-
   const formatLockTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -195,7 +196,7 @@ export default function PinScreen() {
             : 'border-white/10 bg-surface'
         }`}>
           <View className="flex-row items-center justify-center">
-            {loading && <ActivityIndicator size="small" color="#3b82f6" className="mr-2" />}
+            {loading && <ActivityIndicator size="small" color={Brand.primary} className="mr-2" />}
             <Text className={`text-center text-pos-xl tracking-[10px] ${
               isPinLocked 
                 ? 'text-red-400' 

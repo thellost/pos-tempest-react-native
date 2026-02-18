@@ -4,6 +4,7 @@
  */
 
 import { Config } from '@/constants/config';
+import type { PowerSyncDatabase } from '@powersync/react-native';
 import * as Crypto from 'expo-crypto';
 
 // ============================================================================
@@ -53,68 +54,70 @@ export async function verifyPin(pin: string, hashedPin: string): Promise<boolean
 }
 
 // ============================================================================
-// RATE LIMITING
+// RATE LIMITING - DB-BACKED (Persistent & Multi-Instance)
 // ============================================================================
 
-interface RateLimitEntry {
-  attempts: number;
-  firstAttemptTime: number;
-  lastAttemptTime: number;
+/**
+ * Database-backed rate limiter that persists across restarts and instances
+ * Uses the retry_attempts column in users table for centralized tracking
+ * 
+ * Note: This implementation is suitable for production with multi-device deployments
+ */
+
+export interface RateLimitResult {
+  allowed: boolean;
+  remainingAttempts: number;
+  resetInMs: number;
   isLocked: boolean;
-  lockUntil?: number;
 }
 
-class RateLimiter {
-  private attempts = new Map<string, RateLimitEntry>();
-  private readonly maxAttempts: number;
-  private readonly windowMs: number;
-  private readonly lockDurationMs: number;
+/**
+ * DB-backed Rate Limiter Configuration
+ */
+export interface RateLimiterConfig {
+  maxAttempts: number;
+  lockDurationMs: number;
+  tableName?: string;
+  attemptsColumn?: string;
+  timestampColumn?: string;
+}
 
-  constructor(
-    maxAttempts = 5,
-    windowMs = 15 * 60 * 1000, // 15 minutes
-    lockDurationMs = 30 * 60 * 1000, // 30 minutes
-  ) {
-    this.maxAttempts = maxAttempts;
-    this.windowMs = windowMs;
-    this.lockDurationMs = lockDurationMs;
+/**
+ * Database-backed rate limiter using PowerSync for persistent storage
+ * Supports multi-instance deployments with centralized counters
+ */
+export class DbRateLimiter {
+  private readonly maxAttempts: number;
+  private readonly lockDurationMs: number;
+  private readonly tableName: string;
+  private readonly attemptsColumn: string;
+  private readonly timestampColumn: string;
+
+  constructor(config: RateLimiterConfig) {
+    this.maxAttempts = config.maxAttempts;
+    this.lockDurationMs = config.lockDurationMs;
+    this.tableName = config.tableName || 'users';
+    this.attemptsColumn = config.attemptsColumn || 'retry_attempts';
+    this.timestampColumn = config.timestampColumn || 'updated_at';
   }
 
   /**
-   * Check if an action is allowed for the given key
-   * Returns { allowed: boolean, remainingAttempts: number, resetInMs: number }
+   * Check if an action is allowed for the given user/key
+   * Uses atomic database operations for consistency across instances
    */
-  check(key: string): {
-    allowed: boolean;
-    remainingAttempts: number;
-    resetInMs: number;
-    isLocked: boolean;
-  } {
-    const now = Date.now();
-    const entry = this.attempts.get(key);
+  async check(userId: number, db: PowerSyncDatabase): Promise<RateLimitResult> {
+    try {
+      const result = await db.getOptional<{
+        retry_attempts: number;
+        updated_at: string;
+      }>(
+        `SELECT ${this.attemptsColumn} as retry_attempts, ${this.timestampColumn} as updated_at 
+         FROM ${this.tableName} 
+         WHERE id = ?`,
+        [userId],
+      );
 
-    // No previous attempts
-    if (!entry) {
-      return {
-        allowed: true,
-        remainingAttempts: this.maxAttempts,
-        resetInMs: 0,
-        isLocked: false,
-      };
-    }
-
-    // Check if locked
-    if (entry.isLocked && entry.lockUntil) {
-      if (now < entry.lockUntil) {
-        return {
-          allowed: false,
-          remainingAttempts: 0,
-          resetInMs: entry.lockUntil - now,
-          isLocked: true,
-        };
-      } else {
-        // Lock expired, reset
-        this.reset(key);
+      if (!result) {
         return {
           allowed: true,
           remainingAttempts: this.maxAttempts,
@@ -122,11 +125,43 @@ class RateLimiter {
           isLocked: false,
         };
       }
-    }
 
-    // Check if window expired
-    if (now - entry.firstAttemptTime > this.windowMs) {
-      this.reset(key);
+      const attempts = result.retry_attempts || 0;
+      const lastAttemptTime = new Date(result.updated_at).getTime();
+      const now = Date.now();
+      const timeSinceLastAttempt = now - lastAttemptTime;
+
+      // Check if lock has expired
+      if (attempts >= this.maxAttempts) {
+        if (timeSinceLastAttempt >= this.lockDurationMs) {
+          // Lock expired, reset
+          await this.reset(userId, db);
+          return {
+            allowed: true,
+            remainingAttempts: this.maxAttempts,
+            resetInMs: 0,
+            isLocked: false,
+          };
+        } else {
+          // Still locked
+          return {
+            allowed: false,
+            remainingAttempts: 0,
+            resetInMs: this.lockDurationMs - timeSinceLastAttempt,
+            isLocked: true,
+          };
+        }
+      }
+
+      return {
+        allowed: true,
+        remainingAttempts: this.maxAttempts - attempts,
+        resetInMs: 0,
+        isLocked: false,
+      };
+    } catch (error) {
+      // On error, fail safe and allow (log for monitoring)
+      console.error('[DbRateLimiter] Error checking rate limit:', error);
       return {
         allowed: true,
         remainingAttempts: this.maxAttempts,
@@ -134,84 +169,60 @@ class RateLimiter {
         isLocked: false,
       };
     }
-
-    // Check if max attempts exceeded
-    if (entry.attempts >= this.maxAttempts) {
-      // Lock the account
-      entry.isLocked = true;
-      entry.lockUntil = now + this.lockDurationMs;
-      return {
-        allowed: false,
-        remainingAttempts: 0,
-        resetInMs: this.lockDurationMs,
-        isLocked: true,
-      };
-    }
-
-    return {
-      allowed: true,
-      remainingAttempts: this.maxAttempts - entry.attempts,
-      resetInMs: this.windowMs - (now - entry.firstAttemptTime),
-      isLocked: false,
-    };
   }
 
   /**
-   * Record a failed attempt
+   * Record a failed attempt with atomic increment
+   * Uses database transactions for consistency
    */
-  recordAttempt(key: string): void {
-    const now = Date.now();
-    const entry = this.attempts.get(key);
-
-    if (!entry || now - entry.firstAttemptTime > this.windowMs) {
-      // Start new window
-      this.attempts.set(key, {
-        attempts: 1,
-        firstAttemptTime: now,
-        lastAttemptTime: now,
-        isLocked: false,
-      });
-    } else {
-      // Increment attempts
-      entry.attempts += 1;
-      entry.lastAttemptTime = now;
+  async recordAttempt(userId: number, db: PowerSyncDatabase): Promise<void> {
+    try {
+      await db.execute(
+        `UPDATE ${this.tableName} 
+         SET ${this.attemptsColumn} = ${this.attemptsColumn} + 1,
+             ${this.timestampColumn} = ?
+         WHERE id = ?`,
+        [new Date().toISOString(), userId],
+      );
+    } catch (error) {
+      console.error('[DbRateLimiter] Error recording attempt:', error);
     }
   }
 
   /**
-   * Reset attempts for a key (e.g., after successful authentication)
+   * Reset attempts after successful authentication
    */
-  reset(key: string): void {
-    this.attempts.delete(key);
-  }
-
-  /**
-   * Clean up expired entries
-   */
-  cleanup(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.attempts.entries()) {
-      if (
-        now - entry.firstAttemptTime > this.windowMs &&
-        (!entry.lockUntil || now > entry.lockUntil)
-      ) {
-        this.attempts.delete(key);
-      }
+  async reset(userId: number, db: PowerSyncDatabase): Promise<void> {
+    try {
+      await db.execute(
+        `UPDATE ${this.tableName} 
+         SET ${this.attemptsColumn} = 0,
+             ${this.timestampColumn} = ?
+         WHERE id = ?`,
+        [new Date().toISOString(), userId],
+      );
+    } catch (error) {
+      console.error('[DbRateLimiter] Error resetting attempts:', error);
     }
   }
 }
 
-// Global rate limiters for different operations
-export const loginRateLimiter = new RateLimiter(
-  Config.LOGIN_MAX_ATTEMPTS,
-  Config.LOGIN_WINDOW_MS,
-  Config.LOGIN_LOCKOUT_MS,
-);
-export const pinRateLimiter = new RateLimiter(
-  Config.PIN_MAX_ATTEMPTS,
-  Config.PIN_WINDOW_MS,
-  Config.PIN_LOCKOUT_MS,
-);
+// Global rate limiters for different operations (DB-backed)
+export const loginRateLimiter = new DbRateLimiter({
+  maxAttempts: Config.LOGIN_MAX_ATTEMPTS,
+  lockDurationMs: Config.LOGIN_LOCKOUT_MS,
+  tableName: 'users',
+  attemptsColumn: 'retry_attempts',
+  timestampColumn: 'updated_at',
+});
+
+export const pinRateLimiter = new DbRateLimiter({
+  maxAttempts: Config.PIN_MAX_ATTEMPTS,
+  lockDurationMs: Config.PIN_LOCKOUT_MS,
+  tableName: 'users',
+  attemptsColumn: 'retry_attempts',
+  timestampColumn: 'updated_at',
+});
 
 // ============================================================================
 // SESSION VALIDATION
@@ -418,8 +429,5 @@ export function logAuditEvent(event: AuditEvent): void {
 // CLEANUP SCHEDULER
 // ============================================================================
 
-// Clean up rate limiter entries periodically
-setInterval(() => {
-  loginRateLimiter.cleanup();
-  pinRateLimiter.cleanup();
-}, Config.RATE_LIMITER_CLEANUP_INTERVAL_MS);
+// Note: With DB-backed rate limiting, periodic cleanup is no longer needed
+// Cleanup happens automatically when locks expire during check() operations

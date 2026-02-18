@@ -14,19 +14,27 @@ export const powersync = new PowerSyncDatabase({
 
 let initialized = false;
 let connected = false;
+let initPromise: Promise<void> | null = null;
 
 export async function initializePowerSync() {
-	if (!initialized) {
-		await powersync.init();
-		initialized = true;
+	if (initPromise) {
+		return initPromise;
 	}
 
-	if (!connected && process.env.EXPO_PUBLIC_POWERSYNC_URL) {
-		await powersync.connect(powerSyncConnector);
-		connected = true;
-	}
+	initPromise = (async () => {
+		if (!initialized) {
+			await powersync.init();
+			initialized = true;
+		}
+
+		if (!connected && process.env.EXPO_PUBLIC_POWERSYNC_URL) {
+			await powersync.connect(powerSyncConnector);
+			connected = true;
+		}
+	})();
+
+	return initPromise;
 }
-
 export function PowerSyncProvider({ children }: PropsWithChildren) {
 	const [ready, setReady] = useState(false);
 	const [error, setError] = useState<string | null>(null);

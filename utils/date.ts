@@ -3,12 +3,11 @@
  */
 
 /**
- * Get current timestamp in Asia/Jakarta timezone.
+ * Get the current date/time as a Date object.
  */
 export function now(): Date {
   return new Date();
 }
-
 /**
  * Format date for display.
  * @example formatDate(new Date()) // "16 Feb 2026, 14:30"

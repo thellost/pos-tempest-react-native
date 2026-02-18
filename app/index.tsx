@@ -1,3 +1,4 @@
+import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -17,7 +18,7 @@ export default function Index() {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
         <View className="items-center">
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color={Brand.primary} />
           <Text className="mt-4 text-pos-base text-pos-muted">Initializing...</Text>
         </View>
       </View>
