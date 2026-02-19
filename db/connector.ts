@@ -9,31 +9,20 @@ function getPowerSyncEndpoint() {
 
 export const powerSyncConnector: PowerSyncBackendConnector = {
 	fetchCredentials: async () => {
+		const session = await supabase.auth.getSession();
+  
+		if (!session.data.session) {
+			throw new Error('Could not fetch credentials');
+		}
+
 		const endpoint = getPowerSyncEndpoint();
-		const explicitToken = process.env.EXPO_PUBLIC_POWERSYNC_TOKEN;
-
 		if (!endpoint) {
-			return null;
-		}
-
-		if (explicitToken && explicitToken.trim().length > 0) {
-			return {
-				endpoint,
-				token: explicitToken,
-			};
-		}
-
-		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-
-		if (!session?.access_token) {
-			return null;
+			throw new Error('PowerSync endpoint not configured');
 		}
 
 		return {
 			endpoint,
-			token: session.access_token,
+			token: session.data.session.access_token,
 		};
 	},
 

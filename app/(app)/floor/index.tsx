@@ -1,8 +1,7 @@
-import { Colors } from '@/constants/theme';
 import { runPinMigration } from '@/lib/migrate-pins';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 /**
  * Floor & Table Management screen.
@@ -66,21 +65,6 @@ export default function FloorScreen() {
           <Text className="text-pos-sm text-pos-muted">PowerSync status</Text>
         </Pressable>
 
-        {/* TEMPORARY: PIN Migration Button - Remove after migration */}
-        <Pressable
-          className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4"
-          onPress={handleMigration}
-          disabled={migrating}>
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-pos-lg font-semibold text-yellow-400">🔐 Migrate PINs</Text>
-              <Text className="text-pos-sm text-yellow-300/70">
-                {migrating ? 'Running...' : 'One-time setup (remove after)'}
-              </Text>
-            </View>
-            {migrating && <ActivityIndicator color={Colors.light.yellow} />}
-          </View>
-        </Pressable>
       </View>
     </ScrollView>
   );

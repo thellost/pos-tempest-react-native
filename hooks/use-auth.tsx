@@ -149,32 +149,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw new Error('Invalid email format');
       }
 
-      // Fetch user ID for DB-backed rate limiting
+      // Best-effort local rate limiting (PowerSync may not have synced this user yet)
       const userRow = await powersync.getOptional<{ id: number; retry_attempts: number }>(
         'SELECT id, retry_attempts FROM users WHERE email = ? LIMIT 1',
         [sanitizedEmail],
       );
 
-      if (!userRow) {
-        // User doesn't exist - but don't reveal this for security
-        throw new Error('Invalid email or password');
-      }
+      if (userRow) {
+        const rateLimitCheck = await loginRateLimiter.check(userRow.id, powersync);
 
-      // Rate limiting check (DB-backed)
-      const rateLimitCheck = await loginRateLimiter.check(userRow.id, powersync);
-      
-      setLoginAttempts(rateLimitCheck.remainingAttempts);
-      setIsLoginLocked(rateLimitCheck.isLocked);
-      setLoginResetInMs(rateLimitCheck.resetInMs);
+        setLoginAttempts(rateLimitCheck.remainingAttempts);
+        setIsLoginLocked(rateLimitCheck.isLocked);
+        setLoginResetInMs(rateLimitCheck.resetInMs);
 
-      if (!rateLimitCheck.allowed) {
-        const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
-        logAuditEvent({
-          type: AuditEventType.ACCOUNT_LOCKED,
-          metadata: { email: sanitizedEmail, reason: 'Too many login attempts' },
-          timestamp: Date.now(),
-        });
-        throw new Error(`Too many login attempts. Please try again in ${minutes} minutes.`);
+        if (!rateLimitCheck.allowed) {
+          const minutes = Math.ceil(rateLimitCheck.resetInMs / 60000);
+          logAuditEvent({
+            type: AuditEventType.ACCOUNT_LOCKED,
+            metadata: { email: sanitizedEmail, reason: 'Too many login attempts' },
+            timestamp: Date.now(),
+          });
+          throw new Error(`Too many login attempts. Please try again in ${minutes} minutes.`);
+        }
       }
 
       try {
@@ -184,12 +180,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
-          // Record failed attempt (DB-backed)
-          await loginRateLimiter.recordAttempt(userRow.id, powersync);
-          const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
-          setLoginAttempts(updatedCheck.remainingAttempts);
-          setIsLoginLocked(updatedCheck.isLocked);
-          setLoginResetInMs(updatedCheck.resetInMs);
+          // Record failed attempt (DB-backed) if local user exists
+          if (userRow) {
+            await loginRateLimiter.recordAttempt(userRow.id, powersync);
+            const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
+            setLoginAttempts(updatedCheck.remainingAttempts);
+            setIsLoginLocked(updatedCheck.isLocked);
+            setLoginResetInMs(updatedCheck.resetInMs);
+          }
           
           logAuditEvent({
             type: AuditEventType.LOGIN_FAILED,
@@ -210,8 +208,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           throw new Error(sessionValidation.reason || 'Invalid session');
         }
 
-        // Success - reset rate limiter (DB-backed)
-        await loginRateLimiter.reset(userRow.id, powersync);
+        // Success - reset local rate limiter if user exists locally
+        if (userRow) {
+          await loginRateLimiter.reset(userRow.id, powersync);
+        }
         setLoginAttempts(0);
         setIsLoginLocked(false);
         setLoginResetInMs(0);
@@ -226,13 +226,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         markActivity();
         setIsLocked(false);
       } catch (error) {
-        // Update rate limiting state even on errors (DB-backed)
-        if (userRow) {
-          const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
-          setLoginAttempts(updatedCheck.remainingAttempts);
-          setIsLoginLocked(updatedCheck.isLocked);
-          setLoginResetInMs(updatedCheck.resetInMs);
-        }
         throw error;
       }
     },

@@ -18,7 +18,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
     lock,
   },
+
+  db: {
+    schema: 'pos_tempest',
+  },
 })
+
 
 // Tells Supabase Auth to continuously refresh the session automatically
 // if the app is in the foreground. When this is added, you will continue

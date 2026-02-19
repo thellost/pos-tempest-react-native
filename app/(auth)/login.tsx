@@ -202,7 +202,8 @@ export default function LoginScreen() {
               <Text className="text-pos-sm text-pos-muted">
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </Text>
-            </Pressable>          </View>
+            </Pressable>
+          </View>
 
           {/* Sign In Button */}
           <Pressable

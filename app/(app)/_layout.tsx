@@ -79,59 +79,72 @@ export default function AppLayout() {
 
   // Render protected app with activity tracking
   return (
-    <View 
-      className="flex-1" 
-      onTouchStart={markActivity} 
-      onTouchMove={markActivity}
-      onResponderGrant={markActivity}
-      onResponderMove={markActivity}>
-      <Stack 
-        screenOptions={{ 
-          headerShown: false,
-          animation: 'slide_from_right',
-        }}>
-        {/* Main screens */}
-        <Stack.Screen 
-          name="floor/index" 
-          options={{ title: 'Floor View' }} 
-        />
-        <Stack.Screen 
-          name="order/[tableId]" 
-          options={{ title: 'Order' }} 
-        />
-        <Stack.Screen 
-          name="menu/index" 
-          options={{ title: 'Menu' }} 
-        />
-        <Stack.Screen 
-          name="kitchen/index" 
-          options={{ title: 'Kitchen Display' }} 
-        />
-        <Stack.Screen 
-          name="checkout/[orderId]" 
-          options={{ title: 'Checkout' }} 
-        />
-        <Stack.Screen 
-          name="settings/index" 
-          options={{ title: 'Settings' }} 
-        />
-        <Stack.Screen 
-          name="shifts/index" 
-          options={{ title: 'Shifts' }} 
-        />
-        <Stack.Screen 
-          name="inventory/index" 
-          options={{ title: 'Inventory' }} 
-        />
-        <Stack.Screen 
-          name="customers/index" 
-          options={{ title: 'Customers' }} 
-        />
-        <Stack.Screen 
-          name="reports/index" 
-          options={{ title: 'Reports' }} 
-        />
-      </Stack>
+    <View className="flex-1">
+      <View 
+        className="flex-1" 
+        onTouchStart={markActivity} 
+        onTouchMove={markActivity}
+        onResponderGrant={markActivity}
+        onResponderMove={markActivity}>
+        <Stack 
+          screenOptions={{ 
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}>
+          {/* Main screens */}
+          <Stack.Screen 
+            name="floor/index" 
+            options={{ title: 'Floor View' }} 
+          />
+          <Stack.Screen 
+            name="order/[tableId]" 
+            options={{ title: 'Order' }} 
+          />
+          <Stack.Screen 
+            name="menu/index" 
+            options={{ title: 'Menu' }} 
+          />
+          <Stack.Screen 
+            name="kitchen/index" 
+            options={{ title: 'Kitchen Display' }} 
+          />
+          <Stack.Screen 
+            name="checkout/[orderId]" 
+            options={{ title: 'Checkout' }} 
+          />
+          <Stack.Screen 
+            name="settings/index" 
+            options={{ title: 'Settings' }} 
+          />
+          <Stack.Screen 
+            name="shifts/index" 
+            options={{ title: 'Shifts' }} 
+          />
+          <Stack.Screen 
+            name="inventory/index" 
+            options={{ title: 'Inventory' }} 
+          />
+          <Stack.Screen 
+            name="customers/index" 
+            options={{ title: 'Customers' }} 
+          />
+          <Stack.Screen 
+            name="reports/index" 
+            options={{ title: 'Reports' }} 
+          />
+        </Stack>
+      </View>
+
+      {/* Logout Button - Fixed at bottom */}
+      <View className="border-t border-white/10 bg-surface-soft p-4">
+        <Pressable
+          className="flex-row items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 p-3"
+          onPress={async () => {
+            await signOut();
+          }}>
+          <Text className="text-pos-base font-semibold text-red-400">🚪 Sign Out</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
