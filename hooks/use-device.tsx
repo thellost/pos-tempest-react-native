@@ -10,84 +10,90 @@
 
 import type { Branch } from '@/db/models';
 import {
-  clearDeviceId,
-  getDeviceInfo,
-  getOrCreateDeviceId,
-  setDeviceName as setStoredDeviceName,
-  type DeviceInfo,
+    clearDeviceId,
+    getDeviceInfo,
+    getOrCreateDeviceId,
+    setDeviceName as setStoredDeviceName,
+    type DeviceInfo,
 } from '@/lib/device';
 import {
-  getActiveBranches,
-  getDeviceRegistration,
-  registerDevice as registerDeviceService,
-  updateDeviceLastSeen,
-  updateDeviceName as updateDeviceNameService,
-  type DeviceRegistrationResult,
+    getActiveBranches,
+    getDeviceRegistration,
+    registerDevice as registerDeviceService,
+    updateDeviceLastSeen,
+    updateDeviceName as updateDeviceNameService,
+    type DeviceRegistrationResult,
 } from '@/services/device.service';
-import { useCallback, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
- * Device hook return type
+ * Device context value type
  */
-type UseDeviceReturn = {
-  /** Unique device identifier (UUID) */
+type DeviceContextValue = {
   deviceId: string | null;
-  /** Device information (model, OS, etc.) */
   deviceInfo: DeviceInfo | null;
-  /** Device registration status and details */
   registration: DeviceRegistrationResult | null;
-  /** Whether the device is registered and active */
   isRegistered: boolean;
-  /** Whether the device data is still loading */
   loading: boolean;
-  /** Any error that occurred during device initialization */
   error: string | null;
-  /** Available branches for registration */
   branches: Branch[];
-  /** Register this device with a branch */
   registerDevice: (branchId: number, deviceName: string) => Promise<void>;
-  /** Update the device name */
   updateDeviceName: (newName: string) => Promise<void>;
-  /** Refresh device registration status */
   refresh: () => Promise<void>;
-  /** Clear device ID (admin function) */
   clearDevice: () => Promise<void>;
 };
 
+const DeviceContext = createContext<DeviceContextValue | null>(null);
+
 /**
- * Hook to manage device identity and registration.
- * Must be used after PowerSync is initialized.
+ * Device Provider Component
+ * Wrap your app with this to provide device state to all children.
  */
-export function useDevice(): UseDeviceReturn {
+export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [registration, setRegistration] = useState<DeviceRegistrationResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  
+  // Use ref to track initialization state
+  const initializingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  /**
-   * Initialize device ID and check registration status
-   */
   const initializeDevice = useCallback(async () => {
+    // Prevent duplicate calls
+    if (initializingRef.current) {
+      return;
+    }
+    
+    initializingRef.current = true;
+    
     try {
       setLoading(true);
       setError(null);
 
       // Get or create device ID
       const id = await getOrCreateDeviceId();
+      
+      // Check if component is still mounted before updating state
+      if (!mountedRef.current) return;
+      
       setDeviceId(id);
 
       // Get device info
       const info = await getDeviceInfo();
+      if (!mountedRef.current) return;
       setDeviceInfo(info);
 
       // Check registration status
       const regResult = await getDeviceRegistration(id);
+      if (!mountedRef.current) return;
       setRegistration(regResult);
 
       // Load available branches
       const activeBranches = await getActiveBranches();
+      if (!mountedRef.current) return;
       setBranches(activeBranches);
 
       // Update last seen if registered
@@ -98,15 +104,17 @@ export function useDevice(): UseDeviceReturn {
       console.log('[DeviceHook] Initialized device:', id, 'Registered:', regResult.registered);
     } catch (err) {
       console.error('[DeviceHook] Error initializing device:', err);
-      setError(err instanceof Error ? err.message : 'Failed to initialize device');
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to initialize device');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+      initializingRef.current = false;
     }
   }, []);
 
-  /**
-   * Register this device with a branch
-   */
   const registerDevice = useCallback(async (branchId: number, deviceName: string) => {
     if (!deviceId) {
       throw new Error('Device ID not initialized');
@@ -136,9 +144,6 @@ export function useDevice(): UseDeviceReturn {
     }
   }, [deviceId]);
 
-  /**
-   * Update the device name
-   */
   const updateDeviceName = useCallback(async (newName: string) => {
     if (!deviceId) {
       throw new Error('Device ID not initialized');
@@ -157,22 +162,18 @@ export function useDevice(): UseDeviceReturn {
     }
   }, [deviceId]);
 
-  /**
-   * Refresh device registration status
-   */
   const refresh = useCallback(async () => {
+    initializingRef.current = false;
     await initializeDevice();
   }, [initializeDevice]);
 
-  /**
-   * Clear device ID (admin function)
-   */
   const clearDevice = useCallback(async () => {
     try {
       await clearDeviceId();
       setDeviceId(null);
       setDeviceInfo(null);
       setRegistration(null);
+      initializingRef.current = false;
       
       // Re-initialize to get new device ID
       await initializeDevice();
@@ -182,12 +183,17 @@ export function useDevice(): UseDeviceReturn {
     }
   }, [initializeDevice]);
 
-  // Initialize on mount
+  // Initialize on mount only
   useEffect(() => {
+    mountedRef.current = true;
     initializeDevice();
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, [initializeDevice]);
 
-  return {
+  const value = useMemo<DeviceContextValue>(() => ({
     deviceId,
     deviceInfo,
     registration,
@@ -199,5 +205,23 @@ export function useDevice(): UseDeviceReturn {
     updateDeviceName,
     refresh,
     clearDevice,
-  };
+  }), [deviceId, deviceInfo, registration, loading, error, branches, registerDevice, updateDeviceName, refresh, clearDevice]);
+
+  return (
+    <DeviceContext.Provider value={value}>
+      {children}
+    </DeviceContext.Provider>
+  );
+}
+
+/**
+ * Hook to access device identity and registration.
+ * Must be used within a DeviceProvider.
+ */
+export function useDevice(): DeviceContextValue {
+  const context = useContext(DeviceContext);
+  if (!context) {
+    throw new Error('useDevice must be used within a DeviceProvider');
+  }
+  return context;
 }
