@@ -1,6 +1,8 @@
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { Redirect, Stack } from 'expo-router';
+import { useDevice } from '@/hooks/use-device';
+import { useShift } from '@/hooks/use-shift';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 /**
@@ -8,11 +10,16 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
  * Features:
  * - Auth guard (redirects to login if not authenticated)
  * - Lock guard (redirects to PIN if session locked)
+ * - Device guard (redirects to device setup if not registered)
+ * - Shift guard (redirects to shift screen if no open shift)
  * - Activity tracking on all interactions
  * - Session validation
  */
 export default function AppLayout() {
   const { loading, isAuthenticated, isLocked, markActivity, user, signOut } = useAuth();
+  const { loading: deviceLoading, isRegistered, registration } = useDevice();
+  const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
+  const pathname = usePathname();
 
   // Show loading while checking session
   if (loading) {
@@ -77,6 +84,39 @@ export default function AppLayout() {
     );
   }
 
+  // Device guard: show loading while checking device registration
+  const onDeviceSetupScreen = pathname === '/(app)/device-setup';
+
+  if (deviceLoading && !onDeviceSetupScreen) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
+        <Text className="mt-4 text-pos-sm text-pos-muted">Checking device registration...</Text>
+      </View>
+    );
+  }
+
+  // Device guard: redirect to device setup if not registered
+  if (!isRegistered && !onDeviceSetupScreen) {
+    return <Redirect href="/(app)/device-setup" />;
+  }
+
+  // Cashier shift guard: shift must be open before using POS screens.
+  const onShiftScreen = pathname.startsWith('/(app)/shifts');
+
+  if (requiresShift && shiftLoading && !onShiftScreen) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
+        <Text className="mt-4 text-pos-sm text-pos-muted">Checking shift status...</Text>
+      </View>
+    );
+  }
+
+  if (requiresShift && !isShiftOpen && !onShiftScreen) {
+    return <Redirect href="/(app)/shifts" />;
+  }
+
   // Render protected app with activity tracking
   return (
     <View className="flex-1">
@@ -132,8 +172,21 @@ export default function AppLayout() {
             name="reports/index" 
             options={{ title: 'Reports' }} 
           />
+          <Stack.Screen 
+            name="device-setup" 
+            options={{ title: 'Device Setup' }} 
+          />
         </Stack>
       </View>
+
+      {/* Device & Branch Info - Fixed at top */}
+      {isRegistered && registration?.branch && (
+        <View className="absolute top-2 right-2 rounded bg-surface-soft/80 px-3 py-1">
+          <Text className="text-pos-xs text-pos-muted">
+            {registration.device?.device_name} • {registration.branch.name}
+          </Text>
+        </View>
+      )}
 
       {/* Logout Button - Fixed at bottom */}
       <View className="border-t border-white/10 bg-surface-soft p-4">

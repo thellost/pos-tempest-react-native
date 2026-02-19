@@ -132,3 +132,10 @@ export const AUDIT_ACTION = {
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
+
+export const DEVICE_STATUS = {
+	ACTIVE: 'active',
+	INACTIVE: 'inactive',
+} as const;
+
+export type DeviceStatus = (typeof DEVICE_STATUS)[keyof typeof DEVICE_STATUS];

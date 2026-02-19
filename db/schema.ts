@@ -318,6 +318,14 @@ export const appSchema = new Schema({
 		session_id: column.text,
 		created_at: column.text,
 	}),
+	devices: new Table({
+		branch_id: column.integer,
+		device_uid: column.text,
+		device_name: column.text,
+		status: column.text,
+		registered_at: column.text,
+		last_seen_at: column.text,
+	}),
 });
 
 export type AppSchema = typeof appSchema;

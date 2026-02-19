@@ -2,6 +2,8 @@
 
 **TL;DR:** Build an offline-first restaurant POS app on Android tablets using Expo + PowerSync + SQLite + Supabase + NativeWind. The app supports open tables/bills, kitchen & cashier Bluetooth thermal printing, PIN-based quick auth, and is structured for long-term maintainability. 13 steps, executed sequentially.
 
+Shifts and cash drawers are scoped to **devices** (terminals), not users — ensuring physical cash accountability.
+
 The UI will follow a **Toast POS-inspired** aesthetic: dark theme, large touch targets, grid-based menu, split-panel order view, minimal visual noise.
 
 ---
@@ -117,21 +119,67 @@ constants/
 
 ---
 
-### Step 4 — Shift Management
+### Step 4 — Device Registration & Management
 
-**Goal:** Cashiers must open a shift before taking orders. This gates the entire POS workflow.
+**Goal:** Each physical POS terminal (tablet) gets a unique device identity tied to a branch. Shifts, orders, and cash drawers are scoped to the **device**, not just the user. When a different cashier logs in on the same device, the shift and money persist.
 
 **Actions:**
-- Create `src/services/shift.service.ts` — `openShift(userId, branchId, openingCash)`, `closeShift(shiftId, closingCash)`, `getActiveShift(userId)`
-- Create `src/hooks/use-shift.ts` — provides current active shift to the app, checks if shift is open
-- Create `app/(app)/shifts/index.tsx` — UI to open shift (enter opening cash amount via numpad), view current shift summary, close shift (enter closing cash, show expected vs actual, calculate difference)
-- Add shift guard in `app/(app)/_layout.tsx`: if role is `cashier` and no open shift, redirect to shift screen before allowing access to order/floor screens
+- Create `src/lib/device.ts` — device identity utilities:
+  - `getOrCreateDeviceId()` — generates a UUID on first launch and persists it in `AsyncStorage` under key `@pos_tempest/device_id`. Returns the same UUID on subsequent calls. Survives app restarts, lost only on reinstall or manual clear
+  - `getDeviceInfo()` — returns `{ deviceId, deviceName, model, osVersion }` using `expo-device` + stored UUID
+  - `clearDeviceId()` — for admin reset / re-registration
+- Create `src/services/device.service.ts` — device registration business logic:
+  - `registerDevice(deviceId, branchId, deviceName)` — inserts into `devices` table, marks as `active`
+  - `getDeviceRegistration(deviceId)` — queries `devices` table by `device_uid` to get branch association + status
+  - `isDeviceRegistered(deviceId)` — boolean check
+  - `deactivateDevice(deviceId)` — sets status to `inactive` (admin only)
+  - `updateDeviceName(deviceId, newName)` — rename a terminal (e.g. "Kasir 1", "Kasir 2")
+- Create `src/hooks/use-device.ts` — provides `deviceId`, `deviceRegistration`, `isRegistered`, `registerDevice()` to the app
+- Create device setup screen (shown on first launch or when device is unregistered):
+  - Select branch from synced branches list
+  - Enter device/terminal name (e.g. "Kasir 1", "Bar", "Drive-Thru")
+  - Confirm registration → device row created, branch locked
+- Add device guard in `app/(app)/_layout.tsx`: if device is not registered, redirect to device setup screen before any POS access
+- Update `SessionMetadata` in `lib/security.ts` to populate the `deviceId` field from `getOrCreateDeviceId()`
+- Admin device management: settings screen shows list of registered devices for the branch, allows rename/deactivate
 
-**Verification:** Open shift with 500,000 IDR → shift saved locally → synced to Supabase. Close shift → cash reconciliation shown.
+**PowerSync schema addition:**
+```
+devices: {
+  branch_id:     column.integer
+  device_uid:    column.text       // UUID from AsyncStorage
+  device_name:   column.text       // e.g. "Kasir 1"
+  status:        column.text       // 'active' | 'inactive'
+  registered_at: column.text
+  last_seen_at:  column.text
+}
+```
+
+**Verification:** First launch → device setup screen → select "Kemang" branch → name "Kasir 1" → registered. Kill app → relaunch → device recognized, skips setup. Admin can see device in settings.
 
 ---
 
-### Step 5 — Floor & Table Management
+### Step 5 — Shift Management (Device-Scoped)
+
+**Goal:** Cashiers must open a shift before taking orders. Shifts are tied to the **device** (terminal), not the user. The cash drawer balance persists even when a different user logs in on the same device.
+
+**Actions:**
+- Create `src/services/shift.service.ts` — `openShift(userId, deviceId, branchId, openingCash)`, `closeShift(shiftId, closingCash)`, `getActiveShift(deviceId)` (note: lookup by device, not user)
+- Create `src/hooks/use-shift.ts` — provides current active shift for **this device** to the app, checks if shift is open
+- Create `app/(app)/shifts/index.tsx` — UI to open shift (enter opening cash amount via numpad), view current shift summary, close shift (enter closing cash, show expected vs actual, calculate difference). Shows which device this shift belongs to
+- Add shift guard in `app/(app)/_layout.tsx`: if role is `cashier` and no open shift **on this device**, redirect to shift screen before allowing access to order/floor screens
+- `openShift` records both `user_id` (who opened) and `device_id` (which terminal) — the shift stays open on the device even if the user logs out and someone else logs in
+- `closeShift` records the `user_id` of whoever closes it (may differ from who opened)
+
+**Key behavioral difference from user-scoped shifts:**
+- User A opens shift on Kasir 1 with 500k → goes on break → User B logs in on Kasir 1 → User B can take orders under the **same shift** → User B closes shift → cash reconciliation reflects all transactions on Kasir 1
+- User A logs into a **different** device (Kasir 2) → must open a separate shift there
+
+**Verification:** Open shift with 500,000 IDR on device "Kasir 1" → shift saved locally → synced to Supabase. Log out → log in as different user on same device → same shift is active. Close shift → cash reconciliation shown.
+
+---
+
+### Step 6 — Floor & Table Management
 
 **Goal:** Show a visual floor plan so staff can see table status and tap to open/manage orders.
 
@@ -146,7 +194,7 @@ constants/
 
 ---
 
-### Step 6 — Menu Display & Order Creation (Core POS)
+### Step 7 — Menu Display & Order Creation (Core POS)
 
 **Goal:** The main order-taking screen — split panel with menu grid on the left and order summary on the right (Toast POS style).
 
@@ -175,7 +223,7 @@ constants/
 
 ---
 
-### Step 7 — Kitchen Order Tickets (KOT) & Kitchen Display
+### Step 8 — Kitchen Order Tickets (KOT) & Kitchen Display
 
 **Goal:** When cashier sends order to kitchen, generate a KOT. Kitchen display shows live ticket queue.
 
@@ -194,7 +242,7 @@ constants/
 
 ---
 
-### Step 8 — Bluetooth Printer Integration (ESC/POS)
+### Step 9 — Bluetooth Printer Integration (ESC/POS)
 
 **Goal:** Print KOTs to kitchen printer and receipts to cashier printer via Bluetooth.
 
@@ -218,7 +266,7 @@ constants/
 
 ---
 
-### Step 9 — Payment & Checkout
+### Step 10 — Payment & Checkout
 
 **Goal:** Process payments with split-payment support, apply discounts, and close the bill.
 
@@ -239,7 +287,7 @@ constants/
 
 ---
 
-### Step 10 — Customer & Reservation Management
+### Step 11 — Customer & Reservation Management
 
 **Goal:** Look up customers, assign to orders for loyalty tracking, manage reservations.
 
@@ -253,7 +301,7 @@ constants/
 
 ---
 
-### Step 11 — Inventory Management
+### Step 12 — Inventory Management
 
 **Goal:** Track stock levels, show low-stock alerts, auto-deduct on order completion.
 
@@ -273,7 +321,7 @@ constants/
 
 ---
 
-### Step 12 — Reports & Analytics
+### Step 13 — Reports & Analytics
 
 **Goal:** Basic operational reports for managers.
 
@@ -291,7 +339,7 @@ constants/
 
 ---
 
-### Step 13 — Polish, Guards & Edge Cases
+### Step 14 — Polish, Guards & Edge Cases
 
 **Goal:** Harden for real-world restaurant use.
 
@@ -310,20 +358,23 @@ constants/
 **Verification (End-to-End)**
 
 Full workflow test:
-1. Login with email → open shift (500k) → see floor plan
-2. Tap table A3 → new dine-in order for 2 guests
-3. Add Nasi Goreng Spesial (Pedas Sedang, Telur Ceplok) × 2 + Ikan Gurame 0.4kg (Bakar)
-4. Send to Kitchen → KOT prints on kitchen printer → appears on kitchen display
-5. Chef marks items done → order status → ready → served
-6. Tap payment → apply Happy Hour 10% discount → pay with cash 200k
-7. Receipt prints → table A3 turns green → stock deducted
-8. Close shift → cash reconciliation → shift closed
-9. Turn off Wi-Fi → repeat steps 2-7 → everything works offline
-10. Turn on Wi-Fi → data syncs to Supabase
+1. First launch → register device as "Kasir 1" on Kemang branch
+2. Login with email → open shift (500k) on this device → see floor plan
+3. Tap table A3 → new dine-in order for 2 guests
+4. Add Nasi Goreng Spesial (Pedas Sedang, Telur Ceplok) × 2 + Ikan Gurame 0.4kg (Bakar)
+5. Send to Kitchen → KOT prints on kitchen printer → appears on kitchen display
+6. Chef marks items done → order status → ready → served
+7. Tap payment → apply Happy Hour 10% discount → pay with cash 200k
+8. Receipt prints → table A3 turns green → stock deducted
+9. Log out → different user logs in on same device → **same shift still active** (device-scoped)
+10. Close shift → cash reconciliation → shift closed
+11. Turn off Wi-Fi → repeat steps 3-8 → everything works offline
+12. Turn on Wi-Fi → data syncs to Supabase
 
 **Decisions**
 - **NativeWind (Tailwind CSS)** — zero-runtime, utility-first styling via `className` prop, trivial Expo setup, built-in dark mode, familiar Tailwind DX
-- **Branch locked per device** — simplifies data scoping and sync rules
+- **Branch locked per device** — each tablet is registered to a branch on first launch. Device identity persists via AsyncStorage UUID. Simplifies data scoping and sync rules
+- **Shifts scoped to device, not user** — the cash drawer is a physical thing attached to a terminal. When user B relieves user A at the same register, the money stays. Operator changes, shift doesn't
 - **Bluetooth thermal printers** — ESC/POS protocol, most common in Indonesian restaurants
 - **Email + PIN auth** — Supabase handles email auth, PIN validated locally for offline quick-unlock
 - **Global sync bucket for now** — will scope to per-branch buckets when ready (Step 2 keeps this extensible)

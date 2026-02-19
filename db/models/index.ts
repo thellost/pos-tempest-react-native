@@ -12,7 +12,7 @@ import type {
 	RoleType,
 	ShiftStatus,
 	TableStatus,
-	UnitOfMeasure,
+	UnitOfMeasure
 } from '@/constants/enums';
 
 export type EntityId = number;
@@ -388,4 +388,14 @@ export interface AuditLog {
 	user_agent: string | null;
 	session_id: string | null;
 	created_at: Timestamp;
+}
+
+export interface Device {
+	id: EntityId;
+	branch_id: EntityId;
+	device_uid: string;
+	device_name: string;
+	status: DeviceStatus;
+	registered_at: Timestamp;
+	last_seen_at: Timestamp | null;
 }
