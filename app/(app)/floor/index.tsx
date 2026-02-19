@@ -1,27 +1,11 @@
-import { runPinMigration } from '@/lib/migrate-pins';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 /**
  * Floor & Table Management screen.
  * To be implemented in Step 5.
  */
 export default function FloorScreen() {
-  const [migrating, setMigrating] = useState(false);
-
-  const handleMigration = async () => {
-    try {
-      setMigrating(true);
-      await runPinMigration();
-      Alert.alert('Success', 'PIN migration completed successfully!');
-    } catch (error) {
-      Alert.alert('Error', 'PIN migration failed. Check console for details.');
-      console.error('Migration error:', error);
-    } finally {
-      setMigrating(false);
-    }
-  };
   return (
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16 }}>
       <View className="mb-6">
@@ -65,6 +49,7 @@ export default function FloorScreen() {
           <Text className="text-pos-sm text-pos-muted">PowerSync status</Text>
         </Pressable>
 
+       
       </View>
     </ScrollView>
   );

@@ -16,6 +16,46 @@ interface UserWithPin {
   name: string;
 }
 
+interface UserPinSnapshot {
+  id: number;
+  name: string;
+  pin_code: string | null;
+}
+
+/**
+ * Log local DB PIN snapshot (safe preview) after migration.
+ */
+export async function logLocalDbAfterMigration(): Promise<void> {
+  console.log('[PIN Migration] Reading local DB snapshot after migration...');
+
+  const users = await powersync.getAll<UserPinSnapshot>(
+    `
+      SELECT id, name, pin_code
+      FROM users
+      ORDER BY id ASC
+    `,
+  );
+
+  if (users.length === 0) {
+    console.log('[PIN Migration] Local DB snapshot is empty (no users found).');
+    return;
+  }
+
+  console.log('[PIN Migration] Local DB snapshot:');
+
+  for (const user of users) {
+    const pin = user.pin_code ?? '';
+    const pinLength = pin.length;
+    const pinState =
+      pinLength === 0 ? 'empty' : pinLength === 64 ? 'hashed' : /^\d{6}$/.test(pin) ? 'plaintext' : 'invalid';
+    const pinPreview = pinLength === 64 ? `${pin.slice(0, 8)}...${pin.slice(-6)}` : pinLength === 0 ? 'none' : '[hidden]';
+
+    console.log(
+      `[PIN Migration] user=${user.id} name="${user.name}" state=${pinState} length=${pinLength} preview=${pinPreview}`,
+    );
+  }
+}
+
 /**
  * Hash all plain-text PINs in the database
  */
@@ -195,6 +235,9 @@ export async function runPinMigration() {
       console.log('\n⚠️  Migration incomplete. Please review errors above.');
     }
 
+    console.log('\n4. Logging local DB snapshot...\n');
+    await logLocalDbAfterMigration();
+
     console.log('========================================\n');
   } catch (error) {
     console.error('\n✗ Migration failed with error:', error);
@@ -206,5 +249,6 @@ export async function runPinMigration() {
 export default {
   migrateExistingPins,
   verifyPinMigration,
+  logLocalDbAfterMigration,
   runPinMigration,
 };

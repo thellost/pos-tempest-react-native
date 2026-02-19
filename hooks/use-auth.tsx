@@ -273,7 +273,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           resetInMs: pinResetInMs,
         };
       }
-
+      
       // Input validation
       if (!validatePinFormat(pin)) {
         logAuditEvent({

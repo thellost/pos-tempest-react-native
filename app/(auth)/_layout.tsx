@@ -1,6 +1,6 @@
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 /**
@@ -12,6 +12,8 @@ import { ActivityIndicator, Text, View } from 'react-native';
  */
 export default function AuthLayout() {
   const { loading, isAuthenticated, isLocked } = useAuth();
+  const segments = useSegments();
+  const currentAuthRoute = segments[segments.length - 1];
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -30,7 +32,9 @@ export default function AuthLayout() {
 
   // If authenticated but locked, ensure we're on PIN screen
   if (isAuthenticated && isLocked) {
-    return <Redirect href="/(auth)/pin" />;
+    if (currentAuthRoute !== 'pin') {
+      return <Redirect href="/(auth)/pin" />;
+    }
   }
 
   // Not authenticated - show auth screens
