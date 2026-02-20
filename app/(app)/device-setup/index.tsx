@@ -9,14 +9,14 @@ import { useDevice } from '@/hooks/use-device';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
 export default function DeviceSetupScreen() {
@@ -42,6 +42,11 @@ export default function DeviceSetupScreen() {
     try {
       setRegistering(true);
       setRegisterError(null);
+      
+      console.log('[DeviceSetup] Attempting to register device with:', {
+        selectedBranchId,
+        deviceName: deviceName.trim(),
+      });
       
       await registerDevice(selectedBranchId, deviceName.trim());
       

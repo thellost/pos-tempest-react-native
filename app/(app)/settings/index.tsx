@@ -133,6 +133,30 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleResetDevice = async () => {
+    Alert.alert(
+      'Reset Device Registration',
+      'Are you sure you want to reset the device registration? This will require re-registering the device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearDevice();
+              Alert.alert('Success', 'Device registration has been reset.');
+              refreshDevice();
+            } catch (error) {
+              console.error('[Settings] Error resetting device:', error);
+              Alert.alert('Error', 'Failed to reset device registration.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderDevice = ({ item }: { item: Device }) => {
     const isCurrentDevice = item.device_uid === deviceInfo?.deviceId;
     const isEditing = editingDeviceId === item.id;
@@ -270,17 +294,6 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
-          
-          {isAdmin && (
-            <Pressable
-              className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3"
-              onPress={handleClearDevice}
-            >
-              <Text className="text-center text-pos-sm font-semibold text-red-400">
-                Reset Device Registration
-              </Text>
-            </Pressable>
-          )}
         </View>
       </View>
 
@@ -322,6 +335,22 @@ export default function SettingsScreen() {
             Printer configuration will be available in Step 9.
           </Text>
         </View>
+      </View>
+
+      {/* Device Management */}
+      <View className="p-4">
+        <Text className="mb-4 text-pos-lg font-semibold text-pos-text-strong">
+          Device Management
+        </Text>
+
+        <Pressable
+          className="mb-4 rounded-lg bg-red-500 p-4"
+          onPress={handleResetDevice}
+        >
+          <Text className="text-center text-pos-base font-semibold text-white">
+            Reset Device Registration
+          </Text>
+        </Pressable>
       </View>
 
       {/* App Info */}

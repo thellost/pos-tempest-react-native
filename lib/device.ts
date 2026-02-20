@@ -73,8 +73,7 @@ export async function getOrCreateDeviceId(): Promise<string> {
     return newId;
   } catch (error) {
     console.error('[Device] Error getting/creating device ID:', error);
-    // Fallback: generate a temporary ID (won't persist)
-    return generateUUID();
+    throw new Error('Failed to generate or persist device ID');
   }
 }
 

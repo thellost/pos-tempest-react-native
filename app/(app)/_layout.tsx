@@ -85,7 +85,8 @@ export default function AppLayout() {
   }
 
   // Device guard: show loading while checking device registration
-  const onDeviceSetupScreen = pathname === '/(app)/device-setup';
+  // Note: usePathname() strips route group segments, so '/(app)/device-setup' becomes '/device-setup'
+  const onDeviceSetupScreen = pathname === '/device-setup';
 
   if (deviceLoading && !onDeviceSetupScreen) {
     return (
@@ -102,7 +103,8 @@ export default function AppLayout() {
   }
 
   // Cashier shift guard: shift must be open before using POS screens.
-  const onShiftScreen = pathname.startsWith('/(app)/shifts');
+  // Note: usePathname() strips route group segments
+  const onShiftScreen = pathname.startsWith('/shifts');
 
   if (requiresShift && shiftLoading && !onShiftScreen) {
     return (

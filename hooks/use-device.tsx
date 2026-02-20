@@ -10,19 +10,19 @@
 
 import type { Branch } from '@/db/models';
 import {
-    clearDeviceId,
-    getDeviceInfo,
-    getOrCreateDeviceId,
-    setDeviceName as setStoredDeviceName,
-    type DeviceInfo,
+  clearDeviceId,
+  getDeviceInfo,
+  getOrCreateDeviceId,
+  setDeviceName as setStoredDeviceName,
+  type DeviceInfo,
 } from '@/lib/device';
 import {
-    getActiveBranches,
-    getDeviceRegistration,
-    registerDevice as registerDeviceService,
-    updateDeviceLastSeen,
-    updateDeviceName as updateDeviceNameService,
-    type DeviceRegistrationResult,
+  getActiveBranches,
+  getDeviceRegistration,
+  registerDevice as registerDeviceService,
+  updateDeviceLastSeen,
+  updateDeviceName as updateDeviceNameService,
+  type DeviceRegistrationResult,
 } from '@/services/device.service';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -66,20 +66,25 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     if (initializingRef.current) {
       return;
     }
-    
+
     initializingRef.current = true;
-    
+
     try {
       setLoading(true);
       setError(null);
 
       // Get or create device ID
       const id = await getOrCreateDeviceId();
-      
+
+      if (!id) {
+        throw new Error('Failed to initialize device: device ID is invalid');
+      }
+
       // Check if component is still mounted before updating state
       if (!mountedRef.current) return;
-      
+
       setDeviceId(id);
+      console.log('[DeviceHook] Initialized device ID:', id);
 
       // Get device info
       const info = await getDeviceInfo();

@@ -1,5 +1,6 @@
 import type {
 	AuditAction,
+	DeviceStatus,
 	DiscountType,
 	KotStatus,
 	OrderStatus,
@@ -399,3 +400,4 @@ export interface Device {
 	registered_at: Timestamp;
 	last_seen_at: Timestamp | null;
 }
+

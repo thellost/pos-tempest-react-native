@@ -33,7 +33,14 @@ export async function registerDevice(
   branchId: number,
   deviceName: string
 ): Promise<Device> {
+  if (!deviceUid) {
+    throw new Error('Device UID is required for registration');
+  }
+
   const now = new Date().toISOString();
+  
+  // Debugging: Delete all devices before inserting a new one
+  await powersync.execute(`DELETE FROM devices`);
   
   // Check if device is already registered
   const existing = await getDeviceRegistration(deviceUid);
@@ -56,11 +63,24 @@ export async function registerDevice(
     };
   }
   
+  console.log('[DeviceService] Registering device with:', {
+    deviceUid,
+    branchId,
+    deviceName,
+  });
+  
+  // Generate a new unique ID
+  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
+    `SELECT MAX(id) as max_id FROM devices`
+  );
+  // Convert newId to a string
+  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+
   // Insert new device record
   await powersync.execute(
-    `INSERT INTO devices (branch_id, device_uid, device_name, status, registered_at, last_seen_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [branchId, deviceUid, deviceName, DEVICE_STATUS.ACTIVE, now, now]
+    `INSERT INTO devices (id, branch_id, device_uid, device_name, status, registered_at, last_seen_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [newId, branchId, deviceUid, deviceName, DEVICE_STATUS.ACTIVE, now, now]
   );
   
   // Fetch the created device
