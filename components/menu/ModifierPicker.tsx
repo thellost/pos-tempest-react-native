@@ -9,14 +9,13 @@ import {
 } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
-import type { MenuItem } from '@/db/models';
-import type { ModifierGroupWithModifiers } from '@/hooks/use-menu';
+import type { ModifierGroupWithModifiers, MenuItemWithInventory } from '@/hooks/use-menu';
 import type { SelectedModifier } from '@/services/order.service';
 import { formatIDR } from '@/utils/currency';
 
 interface ModifierPickerProps {
   visible: boolean;
-  menuItem: MenuItem;
+  menuItem: MenuItemWithInventory;
   modifierGroups: ModifierGroupWithModifiers[];
   onConfirm: (modifiers: SelectedModifier[], weight: number | null, notes: string) => void;
   onCancel: () => void;
@@ -172,9 +171,6 @@ export function ModifierPicker({
             {/* Modifier groups */}
             {modifierGroups.map((group) => {
               const groupId = typeof group.id === 'string' ? parseInt(group.id, 10) : group.id;
-              const groupModifiers = Array.from(selectedModifiers.values()).filter(
-                m => m.modifier_group_name === group.name
-              );
 
               return (
                 <View key={group.id} className="mb-4">

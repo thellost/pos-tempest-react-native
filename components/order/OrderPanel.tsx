@@ -1,9 +1,12 @@
-import React from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { ORDER_TYPE, ORDER_STATUS } from '@/constants/enums';
 import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
+import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
+import { OrderTotals } from './OrderTotals';
 
 interface OrderPanelProps {
   order: Order | null;
@@ -12,15 +15,11 @@ interface OrderPanelProps {
   onGuestCountChange: (count: number) => void;
   onUpdateQuantity: (itemId: number, newQuantity: number) => void;
   onRemoveItem: (itemId: number) => void;
-  onSendToKitchen?: () => void;
-  onPayment?: () => void;
-  onHold?: () => void;
+  onSendToKitchen: () => void;
+  onPayment: () => void;
+  onHold: () => void;
 }
 
-/**
- * Right-side panel showing order summary.
- * Displays guest count, order items list, and running totals.
- */
 export function OrderPanel({
   order,
   items,
@@ -32,155 +31,119 @@ export function OrderPanel({
   onPayment,
   onHold,
 }: OrderPanelProps) {
-  const hasItems = items.length > 0 && items.some(i => !i.is_voided);
+  const activeItems = items.filter(i => !i.is_voided);
+  const hasItems = activeItems.length > 0;
+  const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
+
+  const handleGuestDecrease = useCallback(() => {
+    if (guestCount > 0) {
+      onGuestCountChange(guestCount - 1);
+    }
+  }, [guestCount, onGuestCountChange]);
+
+  const handleGuestIncrease = useCallback(() => {
+    onGuestCountChange(guestCount + 1);
+  }, [guestCount, onGuestCountChange]);
+
+  const renderItem = useCallback((item: OrderItem & { modifiers: OrderItemModifier[] }) => {
+    return (
+      <OrderItemRow
+        key={`order-item-${item.id}`}
+        item={item}
+        onUpdateQuantity={onUpdateQuantity}
+        onRemove={onRemoveItem}
+      />
+    );
+  }, [onUpdateQuantity, onRemoveItem]);
+
+  const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
 
   return (
     <View className="flex-1 border-l border-white/10 bg-surface-soft">
-      <View className="flex-1 p-4">
-        {/* Header */}
-        <View className="mb-4">
-          <Text className="mb-2 text-pos-xl font-bold text-pos-text-strong">
-            Current Order
-          </Text>
-          {order && (
-            <Text className="text-pos-sm text-pos-muted">
-              {order.order_number}
+      <View className="border-b border-white/10 bg-surface-soft px-4 py-3">
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-pos-xl font-bold text-pos-text-strong">
+              {order?.order_number ?? 'New Order'}
             </Text>
-          )}
-        </View>
-
-        {/* Guest Count */}
-        <View className="mb-4">
-          <Text className="mb-2 text-pos-sm text-pos-muted">Guest Count</Text>
-          <View className="flex-row items-center">
-            <TextInput
-              className="flex-1 rounded-lg border border-white/20 bg-surface px-3 py-2 text-pos-base text-pos-text-strong"
-              placeholder="0"
-              placeholderTextColor="#666"
-              keyboardType="numeric"
-              value={guestCount.toString()}
-              onChangeText={(text) => {
-                const count = parseInt(text) || 0;
-                onGuestCountChange(count);
-              }}
-            />
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Pressable
+              className="rounded bg-toast-gray-2 px-3 py-1"
+              style={{ opacity: order?.order_type === ORDER_TYPE.DINE_IN ? 1 : 0.5 }}
+            >
+              <Text className="text-pos-sm font-medium text-white">Dine-in</Text>
+            </Pressable>
+            <Pressable
+              className="rounded bg-toast-gray-2 px-3 py-1"
+              style={{ opacity: order?.order_type === ORDER_TYPE.TAKEAWAY ? 1 : 0.5 }}
+            >
+              <Text className="text-pos-sm font-medium text-white">Takeaway</Text>
+            </Pressable>
           </View>
         </View>
 
-        {/* Order Items */}
-        <View className="mb-4 flex-1">
-          <Text className="mb-2 text-pos-sm text-pos-muted">
-            Items ({items.filter(i => !i.is_voided).length})
-          </Text>
-          <ScrollView className="flex-1">
-            {items.length === 0 ? (
-              <View className="items-center justify-center py-12">
-                <Text className="text-pos-base text-pos-muted">
-                  No items added yet
-                </Text>
-                <Text className="mt-2 text-pos-sm text-pos-muted">
-                  Select items from the menu
-                </Text>
-              </View>
-            ) : (
-              items.map((item) => (
-                <OrderItemRow
-                  key={item.id}
-                  item={item}
-                  onUpdateQuantity={onUpdateQuantity}
-                  onRemove={onRemoveItem}
-                />
-              ))
-            )}
-          </ScrollView>
+        <View className="mt-3 flex-row items-center justify-between">
+          <Text className="text-pos-sm text-pos-muted">Guests</Text>
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={handleGuestDecrease}
+              className="h-8 w-8 items-center justify-center rounded-lg bg-surface"
+            >
+              <Text className="text-pos-lg text-pos-text-strong">-</Text>
+            </Pressable>
+            <Text className="mx-4 min-w-[32px] text-center text-pos-lg font-bold text-pos-text-strong">
+              {guestCount}
+            </Text>
+            <Pressable
+              onPress={handleGuestIncrease}
+              className="h-8 w-8 items-center justify-center rounded-lg bg-surface"
+            >
+              <Text className="text-pos-lg text-pos-text-strong">+</Text>
+            </Pressable>
+          </View>
         </View>
+      </View>
 
-        {/* Totals */}
-        {order && (
-          <View className="border-t border-white/10 pt-4">
-            <View className="mb-2 flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Subtotal</Text>
-              <Text className="text-pos-sm text-pos-text-strong">
-                {formatIDR(order.subtotal)}
-              </Text>
-            </View>
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingVertical: 12 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {items.length === 0 ? (
+          <View className="items-center justify-center py-12">
+            <Text className="text-pos-lg text-pos-muted">No items added</Text>
+            <Text className="mt-1 text-pos-sm text-pos-muted">
+              Tap menu items to add
+            </Text>
+          </View>
+        ) : (
+          items.map(renderItem)
+        )}
+      </ScrollView>
 
-            {order.discount_amount > 0 && (
-              <View className="mb-2 flex-row justify-between">
-                <Text className="text-pos-sm text-pos-muted">Discount</Text>
-                <Text className="text-pos-sm text-green-500">
-                  -{formatIDR(order.discount_amount)}
-                </Text>
-              </View>
-            )}
-
-            <View className="mb-2 flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Tax</Text>
-              <Text className="text-pos-sm text-pos-text-strong">
-                {formatIDR(order.tax_amount)}
-              </Text>
-            </View>
-
-            <View className="mb-2 flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Service</Text>
-              <Text className="text-pos-sm text-pos-text-strong">
-                {formatIDR(order.service_charge)}
-              </Text>
-            </View>
-
-            {order.rounding_amount !== 0 && (
-              <View className="mb-2 flex-row justify-between">
-                <Text className="text-pos-sm text-pos-muted">Rounding</Text>
-                <Text className="text-pos-sm text-pos-text-strong">
-                  {formatIDR(order.rounding_amount)}
-                </Text>
-              </View>
-            )}
-
-            <View className="mt-2 flex-row justify-between border-t border-white/10 pt-2">
+      <View className="px-4">
+        {order ? (
+          <OrderTotals order={order} />
+        ) : (
+          <View className="border-t border-white/10 py-3">
+            <View className="flex-row justify-between">
               <Text className="text-pos-lg font-bold text-pos-text-strong">Total</Text>
-              <Text className="text-pos-2xl font-bold text-primary">
-                {formatIDR(order.total)}
+              <Text className="text-pos-2xl font-bold text-toast-orange-3">
+                {formatIDR(emptySubtotal)}
               </Text>
             </View>
           </View>
         )}
       </View>
 
-      {/* Action Buttons - Fixed at bottom like Toast POS */}
-      <View className="border-t border-white/10 bg-surface p-4">
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            className={`flex-1 rounded-lg py-4 ${hasItems ? 'bg-gray-600' : 'bg-gray-600/50'}`}
-            disabled={!hasItems}
-            onPress={onHold}
-          >
-            <Text className={`text-center text-pos-base font-semibold ${hasItems ? 'text-white' : 'text-white/50'}`}>
-              Hold
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`flex-1 rounded-lg py-4 ${hasItems ? 'bg-orange-600' : 'bg-orange-600/50'}`}
-            disabled={!hasItems}
-            onPress={onSendToKitchen}
-          >
-            <Text className={`text-center text-pos-base font-semibold ${hasItems ? 'text-white' : 'text-white/50'}`}>
-              Send
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          className={`mt-2 rounded-lg py-4 ${hasItems ? 'bg-green-600' : 'bg-green-600/50'}`}
-          disabled={!hasItems}
-          onPress={onPayment}
-        >
-          <Text className={`text-center text-pos-lg font-bold ${hasItems ? 'text-white' : 'text-white/50'}`}>
-            Payment
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <OrderActions
+        orderStatus={orderStatus}
+        hasItems={hasItems}
+        onSendToKitchen={onSendToKitchen}
+        onHold={onHold}
+        onPayment={onPayment}
+      />
     </View>
   );
 }

@@ -98,6 +98,7 @@ export const appSchema = new Schema({
 		description: column.text,
 		sort_order: column.integer,
 		is_active: column.integer,
+		button_color: column.text,
 		created_at: column.text,
 		updated_at: column.text,
 	}),

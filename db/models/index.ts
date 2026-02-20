@@ -132,6 +132,7 @@ export interface Category {
 	description: string | null;
 	sort_order: number;
 	is_active: boolean;
+	button_color: string | null;
 	created_at: Timestamp;
 	updated_at: Timestamp;
 }

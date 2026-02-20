@@ -34,6 +34,20 @@ export async function createOrder(
   guestCount: number | null
 ): Promise<Order> {
   const now = new Date().toISOString();
+
+  // Check if table already has an active order
+  const existingOrder = await powersync.getOptional<Order>(
+    `SELECT * FROM orders 
+     WHERE table_id = ? AND status NOT IN (?, ?, ?)
+     ORDER BY created_at DESC LIMIT 1`,
+    [tableId, ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.SERVED]
+  );
+
+  if (existingOrder) {
+    console.log('[OrderService] Found existing active order:', existingOrder.order_number);
+    return existingOrder;
+  }
+
   const orderNumber = await generateOrderNumber();
 
   // Get the next order ID

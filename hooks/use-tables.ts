@@ -37,7 +37,7 @@ export function useTables() {
   );
 
   // Query tables with joined order information
-  const { data: tablesData = [], isLoading: tablesLoading } = useQuery<TableWithOrder>(
+  const { data: rawTablesData = [], isLoading: tablesLoading } = useQuery<TableWithOrder>(
     `SELECT 
       t.*,
       fa.name as floor_area_name,
@@ -52,7 +52,7 @@ export function useTables() {
      LEFT JOIN orders o ON t.id = o.table_id 
        AND o.status NOT IN (?, ?, ?)
      WHERE t.branch_id = ? AND t.is_active = 1
-     ORDER BY t.table_number ASC`,
+     ORDER BY t.table_number ASC, o.created_at DESC`,
     [
       ORDER_STATUS.COMPLETED,
       ORDER_STATUS.CANCELLED,
@@ -60,6 +60,19 @@ export function useTables() {
       branchId ?? 0
     ]
   );
+
+  // Deduplicate tables - keep only the first occurrence (most recent order due to ORDER BY)
+  const tablesData = useMemo(() => {
+    const seen = new Set<number>();
+    return rawTablesData.filter(table => {
+      const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+      if (seen.has(tableId)) {
+        return false;
+      }
+      seen.add(tableId);
+      return true;
+    });
+  }, [rawTablesData]);
 
   // Group tables by floor area
   const tablesByArea = useMemo(() => {
