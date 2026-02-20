@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 
 import { TABLE_STATUS } from '@/constants/enums';
 import type { TableWithOrder } from '@/hooks/use-tables';
-import { formatIDR } from '@/utils/currency';
 
 interface TableCardProps {
   table: TableWithOrder;
@@ -59,7 +58,7 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
     <Pressable
       onPress={onPress}
       disabled={isMaintenance}
-      className={`rounded-xl border-2 p-4 ${statusColor} ${
+      className={`min-h-[120px] rounded-xl border-2 p-4 ${statusColor} ${
         isMaintenance ? 'opacity-50' : 'active:scale-95'
       }`}
     >
@@ -78,47 +77,22 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
       {/* Capacity */}
       <View className="mb-2 flex-row items-center">
         <Text className="text-pos-sm text-pos-muted">
-          Capacity: {table.capacity} {table.capacity === 1 ? 'person' : 'people'}
+          {`Capacity: ${table.capacity} ${table.capacity === 1 ? 'person' : 'people'}`}
         </Text>
       </View>
 
-      {/* Active Order Info (if occupied) */}
-      {isOccupied && table.active_order_id && (
-        <View className="mt-3 space-y-2 border-t border-white/10 pt-3">
-          {/* Order Number */}
+      {/* Active Order Info (if occupied) - Compact side-by-side layout */}
+      <View className="min-h-[40px] border-t border-white/10 pt-2">
+        {isOccupied && table.active_order_id ? (
           <View className="flex-row items-center justify-between">
-            <Text className="text-pos-xs text-pos-muted">Order:</Text>
-            <Text className="text-pos-sm font-medium text-pos-text-strong">
-              {table.active_order_number}
-            </Text>
-          </View>
-
-          {/* Guest Count */}
-          {table.guest_count && table.guest_count > 0 && (
-            <View className="flex-row items-center justify-between">
-              <Text className="text-pos-xs text-pos-muted">Guests:</Text>
-              <Text className="text-pos-sm font-medium text-pos-text-strong">
-                {table.guest_count}
+            <View className="flex-1">
+              <Text className="text-pos-xs text-pos-muted">
+                {table.active_order_number}
               </Text>
             </View>
-          )}
-
-          {/* Current Total */}
-          {table.order_total !== null && table.order_total > 0 && (
-            <View className="flex-row items-center justify-between">
-              <Text className="text-pos-xs text-pos-muted">Total:</Text>
-              <Text className="text-pos-base font-bold text-primary">
-                {formatIDR(table.order_total)}
-              </Text>
-            </View>
-          )}
-
-          {/* Elapsed Time */}
-          {elapsedMinutes > 0 && (
-            <View className="flex-row items-center justify-between">
-              <Text className="text-pos-xs text-pos-muted">Time:</Text>
+            {elapsedMinutes > 0 && (
               <Text 
-                className={`text-pos-sm font-medium ${
+                className={`text-pos-xs font-medium ${
                   elapsedMinutes > 90 
                     ? 'text-red-500' 
                     : elapsedMinutes > 60 
@@ -126,30 +100,20 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
                     : 'text-pos-text-strong'
                 }`}
               >
-                {elapsedMinutes} min
+                {`${elapsedMinutes} min`}
               </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Reserved Info */}
-      {isReserved && (
-        <View className="mt-3 border-t border-white/10 pt-3">
+            )}
+          </View>
+        ) : isReserved ? (
           <Text className="text-pos-xs text-yellow-400">
             Reserved - Tap for details
           </Text>
-        </View>
-      )}
-
-      {/* Maintenance Info */}
-      {isMaintenance && (
-        <View className="mt-3 border-t border-white/10 pt-3">
+        ) : isMaintenance ? (
           <Text className="text-pos-xs text-gray-400">
             Under maintenance
           </Text>
-        </View>
-      )}
+        ) : null}
+      </View>
     </Pressable>
   );
 }

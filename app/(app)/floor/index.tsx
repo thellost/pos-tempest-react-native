@@ -125,7 +125,7 @@ export default function FloorScreen() {
         ) : (
           <View className="flex-row flex-wrap gap-4">
             {currentTables.map((table) => (
-              <View key={table.id} className="w-[48%]">
+              <View key={`table-${table.id}`} className="w-[31%]">
                 <TableCard
                   table={table}
                   elapsedMinutes={getOrderElapsedMinutes(table.order_created_at)}
