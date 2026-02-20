@@ -31,10 +31,10 @@ export function MenuItemCard({ item, categoryColor, onPress }: MenuItemCardProps
     <Pressable
       onPress={handlePress}
       disabled={!isAvailable}
-      className={`min-h-pos-touch items-center justify-center rounded-lg p-3 ${
+      className={`min-h-pos-touch items-center justify-center p-3 ${
         !isAvailable ? 'opacity-50' : ''
       } active:opacity-80`}
-      style={{ backgroundColor }}
+      style={{ backgroundColor, borderRadius: 4 }}
     >
       <View className="flex-1 items-center justify-center">
         <Text
@@ -58,7 +58,7 @@ export function MenuItemCard({ item, categoryColor, onPress }: MenuItemCardProps
         </View>
 
         {isLowStock && isAvailable && (
-          <View className="mt-1 rounded bg-pos-warning/80 px-2 py-0.5">
+          <View className="mt-1 px-2 py-0.5" style={{ backgroundColor: 'rgba(217,119,6,0.8)', borderRadius: 2 }}>
             <Text className="text-pos-xs font-semibold text-white">
               Low Stock
             </Text>
@@ -66,7 +66,7 @@ export function MenuItemCard({ item, categoryColor, onPress }: MenuItemCardProps
         )}
 
         {!isAvailable && (
-          <View className="mt-1 rounded bg-black/30 px-2 py-0.5">
+          <View className="mt-1 px-2 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 2 }}>
             <Text className="text-pos-xs font-semibold text-white">
               Sold Out
             </Text>

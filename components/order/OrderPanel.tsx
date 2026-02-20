@@ -67,16 +67,22 @@ export function OrderPanel({
               {order?.order_number ?? 'New Order'}
             </Text>
           </View>
-          <View className="flex-row items-center gap-1">
+          <View className="flex-row items-center">
             <Pressable
-              className="rounded bg-toast-gray-2 px-3 py-1"
-              style={{ opacity: order?.order_type === ORDER_TYPE.DINE_IN ? 1 : 0.5 }}
+              className="px-3 py-1"
+              style={{
+                backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#5f5f5f' : 'transparent',
+                borderRadius: 2,
+              }}
             >
               <Text className="text-pos-sm font-medium text-white">Dine-in</Text>
             </Pressable>
             <Pressable
-              className="rounded bg-toast-gray-2 px-3 py-1"
-              style={{ opacity: order?.order_type === ORDER_TYPE.TAKEAWAY ? 1 : 0.5 }}
+              className="ml-1 px-3 py-1"
+              style={{
+                backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#5f5f5f' : 'transparent',
+                borderRadius: 2,
+              }}
             >
               <Text className="text-pos-sm font-medium text-white">Takeaway</Text>
             </Pressable>
@@ -88,7 +94,8 @@ export function OrderPanel({
           <View className="flex-row items-center">
             <Pressable
               onPress={handleGuestDecrease}
-              className="h-8 w-8 items-center justify-center rounded-lg bg-surface"
+              className="h-8 w-8 items-center justify-center bg-surface"
+              style={{ borderRadius: 4 }}
             >
               <Text className="text-pos-lg text-pos-text-strong">-</Text>
             </Pressable>
@@ -97,7 +104,8 @@ export function OrderPanel({
             </Text>
             <Pressable
               onPress={handleGuestIncrease}
-              className="h-8 w-8 items-center justify-center rounded-lg bg-surface"
+              className="h-8 w-8 items-center justify-center bg-surface"
+              style={{ borderRadius: 4 }}
             >
               <Text className="text-pos-lg text-pos-text-strong">+</Text>
             </Pressable>
