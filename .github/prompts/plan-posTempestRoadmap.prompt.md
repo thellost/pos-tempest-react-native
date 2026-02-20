@@ -196,30 +196,315 @@ devices: {
 
 ### Step 7 — Menu Display & Order Creation (Core POS)
 
-**Goal:** The main order-taking screen — split panel with menu grid on the left and order summary on the right (Toast POS style).
+**Goal:** The main order-taking screen — split panel with menu grid on the left and order summary on the right (Toast POS style). This step is broken into 6 sub-steps for manageability.
+
+**Design Decisions (Toast POS Research):**
+- **Theme:** Dark mode default (`#0B1220` background), orange accent (`#803500`)
+- **Layout:** 65% menu grid / 35% order panel (landscape tablet)
+- **Category colors:** Admin-configurable via `button_color` column on categories table
+- **Modifier picker:** Full-screen modal (optimized for tablet landscape)
+- **Weight input:** Manual entry via numpad (no scale integration)
+- **Direct add:** Items with no modifiers add immediately on tap (no confirmation)
+
+**Database Schema Change Required:**
+```typescript
+// Add to categories table in db/schema.ts
+button_color: column.text  // Hex color e.g. "#803500", nullable
+
+// Update Category interface in db/models/index.ts
+button_color: string | null  // Null defaults to slate "#334155"
+```
+
+---
+
+#### Step 7a — Category Navigation & Menu Grid
+
+**Goal:** Build the left-side menu browsing interface with Toast-style navigation.
 
 **Actions:**
-- Create `src/hooks/use-menu.ts` — queries `categories` (with hierarchy) + `menu_items` filtered by `is_active` and `is_available`, sorted by `sort_order`
-- Create `src/services/order.service.ts` — all order logic:
-  - `createOrder(branchId, tableId, cashierId, shiftId, orderType, guestCount)`
-  - `addItemToOrder(orderId, menuItem, quantity, modifiers[], notes, weight?)`
-  - `removeItemFromOrder(orderItemId)`
-  - `updateItemQuantity(orderItemId, newQty)`
-  - `updateItemNotes(orderItemId, notes)`
-  - `calculateOrderTotals(orderId)` — subtotal, tax, service charge, discounts, rounding, total
-  - `voidOrder(orderId, voidedBy, reason)`
-  - `voidItem(orderItemId, voidedBy, reason)`
-- Create `src/components/menu/CategoryTabs.tsx` — top-level categories as horizontal tabs, sub-categories as a secondary row
-- Create `src/components/menu/MenuGrid.tsx` — responsive grid of menu item cards
-- Create `src/components/menu/MenuItemCard.tsx` — shows name, price, unit, availability. Color/icon for weight-based items. Tap → either add directly or open modifier picker
-- Create `src/components/menu/ModifierPicker.tsx` — bottom sheet or modal showing modifier groups for the selected item. Respects `is_required`, `min_selections`, `max_selections`. For weight-based items, includes a numeric input for weight
-- Create `src/components/order/OrderPanel.tsx` — right-side panel: guest count, order items list, each with qty/modifiers/subtotal, running totals (subtotal, tax, service, total)
-- Create `src/components/order/OrderItemRow.tsx` — swipeable row: tap to edit qty/notes, swipe to remove, shows modifiers inline
-- Create `app/(app)/order/[tableId].tsx` — split layout: 65% menu | 35% order panel. Header shows table number + order number. Bottom bar: "Send to Kitchen" + "Payment" buttons
+- Create `components/menu/CategoryTabs.tsx`:
+  - Horizontal scrollable tabs for top-level categories
+  - Active state: orange accent border bottom, bold text
+  - Sub-categories: secondary row of smaller pills beneath
+  - Search icon → opens menu item search modal
+  - Sticky positioning at top of menu area
+- Create `components/menu/MenuGrid.tsx`:
+  - 4-column responsive grid (adjusts to 3 on smaller screens)
+  - Each cell: `min-h-pos-touch` (48px minimum)
+  - Gap: 12px between items
+  - Pull-to-refresh for sync status feedback
+- Create `components/menu/MenuItemCard.tsx`:
+  - Toast-style square button design
+  - Background: category `button_color` or fallback `#334155`
+  - Content: item name (truncated), price in IDR
+  - Badges: "Weight" icon for weight-based, "Low Stock" indicator
+  - Out-of-stock: grayed out with strikethrough
+  - Press feedback: scale down + haptic
 
-**Weight-based flow:** Tap weight-based item → numeric keypad for weight → compute price (weight × unit price) → add to order.
+**Direct Add Logic:**
+```typescript
+const handleMenuItemPress = async (item: MenuItem) => {
+  const hasModifiers = await hasModifierGroups(item.id);
+  const isWeightBased = item.pricing_type === 'weight_based';
+  
+  if (!hasModifiers && !isWeightBased) {
+    // Direct add - no confirmation
+    await addItemToOrder(order.id, item, 1, [], null, null);
+  } else {
+    // Open full-screen modifier picker
+    setSelectedItem(item);
+    setShowModifierPicker(true);
+  }
+};
+```
 
-**Verification:** Create order on table A3 → add Nasi Goreng Spesial with Pedas Sedang + Telur Ceplok → add Ikan Gurame 0.4kg Bakar → see correct totals. Items persist in SQLite, sync to Supabase.
+**Verification:** Categories scroll horizontally, grid shows 4 columns with category-colored backgrounds, items without modifiers add directly, items with modifiers open picker.
+
+---
+
+#### Step 7b — Order Panel (Right Sidebar)
+
+**Goal:** Build the right-side order summary panel with Toast-style action buttons.
+
+**Actions:**
+- Create `components/order/OrderPanel.tsx`:
+  - Fixed-width right panel (30-35% of screen)
+  - Three sections: Header, Items List, Footer/Actions
+- **Header Section:**
+  - Table number (large, bold)
+  - Order number (muted, small)
+  - Guest count selector (stepper: - / count / +)
+  - Dining option toggle: Dine-in | Takeaway
+- **Items List:**
+  - Scrollable list of `OrderItemRow` components
+  - Empty state: "Tap menu items to add"
+  - Sticky subtotal at bottom of list
+- **Totals Section:**
+  - Subtotal
+  - Discount (if applied)
+  - Tax (PPN 11%)
+  - Service Charge (if configured)
+  - Rounding
+  - **Total (large, bold, orange accent)**
+- **Action Buttons (bottom-fixed):**
+  - "Send to Kitchen" (primary, orange)
+  - "Hold" (secondary, outline)
+  - "Payment" (secondary, outline)
+  - Show "Sent HH:MM" timestamp after order sent (Toast pattern)
+- Create `components/order/OrderTotals.tsx` — totals breakdown component
+- Create `components/order/OrderActions.tsx` — action buttons component
+
+**Verification:** Panel fixed on right, items scroll, totals update in real-time, buttons sticky at bottom.
+
+---
+
+#### Step 7c — Order Item Row & Quick Actions
+
+**Goal:** Build the interactive order item row with swipe/edit/delete actions.
+
+**Actions:**
+- Create `components/order/OrderItemRow.tsx`:
+  - Layout: `[qty badge] [name + modifiers] [price]`
+  - Qty badge: circular, tap to increment (+1), long-press for numpad
+  - Item name: bold, truncate with ellipsis
+  - Modifiers: muted, smaller font, comma-separated horizontal
+  - Price: right-aligned in IDR format
+  - Swipe left → reveal red "Remove" button
+  - Tap row → open QuickEditModal
+- Create `components/order/QuickEditModal.tsx`:
+  - Full-screen modal (landscape tablet)
+  - Qty stepper with + / - buttons
+  - Notes input (optional, multiline)
+  - "Update" / "Remove" buttons
+  - For weight items: show weight display (read-only, set during add)
+- Create `components/order/OrderItemBadge.tsx`:
+  - Voided: red "VOID" badge
+  - Sent to kitchen: green checkmark icon
+  - Modifier changed: yellow dot indicator
+
+**Verification:** Swipe reveals delete, tap opens edit modal, qty updates reflect immediately in totals, long-press opens numpad.
+
+---
+
+#### Step 7d — Modifier Picker (Full-Screen Modal)
+
+**Goal:** Build the modifier selection interface when adding items with modifiers or weight.
+
+**Actions:**
+- Create `components/menu/ModifierPicker.tsx`:
+  - **Full-screen modal** (optimized for tablet landscape, not bottom sheet)
+  - **Header:** Item name, base price, close button
+  - **Weight Input Section (if weight-based):**
+    - Large weight display: "0.40 kg"
+    - Numeric numpad (0-9, decimal, backspace)
+    - Real-time price calculation: weight × unit price
+  - **Modifier Groups:** Stacked vertically
+    - Group header: name + required/optional badge
+    - Required groups appear first
+    - Horizontal scrollable buttons for options
+    - Multi-select: checkboxes, respect `min_selections`, `max_selections`
+    - Single-select: radio button behavior
+    - Extra price shown: "+Rp5.000"
+    - Selected state: orange border, checkmark icon
+  - **Special Request Section:**
+    - Text input: "e.g. No onions, extra sauce..."
+    - Optional price field for admin-configured special requests
+  - **Footer (sticky bottom):**
+    - Running total: "Total: Rp45.000"
+    - "Cancel" button (secondary)
+    - "Add to Order" button (primary, orange) — disabled until required modifiers selected
+- Create `components/menu/ModifierGroupRow.tsx`:
+  - Reusable component for each modifier group
+  - Validation state: shows error message if required group incomplete
+  - Display ordering: respects `sort_order` from database
+- Create `components/menu/WeightInput.tsx`:
+  - Large numeric display
+  - Full numpad layout
+  - Min/max validation if configured on item
+  - Decimal support (0.1, 0.25, 0.5, etc.)
+  - Quick weight buttons: 0.25, 0.5, 1.0
+
+**Layout Reference:**
+```
+┌────────────────────────────────────────────────────────┐
+│  ←  Nasi Goreng Spesial                    Rp35.000   │
+├────────────────────────────────────────────────────────┤
+│  * SPICE LEVEL (Required)                              │
+│  [ Original ] [ Pedas Sedang ✓ ] [ Extra Pedas ]      │
+│                                                        │
+│  ADD-ONS (Optional - Select up to 3)                   │
+│  [ Telur Ceplok ✓ +5k ] [ Ayam Geprek +8k ] [...]    │
+│                                                        │
+│  SPECIAL REQUEST                                       │
+│  ┌────────────────────────────────────────────────┐   │
+│  │ e.g. No onions, extra sauce...                 │   │
+│  └────────────────────────────────────────────────┘   │
+├────────────────────────────────────────────────────────┤
+│  Total: Rp45.000        [Cancel]  [Add to Order ✓]    │
+└────────────────────────────────────────────────────────┘
+```
+
+**Verification:** Required groups enforce selection, total updates live, weight calculation correct, add to order creates item with all modifiers.
+
+---
+
+#### Step 7e — Order Service Layer (Business Logic)
+
+**Goal:** Implement all order CRUD operations and calculations as pure, testable functions.
+
+**Actions:**
+- Create `services/order.service.ts`:
+  ```typescript
+  // Core CRUD operations
+  createOrder(branchId, tableId, cashierId, shiftId, orderType, guestCount): Promise<Order>
+  addItemToOrder(orderId, menuItem, quantity, modifiers[], notes, weight?): Promise<void>
+  removeItemFromOrder(orderItemId): Promise<void>
+  updateItemQuantity(orderItemId, newQuantity): Promise<void>
+  updateItemNotes(orderItemId, notes): Promise<void>
+  
+  // Calculations
+  calculateOrderTotals(orderId): Promise<OrderTotals>
+  // Returns: { subtotal, discountAmount, taxAmount, serviceCharge, roundingAmount, total }
+  
+  // Void operations
+  voidOrder(orderId, voidedBy, reason): Promise<void>
+  voidItem(orderItemId, voidedBy, reason): Promise<void>
+  
+  // Retrieval
+  getOrderWithItems(orderId): Promise<OrderWithItems | null>
+  getActiveOrdersForTable(tableId): Promise<Order[]>
+  ```
+- Create `services/calculator.service.ts` (pure functions, easily testable):
+  ```typescript
+  calculateSubtotal(items: OrderItem[]): number
+  applyDiscount(subtotal: number, discount: Discount): number
+  calculateTax(amountAfterDiscount: number, taxRate: number): number  // PPN 11%
+  calculateServiceCharge(amountAfterDiscount: number, serviceRate: number): number
+  calculateRounding(total: number): { roundingAmount: number, roundedTotal: number }
+  // Indonesian rounding: round to nearest 100 IDR
+  ```
+- All functions should:
+  - Use PowerSync for database operations
+  - Log operations with `[OrderService]` prefix
+  - Throw descriptive errors for user feedback
+  - Handle edge cases (empty order, negative qty, etc.)
+
+**Verification:** Unit test each calculation function, integration test full order flow with real items, verify totals match manual calculation.
+
+---
+
+#### Step 7f — Order Screen Integration
+
+**Goal:** Wire all components together in the main order screen.
+
+**Actions:**
+- Update `app/(app)/order/[tableId].tsx`:
+  - Split layout: 65% MenuGrid (left) | 35% OrderPanel (right)
+  - Header bar: table info, sync status indicator, back button
+  - Load/create order on mount based on `tableId` param
+  - Handle menu item tap → direct add OR modifier picker
+  - Real-time total updates via PowerSync `useQuery`
+  - Handle "Send to Kitchen" → create KOT (calls Step 8 service)
+  - Handle "Hold" → save order, return to floor view
+  - Handle "Payment" → navigate to `checkout/[orderId]`
+- Create `hooks/use-order.ts`:
+  ```typescript
+  {
+    order: Order | null,
+    items: OrderItemWithModifiers[],
+    isLoading: boolean,
+    totals: OrderTotals,
+    addItem: (item, qty, modifiers, notes, weight) => Promise<void>,
+    updateQuantity: (itemId, qty) => Promise<void>,
+    removeItem: (itemId) => Promise<void>,
+    updateNotes: (itemId, notes) => Promise<void>,
+    sendToKitchen: () => Promise<void>,
+    holdOrder: () => void,
+    goToPayment: () => void,
+  }
+  ```
+
+**Screen Layout:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ← Table A3          Order #ORD-20250120-001       ● Synced    │
+├───────────────────────────────────────────┬─────────────────────┤
+│ [Makanan] [Minuman] [Snacks] [Dessert]    │ Table A3            │
+│                                           │ ORD-20250120-001    │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐      │ Guests: [- 2 +]     │
+│ │ Nasi    │ │ Mie     │ │ Ayam    │      ├─────────────────────┤
+│ │ Goreng  │ │ Goreng  │ │ Bakar   │      │ • Nasi Goreng x2    │
+│ │ Rp35.000│ │ Rp30.000│ │ Rp45.000│      │   + Pedas Sedang    │
+│ └─────────┘ └─────────┘ └─────────┘      │   Rp75.000          │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐      │                     │
+│ │ Sate    │ │ Ikan    │ │ Sop     │      │ • Ikan Gurame       │
+│ │ Ayam    │ │ Bakar ⚖ │ │ Buntut  │      │   0.4kg Bakar       │
+│ │ Rp40.000│ │ Rp84.000│ │ Rp55.000│      │   Rp84.000          │
+│ └─────────┘ └─────────┘ └─────────┘      ├─────────────────────┤
+│                                           │ Subtotal   159.000  │
+│                                           │ Tax (11%)   17.490  │
+│                                           │ Total      176.490  │
+│                                           ├─────────────────────┤
+│                                           │ [Send to Kitchen]   │
+│                                           │ [Hold]  [Payment]   │
+└───────────────────────────────────────────┴─────────────────────┘
+```
+
+**Verification:** Full flow: tap table → order screen loads → add items (direct and with modifiers) → see correct totals → send to kitchen creates KOT → payment navigates to checkout.
+
+---
+
+**Step 7 Complete Verification:**
+1. Category tabs scroll, sub-categories show in secondary row
+2. Menu grid shows 4 columns with correct category colors
+3. Items without modifiers add on tap (no confirmation)
+4. Items with modifiers open full-screen picker
+5. Weight items show numpad for manual entry
+6. Order panel shows items, totals, actions
+7. Swipe to delete, tap to edit works
+8. Totals calculate correctly (subtotal, tax 11%, service, rounding)
+9. Send to Kitchen creates KOT
+10. All data persists to SQLite and syncs to Supabase
 
 ---
 
@@ -361,15 +646,17 @@ Full workflow test:
 1. First launch → register device as "Kasir 1" on Kemang branch
 2. Login with email → open shift (500k) on this device → see floor plan
 3. Tap table A3 → new dine-in order for 2 guests
-4. Add Nasi Goreng Spesial (Pedas Sedang, Telur Ceplok) × 2 + Ikan Gurame 0.4kg (Bakar)
-5. Send to Kitchen → KOT prints on kitchen printer → appears on kitchen display
-6. Chef marks items done → order status → ready → served
-7. Tap payment → apply Happy Hour 10% discount → pay with cash 200k
-8. Receipt prints → table A3 turns green → stock deducted
-9. Log out → different user logs in on same device → **same shift still active** (device-scoped)
-10. Close shift → cash reconciliation → shift closed
-11. Turn off Wi-Fi → repeat steps 3-8 → everything works offline
-12. Turn on Wi-Fi → data syncs to Supabase
+4. Tap "Nasi Goreng Spesial" (no modifiers) → **adds directly** to order
+5. Tap "Ikan Gurame" (weight-based) → modifier picker opens → enter 0.4kg → select "Bakar" → add to order
+6. Add modifiers to Nasi Goreng via quick edit → see totals update
+7. Send to Kitchen → KOT prints on kitchen printer → appears on kitchen display
+8. Chef marks items done → order status → ready → served
+9. Tap payment → apply Happy Hour 10% discount → pay with cash 200k
+10. Receipt prints → table A3 turns green → stock deducted
+11. Log out → different user logs in on same device → **same shift still active** (device-scoped)
+12. Close shift → cash reconciliation → shift closed
+13. Turn off Wi-Fi → repeat steps 3-10 → everything works offline
+14. Turn on Wi-Fi → data syncs to Supabase
 
 **Decisions**
 - **NativeWind (Tailwind CSS)** — zero-runtime, utility-first styling via `className` prop, trivial Expo setup, built-in dark mode, familiar Tailwind DX
@@ -378,3 +665,17 @@ Full workflow test:
 - **Bluetooth thermal printers** — ESC/POS protocol, most common in Indonesian restaurants
 - **Email + PIN auth** — Supabase handles email auth, PIN validated locally for offline quick-unlock
 - **Global sync bucket for now** — will scope to per-branch buckets when ready (Step 2 keeps this extensible)
+- **Toast POS color system** — 28 button colors in 7 families for category differentiation:
+  ```
+  ORANGE:    #8f5f3d, #7e4116, #803500 (primary), #682d03
+  TERRACOTTA: #7e635d, #74504D, #722e25, #561408
+  YELLOW:    #7e6b44, #7b5f27, #7c5000, #633d09
+  GRASS:     #657552, #556e34, #37570a, #113a00
+  SKY:       #637486, #4d6074, #2a456b, #213554
+  LAVENDER:  #78668a, #5e4776, #402960, #25174f
+  GRAY:      #6c6c6c, #5f5f5f, #474747, #404040
+  ```
+  Categories store `button_color` in database (nullable, defaults to `#334155` slate)
+- **Modifier picker: full-screen modal** — optimized for tablet landscape, not bottom sheet
+- **Weight input: manual entry** — numpad for weight-based items, no scale integration
+- **Direct add for simple items** — items with no modifiers add immediately on tap, no confirmation modal
