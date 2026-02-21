@@ -210,7 +210,66 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     setSelectedSubCategoryId(subCategoryId);
   }, []);
 
+  const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
+    return orderItems.reduce<Record<number, number>>((accumulator, orderItem) => {
+      if (orderItem.is_voided) {
+        return accumulator;
+      }
+
+      const menuItemId = typeof orderItem.menu_item_id === 'string'
+        ? parseInt(orderItem.menu_item_id as string, 10)
+        : orderItem.menu_item_id;
+      const quantity = typeof orderItem.quantity === 'string'
+        ? parseInt(orderItem.quantity as string, 10)
+        : orderItem.quantity;
+
+      accumulator[menuItemId] = (accumulator[menuItemId] || 0) + quantity;
+      return accumulator;
+    }, {});
+  }, [orderItems]);
+
+  const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
+    const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+
+    const matchingItems = orderItems.filter((orderItem) => {
+      const orderMenuItemId = typeof orderItem.menu_item_id === 'string'
+        ? parseInt(orderItem.menu_item_id as string, 10)
+        : orderItem.menu_item_id;
+      return orderMenuItemId === menuItemId && !orderItem.is_voided;
+    });
+
+    if (matchingItems.length === 0) {
+      return;
+    }
+
+    const targetOrderItem = matchingItems
+      .slice()
+      .sort((left, right) => {
+        const leftId = typeof left.id === 'string' ? parseInt(left.id as string, 10) : left.id;
+        const rightId = typeof right.id === 'string' ? parseInt(right.id as string, 10) : right.id;
+        return rightId - leftId;
+      })[0];
+
+    const targetItemId = typeof targetOrderItem.id === 'string'
+      ? parseInt(targetOrderItem.id as string, 10)
+      : targetOrderItem.id;
+    const currentQuantity = typeof targetOrderItem.quantity === 'string'
+      ? parseInt(targetOrderItem.quantity as string, 10)
+      : targetOrderItem.quantity;
+
+    try {
+      await updateItemQuantity(targetItemId, currentQuantity - 1);
+      await reloadOrder();
+    } catch (error) {
+      console.error('[OrderScreen] Error decrementing item quantity:', error);
+    }
+  }, [orderItems, reloadOrder]);
+
   const currentCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
+  const currentSubCategory = selectedSubCategoryId ? subCategories.find(c => {
+    const catId = typeof c.id === 'string' ? parseInt(c.id, 10) : c.id;
+    return catId === selectedSubCategoryId;
+  }) : undefined;
   
   const allMenuItems = useMemo(() => {
     return selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
@@ -312,7 +371,10 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
           <MenuGrid
             items={menuItemsList}
             category={currentCategory}
+            subCategoryName={currentSubCategory?.name}
+            quantitiesByMenuItemId={quantitiesByMenuItemId}
             onItemPress={handleMenuItemPress}
+            onDecrementItem={handleMenuItemDecrement}
           />
         </View>
       </View>

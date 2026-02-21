@@ -60,75 +60,77 @@ export function OrderPanel({
 
   return (
     <View className="flex-1 border-r border-border bg-surface-soft">
-      <View className="border-b border-border bg-surface-card px-5 py-4">
+      <View className="border-b border-border bg-surface-card px-4 py-3">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-pos-xl font-bold text-pos-text">
+            <Text className="text-pos-lg font-bold text-pos-text">
               {order?.order_number ?? 'New Order'}
             </Text>
           </View>
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1.5">
             <Pressable
-              className="px-4 py-2"
-              style={{
+              className="px-3 py-1.5"
+              style={({ pressed }) => ({
                 backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#6366F1' : 'transparent',
-                borderRadius: 10,
+                borderRadius: 6,
                 borderWidth: order?.order_type === ORDER_TYPE.DINE_IN ? 0 : 1,
                 borderColor: 'rgba(255,255,255,0.12)',
-              }}
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              <Text className={`text-pos-sm font-semibold ${order?.order_type === ORDER_TYPE.DINE_IN ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
+              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.DINE_IN ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
             </Pressable>
             <Pressable
-              className="px-4 py-2"
-              style={{
+              className="px-3 py-1.5"
+              style={({ pressed }) => ({
                 backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#6366F1' : 'transparent',
-                borderRadius: 10,
+                borderRadius: 6,
                 borderWidth: order?.order_type === ORDER_TYPE.TAKEAWAY ? 0 : 1,
                 borderColor: 'rgba(255,255,255,0.12)',
-              }}
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              <Text className={`text-pos-sm font-semibold ${order?.order_type === ORDER_TYPE.TAKEAWAY ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
+              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.TAKEAWAY ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
             </Pressable>
           </View>
         </View>
 
-        <View className="mt-4 flex-row items-center justify-between">
-          <Text className="text-pos-sm text-pos-text-muted">Guests</Text>
-          <View className="flex-row items-center gap-3">
+        <View className="mt-3 flex-row items-center justify-between">
+          <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
+          <View className="flex-row items-center gap-2">
             <Pressable
               onPress={handleGuestDecrease}
-              className="h-9 w-9 items-center justify-center bg-surface-raised"
-              style={{ borderRadius: 8 }}
+              className="h-7 w-7 items-center justify-center bg-surface-raised"
+              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
             >
-              <Text className="text-pos-lg text-pos-text">−</Text>
+              <Text className="text-pos-sm text-pos-text">−</Text>
             </Pressable>
-            <Text className="min-w-[32px] text-center text-pos-lg font-bold text-pos-text">
+            <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
               {guestCount}
             </Text>
             <Pressable
               onPress={handleGuestIncrease}
-              className="h-9 w-9 items-center justify-center bg-surface-raised"
-              style={{ borderRadius: 8 }}
+              className="h-7 w-7 items-center justify-center bg-surface-raised"
+              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
             >
-              <Text className="text-pos-lg text-pos-text">+</Text>
+              <Text className="text-pos-sm text-pos-text">+</Text>
             </Pressable>
           </View>
         </View>
       </View>
 
       <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 16 }}
+        className="flex-1 px-3"
+        contentContainerStyle={{ paddingVertical: 12 }}
         showsVerticalScrollIndicator={false}
       >
         {items.length === 0 ? (
-          <View className="items-center justify-center py-16">
-            <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-              <Text className="text-3xl">🍽️</Text>
+          <View className="items-center justify-center py-12">
+            <View className="mb-3 h-12 w-12 items-center justify-center rounded-full bg-surface-card">
+              <Text className="text-2xl">🍽️</Text>
             </View>
-            <Text className="text-pos-base text-pos-text-muted">No items added</Text>
-            <Text className="mt-1 text-pos-sm text-pos-text-faint">
+            <Text className="text-pos-sm text-pos-text-muted">No items added</Text>
+            <Text className="mt-1 text-pos-xs text-pos-text-faint">
               Tap menu items to add
             </Text>
           </View>
@@ -137,14 +139,14 @@ export function OrderPanel({
         )}
       </ScrollView>
 
-      <View className="px-4">
+      <View className="px-3">
         {order ? (
           <OrderTotals order={order} />
         ) : (
-          <View className="border-t border-border py-4">
+          <View className="border-t border-border py-3">
             <View className="flex-row justify-between">
-              <Text className="text-pos-base font-semibold text-pos-text-muted">Total</Text>
-              <Text className="text-pos-2xl font-bold text-accent">
+              <Text className="text-pos-sm font-semibold text-pos-text-muted">Total</Text>
+              <Text className="text-pos-xl font-bold text-accent">
                 {formatIDR(emptySubtotal)}
               </Text>
             </View>

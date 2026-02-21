@@ -2,7 +2,7 @@ import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
-import { Redirect, Stack, usePathname } from 'expo-router';
+import { Redirect, router, Stack, usePathname } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 export default function AppLayout() {
@@ -173,13 +173,20 @@ export default function AppLayout() {
       )}
 
       <View className="border-t border-border bg-surface-card px-4 py-3">
-        <Pressable
-          className="flex-row items-center justify-center rounded-xl bg-pos-danger-muted px-4 py-3"
-          onPress={async () => {
-            await signOut();
-          }}>
-          <Text className="text-pos-base font-semibold text-pos-danger">Sign Out</Text>
-        </Pressable>
+        <View className="flex-row gap-3">
+          <Pressable
+            className="flex-1 flex-row items-center justify-center rounded-xl bg-accent px-4 py-3"
+            onPress={() => router.push('/explore')}>
+            <Text className="text-pos-base font-semibold text-white">Dashboard</Text>
+          </Pressable>
+          <Pressable
+            className="flex-1 flex-row items-center justify-center rounded-xl bg-pos-danger-muted px-4 py-3"
+            onPress={async () => {
+              await signOut();
+            }}>
+            <Text className="text-pos-base font-semibold text-pos-danger">Sign Out</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );

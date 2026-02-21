@@ -44,17 +44,19 @@ export function OrderActions({
   }, [canPayment, onPayment]);
 
   return (
-    <View className="border-t border-border bg-surface-card p-4">
-      <View className="flex-row gap-3">
+    <View className="border-t border-border bg-surface-card p-3">
+      <View className="flex-row gap-2">
         <Pressable
           onPress={handleHold}
           disabled={!hasItems}
-          className={`flex-1 items-center justify-center py-3.5 ${
-            hasItems ? 'bg-surface-raised' : 'bg-surface-raised opacity-40'
-          }`}
-          style={{ borderRadius: 12 }}
+          className="flex-1 items-center justify-center py-2.5"
+          style={({ pressed }) => ({
+            borderRadius: 8,
+            backgroundColor: hasItems ? '#222838' : '#1A1F2C',
+            opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
+          })}
         >
-          <Text className={`text-pos-base font-semibold ${hasItems ? 'text-pos-text' : 'text-pos-text-faint'}`}>
+          <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-text' : 'text-pos-text-faint'}`}>
             Hold
           </Text>
         </Pressable>
@@ -62,13 +64,15 @@ export function OrderActions({
         <Pressable
           onPress={handleSendToKitchen}
           disabled={!canSend}
-          className={`flex-1 items-center justify-center py-3.5 ${
-            canSend ? 'bg-accent' : 'bg-surface-raised opacity-40'
-          }`}
-          style={{ borderRadius: 12 }}
+          className="flex-1 items-center justify-center py-2.5"
+          style={({ pressed }) => ({
+            borderRadius: 8,
+            backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
+            opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
+          })}
         >
-          <Text className={`text-pos-base font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
-            {sentAt ? `Sent ${sentAt}` : 'Send to Kitchen'}
+          <Text className={`text-pos-sm font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
+            {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
           </Text>
         </Pressable>
       </View>
@@ -76,12 +80,14 @@ export function OrderActions({
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className={`mt-3 items-center justify-center py-4 ${
-          canPayment ? 'bg-pos-success' : 'bg-surface-raised opacity-40'
-        }`}
-        style={{ borderRadius: 12 }}
+        className="mt-2 items-center justify-center py-3"
+        style={({ pressed }) => ({
+          borderRadius: 8,
+          backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
+          opacity: !canPayment ? 0.4 : pressed ? 0.7 : 1,
+        })}
       >
-        <Text className={`text-pos-lg font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
+        <Text className={`text-pos-base font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
           Payment
         </Text>
       </Pressable>

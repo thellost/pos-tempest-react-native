@@ -10,74 +10,101 @@ const DEFAULT_BUTTON_COLOR = '#475569';
 interface MenuItemCardProps {
   item: MenuItemWithInventory;
   categoryColor?: string | null;
+  categoryName?: string | null;
+  quantity?: number;
   onPress: () => void;
+  onDecrement?: () => void;
 }
 
-export function MenuItemCard({ item, categoryColor, onPress }: MenuItemCardProps) {
+export function MenuItemCard({ 
+  item, 
+  categoryColor, 
+  categoryName,
+  quantity = 0, 
+  onPress, 
+  onDecrement 
+}: MenuItemCardProps) {
   const isWeightBased = item.pricing_type === PRICING_TYPE.WEIGHT_BASED;
   const isAvailable = Boolean(item.is_available);
   const isLowStock = item.isLowStock;
-  const backgroundColor = isAvailable
-    ? (categoryColor || DEFAULT_BUTTON_COLOR)
-    : '#2A3142';
+  const accentColor = categoryColor || DEFAULT_BUTTON_COLOR;
+  const displayCategory = categoryName || 'Food & Drink';
 
-  const handlePress = useCallback(() => {
+  const handleAdd = useCallback(() => {
     if (isAvailable) {
       onPress();
     }
   }, [isAvailable, onPress]);
 
+  const handleDecrement = useCallback(() => {
+    if (!isAvailable || !onDecrement || quantity <= 0) return;
+    onDecrement();
+  }, [isAvailable, onDecrement, quantity]);
+
   return (
-    <Pressable
-      onPress={handlePress}
-      disabled={!isAvailable}
-      className={`overflow-hidden ${!isAvailable ? 'opacity-50' : ''}`}
-      style={{ 
-        backgroundColor, 
-        borderRadius: 16,
-        minHeight: 90,
-      }}
+    <View
+      className={`overflow-hidden border border-border bg-surface-card ${!isAvailable ? 'opacity-50' : ''}`}
+      style={{ minHeight: 100, borderRadius: 6 }}
     >
-      <View className="flex-1 justify-between p-4">
-        <View>
-          <Text
-            className="text-center text-[14px] font-bold leading-[18px] text-white"
-            numberOfLines={2}
-          >
+      <View className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accentColor }} />
+
+      <Pressable 
+        onPress={handleAdd} 
+        disabled={!isAvailable} 
+        className="flex-1 px-3 pb-1.5 pt-2"
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      >
+        <Text className="text-[10px] text-pos-text-faint" numberOfLines={1}>
+          {displayCategory}
+        </Text>
+
+        <View className="mt-0.5 flex-1 justify-between">
+          <Text className="text-[13px] font-semibold leading-4 text-pos-text" numberOfLines={2}>
             {item.name}
           </Text>
+
+          <Text className="mt-1 text-[12px] font-semibold text-pos-text">
+            {formatIDR(item.price)}
+            {isWeightBased && `/${item.unit_of_measure}`}
+          </Text>
         </View>
+      </Pressable>
 
-        <View className="mt-auto items-center pt-2">
-          <View 
-            className="rounded-lg px-3 py-1"
-            style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-          >
-            <Text className="text-[13px] font-bold text-white">
-              {formatIDR(item.price)}
-              {isWeightBased && `/${item.unit_of_measure}`}
-            </Text>
-          </View>
-        </View>
+      <View className="flex-row items-center justify-end gap-1.5 border-t border-border px-2 py-1.5">
+        <Pressable
+          onPress={handleDecrement}
+          disabled={!isAvailable || quantity <= 0}
+          className="h-6 w-6 items-center justify-center border border-border bg-surface-raised"
+          style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text className="text-[12px] text-pos-text">−</Text>
+        </Pressable>
 
-        {isLowStock && isAvailable && (
-          <View 
-            className="absolute left-2 top-2 rounded-lg px-2 py-1"
-            style={{ backgroundColor: 'rgba(245, 158, 11, 0.9)' }}
-          >
-            <Text className="text-[10px] font-bold text-white">LOW STOCK</Text>
-          </View>
-        )}
+        <Text className="w-4 text-center text-[12px] font-semibold text-pos-text">
+          {quantity}
+        </Text>
 
-        {!isAvailable && (
-          <View 
-            className="absolute left-2 top-2 rounded-lg px-2 py-1"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
-          >
-            <Text className="text-[10px] font-bold text-white">SOLD OUT</Text>
-          </View>
-        )}
+        <Pressable
+          onPress={handleAdd}
+          disabled={!isAvailable}
+          className="h-6 w-6 items-center justify-center border border-border bg-surface-raised"
+          style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text className="text-[12px] text-pos-text">+</Text>
+        </Pressable>
       </View>
-    </Pressable>
+
+      {isLowStock && isAvailable && (
+        <View className="absolute right-1.5 top-1.5 rounded bg-pos-warning px-1.5 py-0.5">
+          <Text className="text-[8px] font-bold text-pos-text-strong">LOW</Text>
+        </View>
+      )}
+
+      {!isAvailable && (
+        <View className="absolute right-1.5 top-1.5 rounded bg-pos-danger px-1.5 py-0.5">
+          <Text className="text-[8px] font-bold text-pos-text-strong">SOLD</Text>
+        </View>
+      )}
+    </View>
   );
 }

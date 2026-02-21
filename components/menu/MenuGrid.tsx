@@ -6,19 +6,30 @@ import type { MenuItemWithInventory } from '@/hooks/use-menu';
 import { MenuItemCard } from './MenuItemCard';
 
 const { width } = Dimensions.get('window');
-const GRID_PADDING = 16;
-const GAP = 12;
+const GRID_PADDING = 10;
+const GAP = 6;
 const COLUMNS = 4;
-const ASPECT_RATIO = 1.15;
+const ASPECT_RATIO = 0.95;
 
 interface MenuGridProps {
   items: MenuItemWithInventory[];
   category?: Category;
+  subCategoryName?: string | null;
+  quantitiesByMenuItemId?: Record<number, number>;
   onItemPress: (item: MenuItemWithInventory) => void;
+  onDecrementItem?: (item: MenuItemWithInventory) => void;
   onRefresh?: () => Promise<void>;
 }
 
-export function MenuGrid({ items, category, onItemPress, onRefresh }: MenuGridProps) {
+export function MenuGrid({
+  items,
+  category,
+  subCategoryName,
+  quantitiesByMenuItemId,
+  onItemPress,
+  onDecrementItem,
+  onRefresh,
+}: MenuGridProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -34,6 +45,13 @@ export function MenuGrid({ items, category, onItemPress, onRefresh }: MenuGridPr
   const handleItemPress = useCallback((item: MenuItemWithInventory) => {
     onItemPress(item);
   }, [onItemPress]);
+
+  const getItemQuantity = useCallback((item: MenuItemWithInventory): number => {
+    const itemId = typeof item.id === 'string' ? parseInt(item.id as string, 10) : item.id;
+    return quantitiesByMenuItemId?.[itemId] || 0;
+  }, [quantitiesByMenuItemId]);
+
+  const displayCategoryName = subCategoryName || category?.name || 'Food & Drink';
 
   if (items.length === 0) {
     return (
@@ -86,7 +104,10 @@ export function MenuGrid({ items, category, onItemPress, onRefresh }: MenuGridPr
             <MenuItemCard
               item={item}
               categoryColor={category?.button_color}
+              categoryName={displayCategoryName}
+              quantity={getItemQuantity(item)}
               onPress={() => handleItemPress(item)}
+              onDecrement={() => onDecrementItem?.(item)}
             />
           </View>
         ))}
