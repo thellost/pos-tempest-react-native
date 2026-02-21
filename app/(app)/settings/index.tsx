@@ -1,0 +1,331 @@
+import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
+import { Brand } from '@/constants/theme';
+import type { Device } from '@/db/models';
+import { useAuth } from '@/hooks/use-auth';
+import { useDevice } from '@/hooks/use-device';
+import {
+  deactivateDevice,
+  getDevicesByBranch,
+  reactivateDevice,
+  updateDeviceName,
+} from '@/services/device.service';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+export default function SettingsScreen() {
+  const { user } = useAuth();
+  const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
+  
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
+  const isManager = user?.role_name === ROLE_TYPE.MANAGER;
+  const canManageDevices = isAdmin || isManager;
+
+  const loadDevices = useCallback(async () => {
+    if (!registration?.branch?.id) return;
+    
+    try {
+      setDevicesLoading(true);
+      const branchDevices = await getDevicesByBranch(registration.branch.id);
+      setDevices(branchDevices);
+    } catch (error) {
+      console.error('[Settings] Error loading devices:', error);
+    } finally {
+      setDevicesLoading(false);
+    }
+  }, [registration?.branch?.id]);
+
+  useEffect(() => {
+    loadDevices();
+  }, [loadDevices]);
+
+  const handleRenameDevice = async (device: Device) => {
+    if (!editingName.trim()) {
+      Alert.alert('Error', 'Please enter a device name');
+      return;
+    }
+    
+    try {
+      await updateDeviceName(device.device_uid, editingName.trim());
+      await loadDevices();
+      setEditingDeviceId(null);
+      setEditingName('');
+      
+      if (device.device_uid === deviceInfo?.deviceId) {
+        await refreshDevice();
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to update device name');
+    }
+  };
+
+  const handleDeactivateDevice = async (device: Device) => {
+    Alert.alert(
+      'Deactivate Device',
+      `Are you sure you want to deactivate "${device.device_name}"? This device will need to re-register to use the POS.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deactivate',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deactivateDevice(device.device_uid);
+              await loadDevices();
+            } catch {
+              Alert.alert('Error', 'Failed to deactivate device');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReactivateDevice = async (device: Device) => {
+    try {
+      await reactivateDevice(device.device_uid);
+      await loadDevices();
+    } catch {
+      Alert.alert('Error', 'Failed to reactivate device');
+    }
+  };
+
+  const handleResetDevice = async () => {
+    Alert.alert(
+      'Reset Device Registration',
+      'Are you sure you want to reset the device registration? This will require re-registering the device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearDevice();
+              Alert.alert('Success', 'Device registration has been reset.');
+              refreshDevice();
+            } catch {
+              Alert.alert('Error', 'Failed to reset device registration.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderDevice = ({ item }: { item: Device }) => {
+    const isCurrentDevice = item.device_uid === deviceInfo?.deviceId;
+    const isEditing = editingDeviceId === item.id;
+
+    return (
+      <View
+        className={`mb-3 rounded-xl border p-4 ${
+          isCurrentDevice
+            ? 'border-accent bg-accent-muted'
+            : item.status === DEVICE_STATUS.INACTIVE
+            ? 'border-pos-danger/20 bg-pos-danger-muted'
+            : 'border-border bg-surface-card'
+        }`}
+      >
+        {isEditing ? (
+          <View className="gap-3">
+            <TextInput
+              className="rounded-xl border border-border bg-surface p-3 text-pos-base text-pos-text"
+              value={editingName}
+              onChangeText={setEditingName}
+              autoFocus
+            />
+            <View className="flex-row gap-2">
+              <Pressable
+                className="flex-1 rounded-xl bg-accent p-3"
+                onPress={() => handleRenameDevice(item)}
+              >
+                <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
+              </Pressable>
+              <Pressable
+                className="flex-1 rounded-xl border border-border bg-surface p-3"
+                onPress={() => {
+                  setEditingDeviceId(null);
+                  setEditingName('');
+                }}
+              >
+                <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <>
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-pos-base font-semibold text-pos-text">
+                  {item.device_name}
+                </Text>
+                {isCurrentDevice && (
+                  <View className="rounded-md bg-accent-muted px-2 py-0.5">
+                    <Text className="text-pos-xs text-accent">This Device</Text>
+                  </View>
+                )}
+                {item.status === DEVICE_STATUS.INACTIVE && (
+                  <View className="rounded-md bg-pos-danger-muted px-2 py-0.5">
+                    <Text className="text-pos-xs text-pos-danger">Inactive</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            
+            <Text className="mt-1 text-pos-xs text-pos-text-muted">
+              ID: {item.device_uid.slice(0, 8)}...
+            </Text>
+            
+            <Text className="mt-1 text-pos-xs text-pos-text-muted">
+              Registered: {new Date(item.registered_at).toLocaleDateString()}
+            </Text>
+            
+            {canManageDevices && (
+              <View className="mt-3 flex-row gap-2">
+                <Pressable
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5"
+                  onPress={() => {
+                    setEditingDeviceId(item.id);
+                    setEditingName(item.device_name);
+                  }}
+                >
+                  <Text className="text-pos-xs text-pos-text">Rename</Text>
+                </Pressable>
+                
+                {item.status === DEVICE_STATUS.ACTIVE ? (
+                  <Pressable
+                    className="rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-3 py-1.5"
+                    onPress={() => handleDeactivateDevice(item)}
+                  >
+                    <Text className="text-pos-xs text-pos-danger">Deactivate</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    className="rounded-lg border border-pos-success/20 bg-pos-success-muted px-3 py-1.5"
+                    onPress={() => handleReactivateDevice(item)}
+                  >
+                    <Text className="text-pos-xs text-pos-success">Reactivate</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <ScrollView className="flex-1 bg-surface p-6">
+      <View className="mb-6">
+        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
+          Current Device
+        </Text>
+        <View className="rounded-xl bg-surface-card p-4">
+          <View className="gap-2">
+            <View className="flex-row justify-between">
+              <Text className="text-pos-sm text-pos-text-muted">Name:</Text>
+              <Text className="text-pos-sm text-pos-text">
+                {registration?.device?.device_name || 'Not set'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-pos-sm text-pos-text-muted">Branch:</Text>
+              <Text className="text-pos-sm text-pos-text">
+                {registration?.branch?.name || 'Not set'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-pos-sm text-pos-text-muted">Model:</Text>
+              <Text className="text-pos-sm text-pos-text">
+                {deviceInfo?.model || 'Unknown'}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-pos-sm text-pos-text-muted">Device ID:</Text>
+              <Text className="text-pos-sm text-pos-text">
+                {deviceInfo?.deviceId?.slice(0, 8)}...
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {canManageDevices && (
+        <View className="mb-6">
+          <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
+            Branch Devices
+          </Text>
+          
+          {devicesLoading ? (
+            <View className="items-center py-8">
+              <ActivityIndicator size="large" color={Brand.primary} />
+            </View>
+          ) : devices.length === 0 ? (
+            <View className="rounded-xl bg-surface-card p-4">
+              <Text className="text-pos-sm text-pos-text-muted">
+                No devices registered for this branch.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={devices}
+              renderItem={renderDevice}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
+      )}
+
+      <View className="mb-6">
+        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
+          Printer Settings
+        </Text>
+        <View className="rounded-xl bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">
+            Printer configuration will be available in Step 9.
+          </Text>
+        </View>
+      </View>
+
+      <View className="p-4">
+        <Text className="mb-4 text-pos-lg font-semibold text-pos-text">
+          Device Management
+        </Text>
+
+        <Pressable
+          className="mb-4 rounded-xl bg-pos-danger p-4"
+          onPress={handleResetDevice}
+        >
+          <Text className="text-center text-pos-base font-semibold text-white">
+            Reset Device Registration
+          </Text>
+        </Pressable>
+      </View>
+
+      <View className="rounded-xl bg-surface-card p-4">
+        <Text className="text-pos-sm text-pos-text-muted">
+          POS Tempest v1.0.0
+        </Text>
+        <Text className="mt-1 text-pos-xs text-pos-text-faint">
+          Offline-first restaurant POS
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
