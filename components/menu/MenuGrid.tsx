@@ -6,10 +6,10 @@ import type { MenuItemWithInventory } from '@/hooks/use-menu';
 import { MenuItemCard } from './MenuItemCard';
 
 const { width } = Dimensions.get('window');
-const GRID_GAP = 12;
 const GRID_PADDING = 16;
-const COLUMN_COUNT = 4;
-const ITEM_MARGIN = GRID_GAP / 2;
+const GAP = 12;
+const COLUMNS = 4;
+const ASPECT_RATIO = 1.15;
 
 interface MenuGridProps {
   items: MenuItemWithInventory[];
@@ -37,22 +37,27 @@ export function MenuGrid({ items, category, onItemPress, onRefresh }: MenuGridPr
 
   if (items.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center p-8">
-        <Text className="text-pos-lg text-pos-muted">
+      <View className="flex-1 items-center justify-center bg-surface p-8">
+        <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+          <Text className="text-3xl">📋</Text>
+        </View>
+        <Text className="text-pos-lg text-pos-text-muted">
           No items available
         </Text>
-        <Text className="mt-2 text-pos-sm text-pos-muted">
+        <Text className="mt-2 text-pos-sm text-pos-text-faint">
           {category ? `in ${category.name}` : 'in this category'}
         </Text>
       </View>
     );
   }
 
-  const itemWidth = (width * 0.65 - GRID_PADDING * 2 - GRID_GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+  const gridWidth = width * 0.70 - GRID_PADDING * 2;
+  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
+  const itemHeight = itemWidth * ASPECT_RATIO;
 
   return (
     <ScrollView
-      className="flex-1"
+      className="flex-1 bg-surface"
       contentContainerStyle={{ padding: GRID_PADDING }}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -60,19 +65,22 @@ export function MenuGrid({ items, category, onItemPress, onRefresh }: MenuGridPr
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#803500"
-            colors={['#803500']}
+            tintColor="#6366F1"
+            colors={['#6366F1']}
           />
         ) : undefined
       }
     >
-      <View className="flex-row flex-wrap" style={{ margin: -ITEM_MARGIN }}>
+      <View 
+        className="flex-row flex-wrap" 
+        style={{ gap: GAP }}
+      >
         {items.map((item) => (
           <View
             key={`menu-item-${item.id}`}
             style={{
               width: itemWidth,
-              padding: ITEM_MARGIN,
+              height: itemHeight,
             }}
           >
             <MenuItemCard

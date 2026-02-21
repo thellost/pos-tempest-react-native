@@ -1,5 +1,5 @@
 import { useQuery } from '@powersync/react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { Category, MenuItem, MenuItemModifierGroup, Modifier, ModifierGroup } from '@/db/models';
 import { useAuth } from './use-auth';
@@ -27,40 +27,48 @@ export function useMenu() {
   const branchId = user?.branch_id;
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category>(
-    `SELECT * FROM categories 
-     WHERE is_active = 1 
-     ORDER BY parent_id ASC, sort_order ASC`
+    `SELECT * FROM categories ORDER BY parent_id ASC, sort_order ASC`
   );
 
   const { data: menuItems = [], isLoading: menuItemsLoading } = useQuery<MenuItem>(
-    `SELECT * FROM menu_items 
-     WHERE is_active = 1
-     ORDER BY sort_order ASC`
+    `SELECT * FROM menu_items ORDER BY sort_order ASC`
   );
 
   const { data: modifierGroups = [], isLoading: modifierGroupsLoading } = useQuery<ModifierGroup>(
-    `SELECT * FROM modifier_groups 
-     WHERE is_active = 1 
-     ORDER BY sort_order ASC`
+    `SELECT * FROM modifier_groups WHERE is_active = 1 ORDER BY sort_order ASC`
   );
 
   const { data: modifiers = [], isLoading: modifiersLoading } = useQuery<Modifier>(
-    `SELECT * FROM modifiers 
-     WHERE is_active = 1 
-     ORDER BY sort_order ASC`
+    `SELECT * FROM modifiers WHERE is_active = 1 ORDER BY sort_order ASC`
   );
 
   const { data: menuItemModifierGroups = [], isLoading: mappingsLoading } = useQuery<MenuItemModifierGroup>(
-    `SELECT * FROM menu_item_modifier_groups 
-     ORDER BY sort_order ASC`
+    `SELECT * FROM menu_item_modifier_groups ORDER BY sort_order ASC`
   );
 
   const { data: inventoryData = [], isLoading: inventoryLoading } = useQuery<MenuItemInventoryInfo & { menu_item_id: number }>(
-    `SELECT menu_item_id, stock_quantity, low_stock_threshold 
-     FROM inventories 
-     WHERE branch_id = ?`,
+    `SELECT menu_item_id, stock_quantity, low_stock_threshold FROM inventories WHERE branch_id = ?`,
     [branchId ?? 0]
   );
+
+  // Filter active items
+  const activeMenuItems = useMemo(() => {
+    return menuItems.filter(item => Boolean(item.is_active));
+  }, [menuItems]);
+
+  const activeCategories = useMemo(() => {
+    return categories.filter(cat => Boolean(cat.is_active));
+  }, [categories]);
+
+  // Debug logging (only in development)
+  useEffect(() => {
+    if (__DEV__ && menuItems.length > 0) {
+      console.log('[useMenu] Loaded:', {
+        categories: activeCategories.length,
+        menuItems: activeMenuItems.length,
+      });
+    }
+  }, [activeCategories, activeMenuItems]);
 
   const inventoryMap = useMemo(() => {
     const map = new Map<number, MenuItemInventoryInfo>();
@@ -71,26 +79,46 @@ export function useMenu() {
   }, [inventoryData]);
 
   const topLevelCategories = useMemo(() => {
-    return categories.filter(cat => cat.parent_id === null || cat.parent_id === 0);
-  }, [categories]);
+    return activeCategories.filter(cat => {
+      const parentId = cat.parent_id;
+      if (typeof parentId === 'string') {
+        return parentId === 'null' || parentId === '' || parentId === '0';
+      }
+      return parentId === null || parentId === 0;
+    });
+  }, [activeCategories]);
 
   const getSubCategories = useMemo(() => {
     return (parentId: number): Category[] => {
       const parentIdNum = typeof parentId === 'string' ? parseInt(parentId as string, 10) : parentId;
-      return categories.filter(cat => {
+      return activeCategories.filter(cat => {
         const catParentId = typeof cat.parent_id === 'string' ? parseInt(cat.parent_id as string, 10) : cat.parent_id;
         return catParentId === parentIdNum;
       });
     };
-  }, [categories]);
+  }, [activeCategories]);
 
   const getMenuItemsByCategory = useMemo(() => {
     return (categoryId: number): MenuItemWithInventory[] => {
       const categoryIdNum = typeof categoryId === 'string' ? parseInt(categoryId as string, 10) : categoryId;
-      return menuItems
+      
+      // Get all subcategory IDs for this category
+      const subCategoryIds = activeCategories
+        .filter(cat => {
+          if (cat.parent_id === null || cat.parent_id === undefined) return false;
+          const catParentId = typeof cat.parent_id === 'string' ? parseInt(cat.parent_id, 10) : cat.parent_id;
+          return catParentId === categoryIdNum;
+        })
+        .map(cat => typeof cat.id === 'string' ? parseInt(cat.id as string, 10) : cat.id);
+      
+      // Include both the main category and its subcategories
+      const validCategoryIds = [categoryIdNum, ...subCategoryIds];
+      
+      return activeMenuItems
         .filter(item => {
-          const itemCategoryId = typeof item.category_id === 'string' ? parseInt(item.category_id as string, 10) : item.category_id;
-          return itemCategoryId === categoryIdNum && item.is_available;
+          if (item.category_id === null || item.category_id === undefined) return false;
+          const itemCategoryId = typeof item.category_id === 'string' ? parseInt(item.category_id, 10) : item.category_id;
+          return validCategoryIds.includes(itemCategoryId) && Boolean(item.is_available);
         })
         .map(item => {
           const inv = inventoryMap.get(typeof item.id === 'string' ? parseInt(item.id as string, 10) : item.id);
@@ -98,17 +126,17 @@ export function useMenu() {
           return { ...item, inventoryInfo: inv, isLowStock };
         });
     };
-  }, [menuItems, inventoryMap]);
+  }, [activeMenuItems, activeCategories, inventoryMap]);
 
   const getCategoryById = useMemo(() => {
     return (categoryId: number): Category | undefined => {
       const id = typeof categoryId === 'string' ? parseInt(categoryId as string, 10) : categoryId;
-      return categories.find(cat => {
+      return activeCategories.find(cat => {
         const catId = typeof cat.id === 'string' ? parseInt(cat.id as string, 10) : cat.id;
         return catId === id;
       });
     };
-  }, [categories]);
+  }, [activeCategories]);
 
   const getModifierGroupsForMenuItem = async (menuItemId: number): Promise<ModifierGroupWithModifiers[]> => {
     try {
@@ -165,14 +193,14 @@ export function useMenu() {
   const searchMenuItems = useMemo(() => {
     return (query: string): MenuItemWithInventory[] => {
       if (!query.trim()) {
-        return menuItems.map(item => {
+        return activeMenuItems.map(item => {
           const inv = inventoryMap.get(typeof item.id === 'string' ? parseInt(item.id as string, 10) : item.id);
           const isLowStock = inv && inv.low_stock_threshold !== null ? inv.stock_quantity <= inv.low_stock_threshold : false;
-          return { ...item, inventory: inv, isLowStock };
+          return { ...item, inventoryInfo: inv, isLowStock };
         });
       }
       const lowerQuery = query.toLowerCase();
-      return menuItems
+      return activeMenuItems
         .filter(item => 
           item.name.toLowerCase().includes(lowerQuery) ||
           item.description?.toLowerCase().includes(lowerQuery)
@@ -183,12 +211,12 @@ export function useMenu() {
           return { ...item, inventoryInfo: inv, isLowStock };
         });
     };
-  }, [menuItems, inventoryMap]);
+  }, [activeMenuItems, inventoryMap]);
 
   return {
-    categories,
+    categories: activeCategories,
     topLevelCategories,
-    menuItems,
+    menuItems: activeMenuItems,
     modifierGroups,
     modifiers,
     getSubCategories,

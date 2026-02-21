@@ -10,42 +10,28 @@ interface TableCardProps {
   onPress: () => void;
 }
 
-/**
- * Card component for a single table.
- * Shows table number, capacity, status (color-coded), guest count,
- * current order total, and elapsed time since order opened.
- * 
- * Status colors:
- * - Green: Available
- * - Red: Occupied
- * - Yellow: Reserved
- * - Gray: Maintenance
- */
 export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
   const isOccupied = table.status === TABLE_STATUS.OCCUPIED;
   const isAvailable = table.status === TABLE_STATUS.AVAILABLE;
   const isReserved = table.status === TABLE_STATUS.RESERVED;
   const isMaintenance = table.status === TABLE_STATUS.MAINTENANCE;
 
-  // Determine background color based on status
-  const statusColor = isAvailable 
-    ? 'bg-green-600/20 border-green-600/40' 
+  const statusBgColor = isAvailable 
+    ? 'bg-status-available-muted border-status-available/30' 
     : isOccupied 
-    ? 'bg-red-600/20 border-red-600/40'
+    ? 'bg-status-occupied-muted border-status-occupied/30'
     : isReserved 
-    ? 'bg-yellow-600/20 border-yellow-600/40'
-    : 'bg-gray-600/20 border-gray-600/40';
+    ? 'bg-status-reserved-muted border-status-reserved/30'
+    : 'bg-status-maintenance-muted border-status-maintenance/30';
 
-  // Badge color for status indicator
-  const badgeColor = isAvailable 
-    ? 'bg-green-600' 
+  const badgeBgColor = isAvailable 
+    ? 'bg-status-available' 
     : isOccupied 
-    ? 'bg-red-600'
+    ? 'bg-status-occupied'
     : isReserved 
-    ? 'bg-yellow-600'
-    : 'bg-gray-600';
+    ? 'bg-status-reserved'
+    : 'bg-status-maintenance';
 
-  // Display status text
   const statusText = isAvailable 
     ? 'Available' 
     : isOccupied 
@@ -58,46 +44,50 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
     <Pressable
       onPress={onPress}
       disabled={isMaintenance}
-      className={`min-h-[120px] rounded-xl border-2 p-4 ${statusColor} ${
-        isMaintenance ? 'opacity-50' : 'active:scale-95'
+      className={`min-h-[130px] overflow-hidden rounded-2xl border-2 p-5 ${statusBgColor} ${
+        isMaintenance ? 'opacity-50' : ''
       }`}
+      style={{ 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+      }}
     >
-      {/* Header: Table Number & Status Badge */}
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-pos-2xl font-bold text-pos-text-strong">
+      <View className="mb-4 flex-row items-center justify-between">
+        <Text className="text-pos-2xl font-bold text-pos-text">
           {table.table_number}
         </Text>
-        <View className={`rounded-full px-3 py-1 ${badgeColor}`}>
+        <View className={`rounded-full px-3 py-1.5 ${badgeBgColor}`}>
           <Text className="text-pos-xs font-semibold text-white">
             {statusText}
           </Text>
         </View>
       </View>
 
-      {/* Capacity */}
-      <View className="mb-2 flex-row items-center">
-        <Text className="text-pos-sm text-pos-muted">
+      <View className="mb-3 flex-row items-center">
+        <Text className="text-pos-sm text-pos-text-muted">
           {`Capacity: ${table.capacity} ${table.capacity === 1 ? 'person' : 'people'}`}
         </Text>
       </View>
 
-      {/* Active Order Info (if occupied) - Compact side-by-side layout */}
-      <View className="min-h-[40px] border-t border-white/10 pt-2">
+      <View className="min-h-[40px] border-t border-border pt-3">
         {isOccupied && table.active_order_id ? (
           <View className="flex-row items-center justify-between">
             <View className="flex-1">
-              <Text className="text-pos-xs text-pos-muted">
+              <Text className="text-pos-xs text-pos-text-muted">
                 {table.active_order_number}
               </Text>
             </View>
             {elapsedMinutes > 0 && (
               <Text 
-                className={`text-pos-xs font-medium ${
+                className={`text-pos-xs font-semibold ${
                   elapsedMinutes > 90 
-                    ? 'text-red-500' 
+                    ? 'text-pos-danger' 
                     : elapsedMinutes > 60 
-                    ? 'text-yellow-500' 
-                    : 'text-pos-text-strong'
+                    ? 'text-pos-warning' 
+                    : 'text-pos-text'
                 }`}
               >
                 {`${elapsedMinutes} min`}
@@ -105,14 +95,18 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
             )}
           </View>
         ) : isReserved ? (
-          <Text className="text-pos-xs text-yellow-400">
+          <Text className="text-pos-xs text-pos-warning">
             Reserved - Tap for details
           </Text>
         ) : isMaintenance ? (
-          <Text className="text-pos-xs text-gray-400">
+          <Text className="text-pos-xs text-pos-text-faint">
             Under maintenance
           </Text>
-        ) : null}
+        ) : (
+          <Text className="text-pos-xs text-pos-success">
+            Tap to start order
+          </Text>
+        )}
       </View>
     </Pressable>
   );

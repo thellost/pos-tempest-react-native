@@ -1,9 +1,3 @@
-/**
- * Device Setup Screen
- * Shown on first launch or when device is not registered.
- * Allows user to select a branch and name the device.
- */
-
 import { Brand } from '@/constants/theme';
 import { useDevice } from '@/hooks/use-device';
 import { useRouter } from 'expo-router';
@@ -50,7 +44,6 @@ export default function DeviceSetupScreen() {
       
       await registerDevice(selectedBranchId, deviceName.trim());
       
-      // Navigate to main app
       router.replace('/(app)/floor');
     } catch (err) {
       setRegisterError(err instanceof Error ? err.message : 'Failed to register device');
@@ -63,7 +56,7 @@ export default function DeviceSetupScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
         <ActivityIndicator size="large" color={Brand.primary} />
-        <Text className="mt-4 text-pos-sm text-pos-muted">Loading...</Text>
+        <Text className="mt-4 text-pos-sm text-pos-text-muted">Loading...</Text>
       </View>
     );
   }
@@ -77,36 +70,35 @@ export default function DeviceSetupScreen() {
         className="flex-1 p-8"
         contentContainerStyle={{ maxWidth: 600, alignSelf: 'center', width: '100%' }}
       >
-        {/* Header */}
-        <View className="mb-8">
-          <Text className="text-pos-2xl font-bold text-pos-text-strong">
-            Device Setup
-          </Text>
-          <Text className="mt-2 text-pos-base text-pos-muted">
-            Register this POS terminal to get started
-          </Text>
+        <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
+          <Text className="text-3xl">📱</Text>
         </View>
+        <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text">
+          Device Setup
+        </Text>
+        <Text className="mb-8 text-center text-pos-base text-pos-text-muted">
+          Register this POS terminal to get started
+        </Text>
 
-        {/* Device Info */}
-        <View className="mb-6 rounded-lg bg-surface-soft p-4">
-          <Text className="text-pos-sm font-semibold text-pos-text-strong">
+        <View className="mb-6 rounded-xl bg-surface-card p-5">
+          <Text className="text-pos-sm font-semibold text-pos-text">
             Device Information
           </Text>
           <View className="mt-3 gap-2">
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Model:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Model:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {deviceInfo?.model || 'Unknown'}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">OS Version:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">OS Version:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {deviceInfo?.osVersion || 'Unknown'}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Device ID:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Device ID:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {deviceInfo?.deviceId?.slice(0, 8) || 'Unknown'}...
               </Text>
@@ -114,14 +106,13 @@ export default function DeviceSetupScreen() {
           </View>
         </View>
 
-        {/* Branch Selection */}
         <View className="mb-6">
-          <Text className="mb-3 text-pos-base font-semibold text-pos-text-strong">
+          <Text className="mb-3 text-pos-base font-semibold text-pos-text">
             Select Branch
           </Text>
           {branches.length === 0 ? (
-            <View className="rounded-lg bg-yellow-500/10 p-4">
-              <Text className="text-pos-sm text-yellow-400">
+            <View className="rounded-xl bg-pos-warning-muted p-4">
+              <Text className="text-pos-sm text-pos-warning">
                 No branches available. Please sync with the server or contact your administrator.
               </Text>
             </View>
@@ -130,22 +121,22 @@ export default function DeviceSetupScreen() {
               {branches.map((branch) => (
                 <Pressable
                   key={branch.id}
-                  className={`rounded-lg border p-4 ${
+                  className={`rounded-xl border p-4 ${
                     selectedBranchId === branch.id
-                      ? 'border-brand bg-brand/10'
-                      : 'border-white/10 bg-surface-soft'
+                      ? 'border-accent bg-accent-muted'
+                      : 'border-border bg-surface-card'
                   }`}
                   onPress={() => setSelectedBranchId(branch.id)}
                 >
                   <Text
                     className={`text-pos-base font-semibold ${
-                      selectedBranchId === branch.id ? 'text-brand' : 'text-pos-text-strong'
+                      selectedBranchId === branch.id ? 'text-accent' : 'text-pos-text'
                     }`}
                   >
                     {branch.name}
                   </Text>
                   {branch.address && (
-                    <Text className="mt-1 text-pos-sm text-pos-muted">
+                    <Text className="mt-1 text-pos-sm text-pos-text-muted">
                       {branch.address}
                     </Text>
                   )}
@@ -155,40 +146,37 @@ export default function DeviceSetupScreen() {
           )}
         </View>
 
-        {/* Device Name Input */}
         <View className="mb-6">
-          <Text className="mb-3 text-pos-base font-semibold text-pos-text-strong">
+          <Text className="mb-3 text-pos-base font-semibold text-pos-text">
             Device Name
           </Text>
           <TextInput
-            className="rounded-lg border border-white/10 bg-surface-soft p-4 text-pos-base text-pos-text"
+            className="rounded-xl border border-border bg-surface-card p-4 text-pos-base text-pos-text"
             placeholder="e.g., Kasir 1, Bar, Drive-Thru"
-            placeholderTextColor="#64748b"
+            placeholderTextColor="#64748B"
             value={deviceName}
             onChangeText={setDeviceName}
             autoCapitalize="words"
             autoCorrect={false}
           />
-          <Text className="mt-2 text-pos-xs text-pos-muted">
+          <Text className="mt-2 text-pos-xs text-pos-text-muted">
             Give this terminal a recognizable name for staff identification
           </Text>
         </View>
 
-        {/* Error Messages */}
         {(error || registerError) && (
-          <View className="mb-6 rounded-lg bg-red-500/10 p-4">
-            <Text className="text-pos-sm text-red-400">
+          <View className="mb-6 rounded-xl bg-pos-danger-muted p-4">
+            <Text className="text-pos-sm text-pos-danger">
               {registerError || error}
             </Text>
           </View>
         )}
 
-        {/* Register Button */}
         <Pressable
-          className={`rounded-lg p-4 ${
+          className={`rounded-xl p-4 ${
             registering || !selectedBranchId || !deviceName.trim()
-              ? 'bg-brand/50'
-              : 'bg-brand'
+              ? 'bg-accent/40'
+              : 'bg-accent'
           }`}
           onPress={handleRegister}
           disabled={registering || !selectedBranchId || !deviceName.trim()}
@@ -207,10 +195,9 @@ export default function DeviceSetupScreen() {
           )}
         </Pressable>
 
-        {/* Help Text */}
-        <View className="mt-8 rounded-lg bg-surface-soft p-4">
-          <Text className="text-pos-sm text-pos-muted">
-            💡 This device will be registered to the selected branch. 
+        <View className="mt-8 rounded-xl bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">
+            This device will be registered to the selected branch. 
             All orders and shifts will be associated with this device.
             Contact your administrator to change the branch later.
           </Text>

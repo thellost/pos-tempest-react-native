@@ -44,17 +44,17 @@ export function OrderActions({
   }, [canPayment, onPayment]);
 
   return (
-    <View className="border-t border-white/10 bg-surface-soft p-3">
-      <View className="flex-row gap-1">
+    <View className="border-t border-border bg-surface-card p-4">
+      <View className="flex-row gap-3">
         <Pressable
           onPress={handleHold}
           disabled={!hasItems}
-          className={`flex-1 items-center justify-center py-3 ${
-            hasItems ? 'bg-toast-gray-2 active:opacity-80' : 'bg-toast-gray-3 opacity-50'
+          className={`flex-1 items-center justify-center py-3.5 ${
+            hasItems ? 'bg-surface-raised' : 'bg-surface-raised opacity-40'
           }`}
-          style={{ borderRadius: 4 }}
+          style={{ borderRadius: 12 }}
         >
-          <Text className={`text-pos-base font-semibold ${hasItems ? 'text-white' : 'text-white/50'}`}>
+          <Text className={`text-pos-base font-semibold ${hasItems ? 'text-pos-text' : 'text-pos-text-faint'}`}>
             Hold
           </Text>
         </Pressable>
@@ -62,12 +62,12 @@ export function OrderActions({
         <Pressable
           onPress={handleSendToKitchen}
           disabled={!canSend}
-          className={`flex-1 items-center justify-center py-3 ${
-            canSend ? 'bg-toast-orange-3 active:opacity-80' : 'bg-toast-gray-3 opacity-50'
+          className={`flex-1 items-center justify-center py-3.5 ${
+            canSend ? 'bg-accent' : 'bg-surface-raised opacity-40'
           }`}
-          style={{ borderRadius: 4 }}
+          style={{ borderRadius: 12 }}
         >
-          <Text className={`text-pos-base font-semibold ${canSend ? 'text-white' : 'text-white/50'}`}>
+          <Text className={`text-pos-base font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
             {sentAt ? `Sent ${sentAt}` : 'Send to Kitchen'}
           </Text>
         </Pressable>
@@ -76,12 +76,12 @@ export function OrderActions({
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className={`mt-1 items-center justify-center py-4 ${
-          canPayment ? 'bg-pos-success active:opacity-80' : 'bg-toast-gray-3 opacity-50'
+        className={`mt-3 items-center justify-center py-4 ${
+          canPayment ? 'bg-pos-success' : 'bg-surface-raised opacity-40'
         }`}
-        style={{ borderRadius: 4 }}
+        style={{ borderRadius: 12 }}
       >
-        <Text className={`text-pos-lg font-bold ${canPayment ? 'text-white' : 'text-white/50'}`}>
+        <Text className={`text-pos-lg font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
           Payment
         </Text>
       </Pressable>

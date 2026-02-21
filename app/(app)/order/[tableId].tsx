@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
@@ -26,7 +26,7 @@ export default function OrderScreen() {
   if (!tableId || Array.isArray(tableId)) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <Text className="text-pos-base text-pos-muted">Invalid table ID</Text>
+        <Text className="text-pos-base text-pos-text-muted">Invalid table ID</Text>
       </View>
     );
   }
@@ -51,6 +51,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     getMenuItemsByCategory,
     getCategoryById,
     getModifierGroupsForMenuItem,
+    isLoading: menuLoading,
+    categories,
+    menuItems,
   } = useMenu();
 
   const [table, setTable] = useState<any>(null);
@@ -208,21 +211,52 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, []);
 
   const currentCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
-  const allMenuItems = selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
-  const menuItems = selectedSubCategoryId
-    ? allMenuItems.filter(item => {
-        const itemCategoryId = typeof item.category_id === 'string'
-          ? parseInt(item.category_id as string, 10)
-          : item.category_id;
-        return itemCategoryId === selectedSubCategoryId;
-      })
-    : allMenuItems;
+  
+  const allMenuItems = useMemo(() => {
+    return selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
+  }, [selectedCategoryId, getMenuItemsByCategory]);
+  
+  const menuItemsList = useMemo(() => {
+    if (!selectedSubCategoryId) return allMenuItems;
+    return allMenuItems.filter((item: MenuItemWithInventory) => {
+      const itemCategoryId = typeof item.category_id === 'string'
+        ? parseInt(item.category_id as string, 10)
+        : item.category_id;
+      return itemCategoryId === selectedSubCategoryId;
+    });
+  }, [allMenuItems, selectedSubCategoryId]);
 
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#803500" />
-        <Text className="mt-4 text-pos-base text-pos-muted">Loading order...</Text>
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text className="mt-4 text-pos-base text-pos-text-muted">Loading order...</Text>
+      </View>
+    );
+  }
+
+  if (menuLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color="#6366F1" />
+        <Text className="mt-4 text-pos-base text-pos-text-muted">Loading menu...</Text>
+      </View>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface p-8">
+        <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+          <Text className="text-3xl">📋</Text>
+        </View>
+        <Text className="text-pos-xl font-semibold text-pos-text">No Categories Found</Text>
+        <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
+          Menu data has not synced yet. Please wait or check your connection.
+        </Text>
+        <Text className="mt-4 text-pos-sm text-pos-text-faint">
+          Categories: {categories.length} | Items: {menuItems.length}
+        </Text>
       </View>
     );
   }
@@ -230,38 +264,6 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   return (
     <View className="flex-1 bg-surface">
       <View className="flex-1 flex-row">
-        <View className="w-[70%] flex-1">
-          <View className="border-b border-white/10 bg-surface-soft px-4 py-3">
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="text-pos-xl font-bold text-pos-text-strong">
-                  {table?.table_number || `Table ${tableId}`}
-                </Text>
-                {order && (
-                  <Text className="text-pos-xs text-pos-muted">
-                    {order.order_number}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-
-          <CategoryTabs
-            categories={topLevelCategories}
-            subCategories={subCategories}
-            selectedCategoryId={selectedCategoryId}
-            selectedSubCategoryId={selectedSubCategoryId}
-            onSelectCategory={handleSelectCategory}
-            onSelectSubCategory={handleSelectSubCategory}
-          />
-
-          <MenuGrid
-            items={menuItems}
-            category={currentCategory}
-            onItemPress={handleMenuItemPress}
-          />
-        </View>
-
         <View className="w-[30%]">
           <OrderPanel
             order={order}
@@ -279,6 +281,38 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
             onHold={() => {
               console.log('Hold Order');
             }}
+          />
+        </View>
+
+        <View className="w-[70%] flex-1">
+          <View className="border-b border-border bg-surface-card px-5 py-4">
+            <View className="flex-row items-center justify-between">
+              <View>
+                <Text className="text-pos-2xl font-bold text-pos-text">
+                  {table?.table_number || `Table ${tableId}`}
+                </Text>
+                {order && (
+                  <Text className="mt-1 text-pos-sm text-pos-text-muted">
+                    {order.order_number}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          <CategoryTabs
+            categories={topLevelCategories}
+            subCategories={subCategories}
+            selectedCategoryId={selectedCategoryId}
+            selectedSubCategoryId={selectedSubCategoryId}
+            onSelectCategory={handleSelectCategory}
+            onSelectSubCategory={handleSelectSubCategory}
+          />
+
+          <MenuGrid
+            items={menuItemsList}
+            category={currentCategory}
+            onItemPress={handleMenuItemPress}
           />
         </View>
       </View>

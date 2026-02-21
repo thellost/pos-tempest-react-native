@@ -5,14 +5,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
-/**
- * Secure login screen with email/password authentication.
- * Features:
- * - Input validation and sanitization
- * - Rate limiting with visual feedback
- * - Secure error messages
- * - Automatic redirect on successful authentication
- */
 export default function LoginScreen() {
   const { 
     isAuthenticated, 
@@ -29,7 +21,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
 
-  // Update lock timer
   useEffect(() => {
     if (isLoginLocked && loginResetInMs > 0) {
       setLockTimeRemaining(Math.ceil(loginResetInMs / 1000));
@@ -55,7 +46,6 @@ export default function LoginScreen() {
   }, [isAuthenticated, isLocked]);
 
   async function handleSignIn() {
-    // Client-side validation
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
 
@@ -81,11 +71,9 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await signIn(trimmedEmail, trimmedPassword);
-      // Navigation handled by useEffect
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed';
       
-      // Show remaining attempts if rate-limited
       if (loginAttempts > 0 && !isLoginLocked) {
         Alert.alert(
           'Login Failed',
@@ -122,38 +110,37 @@ export default function LoginScreen() {
   return (
     <View className="flex-1 bg-surface">
       <View className="flex-1 items-center justify-center p-8">
-        <View className="w-full max-w-md rounded-2xl border border-white/10 bg-surface-soft p-6">
-          {/* Header */}
-          <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text-strong">
+        <View className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-8">
+          <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
+            <Text className="text-3xl">⚡</Text>
+          </View>
+          <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text">
             POS Tempest
           </Text>
-          <Text className="mb-6 text-center text-pos-sm text-pos-muted">
+          <Text className="mb-8 text-center text-pos-sm text-pos-text-muted">
             Sign in to continue
           </Text>
 
-          {/* Rate Limit Warning */}
           {isLoginLocked && lockTimeRemaining > 0 && (
-            <View className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <Text className="text-center text-pos-sm font-semibold text-red-400">
+            <View className="mb-5 rounded-xl border border-pos-danger/30 bg-pos-danger-muted p-4">
+              <Text className="text-center text-pos-sm font-semibold text-pos-danger">
                 Account temporarily locked
               </Text>
-              <Text className="mt-1 text-center text-pos-xs text-red-300">
+              <Text className="mt-1 text-center text-pos-xs text-pos-danger">
                 Try again in {formatLockTime(lockTimeRemaining)}
               </Text>
             </View>
           )}
 
-          {/* Remaining Attempts Warning */}
           {!isLoginLocked && loginAttempts > 0 && loginAttempts <= 2 && (
-            <View className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
-              <Text className="text-center text-pos-sm text-yellow-400">
+            <View className="mb-5 rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-4">
+              <Text className="text-center text-pos-sm text-pos-warning">
                 {loginAttempts} {loginAttempts === 1 ? 'attempt' : 'attempts'} remaining
               </Text>
             </View>
           )}
 
-          {/* Email Input */}
-          <Text className="mb-2 text-pos-sm font-semibold text-pos-muted">Email</Text>
+          <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Email</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -162,19 +149,14 @@ export default function LoginScreen() {
             autoCorrect={false}
             keyboardType="email-address"
             placeholder="your@email.com"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor="#64748B"
             editable={!loading && !isLoginLocked}
             returnKeyType="next"
-            className={`mb-4 rounded-lg border px-4 py-3 text-pos-base ${
-              isLoginLocked
-                ? 'border-white/5 bg-surface/50 text-pos-muted'
-                : 'border-white/10 bg-surface text-pos-text-strong'
-            }`}
+            className="mb-5 rounded-xl border border-border bg-surface px-4 py-3.5 text-pos-base text-pos-text"
           />
 
-          {/* Password Input */}
-          <Text className="mb-2 text-pos-sm font-semibold text-pos-muted">Password</Text>
-          <View className="relative mb-6">
+          <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Password</Text>
+          <View className="relative mb-8">
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -183,15 +165,11 @@ export default function LoginScreen() {
               autoComplete="password"
               autoCorrect={false}
               placeholder="••••••••"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748B"
               editable={!loading && !isLoginLocked}
               returnKeyType="go"
               onSubmitEditing={onSubmitEditing}
-              className={`rounded-lg border px-4 py-3 pr-12 text-pos-base ${
-                isLoginLocked
-                  ? 'border-white/5 bg-surface/50 text-pos-muted'
-                  : 'border-white/10 bg-surface text-pos-text-strong'
-              }`}
+              className="rounded-xl border border-border bg-surface px-4 py-3.5 pr-12 text-pos-base text-pos-text"
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -199,18 +177,17 @@ export default function LoginScreen() {
               className="absolute right-3 top-3"
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
-              <Text className="text-pos-sm text-pos-muted">
+              <Text className="text-pos-sm text-pos-text-muted">
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </Text>
             </Pressable>
           </View>
 
-          {/* Sign In Button */}
           <Pressable
-            className={`rounded-lg p-3 ${
+            className={`rounded-xl p-4 ${
               loading || isLoginLocked || !email.trim() || !password.trim()
-                ? 'bg-brand/30'
-                : 'bg-brand active:bg-brand-dark'
+                ? 'bg-accent/30'
+                : 'bg-accent'
             }`}
             onPress={handleSignIn}
             disabled={loading || isLoginLocked || !email.trim() || !password.trim()}>
@@ -222,9 +199,8 @@ export default function LoginScreen() {
             </View>
           </Pressable>
 
-          {/* Security Notice */}
-          <Text className="mt-4 text-center text-pos-xs text-pos-muted/70">
-            🔒 Your credentials are encrypted and secure
+          <Text className="mt-5 text-center text-pos-xs text-pos-text-faint">
+            Your credentials are encrypted and secure
           </Text>
         </View>
       </View>

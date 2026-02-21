@@ -36,23 +36,23 @@ export default function ExploreScreen() {
   const hasSyncError = Boolean(downloadError || uploadError);
 
   const connectionBadge = hasSyncError
-    ? { label: 'Error', dot: 'bg-red-500', chip: 'bg-red-500/15 border-red-500/30 text-red-300' }
+    ? { label: 'Error', dot: 'bg-pos-danger', chip: 'bg-pos-danger-muted border-pos-danger/30 text-pos-danger' }
     : status.dataFlowStatus.downloading || status.dataFlowStatus.uploading || status.connecting
       ? {
           label: 'Syncing',
-          dot: 'bg-amber-400',
-          chip: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
+          dot: 'bg-pos-warning',
+          chip: 'bg-pos-warning-muted border-pos-warning/30 text-pos-warning',
         }
       : status.connected
         ? {
             label: 'Online',
-            dot: 'bg-emerald-400',
-            chip: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
+            dot: 'bg-pos-success',
+            chip: 'bg-pos-success-muted border-pos-success/30 text-pos-success',
           }
         : {
             label: 'Offline',
             dot: 'bg-slate-400',
-            chip: 'bg-slate-500/15 border-slate-500/30 text-slate-300',
+            chip: 'bg-surface-card border-border text-pos-text-muted',
           };
 
   const statusSnapshot = useMemo(
@@ -118,11 +118,11 @@ export default function ExploreScreen() {
 
   return (
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <View className="mb-4 rounded-2xl border border-white/10 bg-surface-soft p-4">
+      <View className="mb-4 rounded-2xl border border-border bg-surface-card p-4">
         <View className="mb-3 flex-row items-center justify-between">
           <View>
-            <Text className="text-pos-2xl font-bold text-pos-text-strong">Operations Overview</Text>
-            <Text className="mt-1 text-pos-sm text-pos-muted">
+            <Text className="text-pos-2xl font-bold text-pos-text">Operations Overview</Text>
+            <Text className="mt-1 text-pos-sm text-pos-text-muted">
               Live branch, order, kitchen, and payment snapshot
             </Text>
           </View>
@@ -132,107 +132,107 @@ export default function ExploreScreen() {
           </View>
         </View>
 
-        <Text className="text-pos-sm text-pos-muted">
+        <Text className="text-pos-sm text-pos-text-muted">
           Connected: {String(status.connected)} · Connecting: {String(status.connecting)} · Downloading:{' '}
           {String(status.dataFlowStatus.downloading)} · Uploading: {String(status.dataFlowStatus.uploading)}
         </Text>
-        <Text className="mt-1 text-pos-sm text-pos-muted">Status: {status.getMessage()}</Text>
-        <Text className="mt-1 text-pos-sm text-pos-muted">
+        <Text className="mt-1 text-pos-sm text-pos-text-muted">Status: {status.getMessage()}</Text>
+        <Text className="mt-1 text-pos-sm text-pos-text-muted">
           Last Synced: {status.lastSyncedAt ? status.lastSyncedAt.toISOString() : 'Never'}
         </Text>
       </View>
 
       <View className="mb-4 flex-row flex-wrap gap-3">
-        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
-          <Text className="text-pos-sm text-pos-muted">Active Branches</Text>
-          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{branches.length}</Text>
+        <View className="min-w-[140px] flex-1 rounded-xl border border-border bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">Active Branches</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text">{branches.length}</Text>
         </View>
-        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
-          <Text className="text-pos-sm text-pos-muted">Recent Orders</Text>
-          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{orders.length}</Text>
+        <View className="min-w-[140px] flex-1 rounded-xl border border-border bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">Recent Orders</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text">{orders.length}</Text>
         </View>
-        <View className="min-w-[140px] flex-1 rounded-xl border border-white/10 bg-[#0F1A2E] p-4">
-          <Text className="text-pos-sm text-pos-muted">Kitchen Tickets</Text>
-          <Text className="mt-1 text-pos-2xl font-bold text-pos-text-strong">{tickets.length}</Text>
+        <View className="min-w-[140px] flex-1 rounded-xl border border-border bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">Kitchen Tickets</Text>
+          <Text className="mt-1 text-pos-2xl font-bold text-pos-text">{tickets.length}</Text>
         </View>
       </View>
 
       {downloadError ? (
-        <View className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-          <Text className="text-pos-sm text-red-300">Download error: {downloadError}</Text>
+        <View className="mb-3 rounded-xl bg-pos-danger-muted p-3">
+          <Text className="text-pos-sm text-pos-danger">Download error: {downloadError}</Text>
         </View>
       ) : null}
 
       {uploadError ? (
-        <View className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-          <Text className="text-pos-sm text-red-300">Upload error: {uploadError}</Text>
+        <View className="mb-3 rounded-xl bg-pos-danger-muted p-3">
+          <Text className="text-pos-sm text-pos-danger">Upload error: {uploadError}</Text>
         </View>
       ) : null}
 
-      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
-        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Active Branches</Text>
+      <View className="mb-3 rounded-xl border border-border bg-surface-card p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text">Active Branches</Text>
         {branches.map((b) => (
           <Text key={b.id} className="mb-1 text-pos-sm text-pos-text">
             • {b.name}
           </Text>
         ))}
-        {branches.length === 0 ? <Text className="text-pos-sm text-pos-muted">No branch rows yet.</Text> : null}
+        {branches.length === 0 ? <Text className="text-pos-sm text-pos-text-muted">No branch rows yet.</Text> : null}
       </View>
 
-      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
-        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Recent Orders</Text>
+      <View className="mb-3 rounded-xl border border-border bg-surface-card p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text">Recent Orders</Text>
         {orders.map((o) => (
-          <View key={o.id} className="mb-2 rounded-lg bg-white/5 p-3">
-            <Text className="text-pos-sm font-semibold text-pos-text-strong">
+          <View key={o.id} className="mb-2 rounded-xl bg-surface-raised p-3">
+            <Text className="text-pos-sm font-semibold text-pos-text">
               {o.order_number ?? '-'} · Table {o.table_number ?? '-'}
             </Text>
-            <Text className="mt-1 text-pos-sm text-pos-muted">
+            <Text className="mt-1 text-pos-sm text-pos-text-muted">
               {o.branch_name ?? '-'} · {o.status ?? '-'} · {o.payment_status ?? '-'}
             </Text>
-            <Text className="mt-1 text-pos-sm font-semibold text-brand">
+            <Text className="mt-1 text-pos-sm font-semibold text-accent">
               Rp{Math.round(Number(o.total ?? 0)).toLocaleString('id-ID')}
             </Text>
           </View>
         ))}
-        {orders.length === 0 ? <Text className="text-pos-sm text-pos-muted">No order rows yet.</Text> : null}
+        {orders.length === 0 ? <Text className="text-pos-sm text-pos-text-muted">No order rows yet.</Text> : null}
       </View>
 
-      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
-        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Kitchen Tickets</Text>
+      <View className="mb-3 rounded-xl border border-border bg-surface-card p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text">Kitchen Tickets</Text>
         {tickets.map((k) => (
-          <View key={k.id} className="mb-2 flex-row items-center justify-between rounded-lg bg-white/5 p-3">
+          <View key={k.id} className="mb-2 flex-row items-center justify-between rounded-xl bg-surface-raised p-3">
             <View className="flex-1 pr-3">
-              <Text className="text-pos-sm font-semibold text-pos-text-strong">{k.ticket_number ?? '-'}</Text>
-              <Text className="text-pos-sm text-pos-muted">{k.order_number ?? '-'}</Text>
+              <Text className="text-pos-sm font-semibold text-pos-text">{k.ticket_number ?? '-'}</Text>
+              <Text className="text-pos-sm text-pos-text-muted">{k.order_number ?? '-'}</Text>
             </View>
-            <Text className="rounded-full bg-brand/20 px-2 py-1 text-pos-xs font-semibold uppercase tracking-wide text-brand">
+            <Text className="rounded-full bg-accent-muted px-3 py-1 text-pos-xs font-semibold uppercase tracking-wide text-accent">
               {k.status ?? '-'}
             </Text>
           </View>
         ))}
         {tickets.length === 0 ? (
-          <Text className="text-pos-sm text-pos-muted">No kitchen ticket rows yet.</Text>
+          <Text className="text-pos-sm text-pos-text-muted">No kitchen ticket rows yet.</Text>
         ) : null}
       </View>
 
-      <View className="mb-3 rounded-xl border border-white/10 bg-surface-soft p-4">
-        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Payment Summary</Text>
+      <View className="mb-3 rounded-xl border border-border bg-surface-card p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text">Payment Summary</Text>
         {paymentSummary.map((p) => (
           <View
             key={`${p.payment_method}`}
-            className="mb-2 flex-row items-center justify-between rounded-lg bg-white/5 p-3">
+            className="mb-2 flex-row items-center justify-between rounded-xl bg-surface-raised p-3">
             <Text className="text-pos-sm text-pos-text">{p.payment_method}</Text>
-            <Text className="text-pos-sm font-semibold text-pos-text-strong">
+            <Text className="text-pos-sm font-semibold text-pos-text">
               Rp{Math.round(Number(p.total ?? 0)).toLocaleString('id-ID')}
             </Text>
           </View>
         ))}
-        {paymentSummary.length === 0 ? <Text className="text-pos-sm text-pos-muted">No payment rows yet.</Text> : null}
+        {paymentSummary.length === 0 ? <Text className="text-pos-sm text-pos-text-muted">No payment rows yet.</Text> : null}
       </View>
 
-      <View className="rounded-xl border border-white/10 bg-black/20 p-4">
-        <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">Debug Snapshot</Text>
-        <Text className="text-pos-xs text-pos-muted">{statusSignature}</Text>
+      <View className="rounded-xl border border-border bg-surface-card p-4">
+        <Text className="mb-2 text-pos-base font-semibold text-pos-text">Debug Snapshot</Text>
+        <Text className="text-pos-xs text-pos-text-faint">{statusSignature}</Text>
       </View>
     </ScrollView>
   );

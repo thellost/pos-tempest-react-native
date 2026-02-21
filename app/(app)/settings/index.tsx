@@ -1,8 +1,3 @@
-/**
- * Settings Screen
- * Branch config, printer pairing, and device management.
- */
-
 import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
 import { Brand } from '@/constants/theme';
 import type { Device } from '@/db/models';
@@ -14,7 +9,6 @@ import {
   reactivateDevice,
   updateDeviceName,
 } from '@/services/device.service';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,7 +22,6 @@ import {
 } from 'react-native';
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const { user } = useAuth();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
   
@@ -71,11 +64,10 @@ export default function SettingsScreen() {
       setEditingDeviceId(null);
       setEditingName('');
       
-      // Refresh device hook if this is the current device
       if (device.device_uid === deviceInfo?.deviceId) {
         await refreshDevice();
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update device name');
     }
   };
@@ -93,7 +85,7 @@ export default function SettingsScreen() {
             try {
               await deactivateDevice(device.device_uid);
               await loadDevices();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to deactivate device');
             }
           },
@@ -106,31 +98,9 @@ export default function SettingsScreen() {
     try {
       await reactivateDevice(device.device_uid);
       await loadDevices();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to reactivate device');
     }
-  };
-
-  const handleClearDevice = () => {
-    Alert.alert(
-      'Reset Device',
-      'This will clear the device registration and generate a new device ID. You will need to re-register this device. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearDevice();
-              router.replace('/(app)/device-setup');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset device');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleResetDevice = async () => {
@@ -147,8 +117,7 @@ export default function SettingsScreen() {
               await clearDevice();
               Alert.alert('Success', 'Device registration has been reset.');
               refreshDevice();
-            } catch (error) {
-              console.error('[Settings] Error resetting device:', error);
+            } catch {
               Alert.alert('Error', 'Failed to reset device registration.');
             }
           },
@@ -163,31 +132,31 @@ export default function SettingsScreen() {
 
     return (
       <View
-        className={`mb-3 rounded-lg border p-4 ${
+        className={`mb-3 rounded-xl border p-4 ${
           isCurrentDevice
-            ? 'border-brand bg-brand/5'
+            ? 'border-accent bg-accent-muted'
             : item.status === DEVICE_STATUS.INACTIVE
-            ? 'border-red-500/20 bg-red-500/5'
-            : 'border-white/10 bg-surface-soft'
+            ? 'border-pos-danger/20 bg-pos-danger-muted'
+            : 'border-border bg-surface-card'
         }`}
       >
         {isEditing ? (
           <View className="gap-3">
             <TextInput
-              className="rounded-lg border border-white/10 bg-surface p-3 text-pos-base text-pos-text"
+              className="rounded-xl border border-border bg-surface p-3 text-pos-base text-pos-text"
               value={editingName}
               onChangeText={setEditingName}
               autoFocus
             />
             <View className="flex-row gap-2">
               <Pressable
-                className="flex-1 rounded-lg bg-brand p-2"
+                className="flex-1 rounded-xl bg-accent p-3"
                 onPress={() => handleRenameDevice(item)}
               >
                 <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
               </Pressable>
               <Pressable
-                className="flex-1 rounded-lg border border-white/10 bg-surface p-2"
+                className="flex-1 rounded-xl border border-border bg-surface p-3"
                 onPress={() => {
                   setEditingDeviceId(null);
                   setEditingName('');
@@ -201,34 +170,34 @@ export default function SettingsScreen() {
           <>
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <Text className="text-pos-base font-semibold text-pos-text-strong">
+                <Text className="text-pos-base font-semibold text-pos-text">
                   {item.device_name}
                 </Text>
                 {isCurrentDevice && (
-                  <View className="rounded bg-brand/20 px-2 py-0.5">
-                    <Text className="text-pos-xs text-brand">This Device</Text>
+                  <View className="rounded-md bg-accent-muted px-2 py-0.5">
+                    <Text className="text-pos-xs text-accent">This Device</Text>
                   </View>
                 )}
                 {item.status === DEVICE_STATUS.INACTIVE && (
-                  <View className="rounded bg-red-500/20 px-2 py-0.5">
-                    <Text className="text-pos-xs text-red-400">Inactive</Text>
+                  <View className="rounded-md bg-pos-danger-muted px-2 py-0.5">
+                    <Text className="text-pos-xs text-pos-danger">Inactive</Text>
                   </View>
                 )}
               </View>
             </View>
             
-            <Text className="mt-1 text-pos-xs text-pos-muted">
+            <Text className="mt-1 text-pos-xs text-pos-text-muted">
               ID: {item.device_uid.slice(0, 8)}...
             </Text>
             
-            <Text className="mt-1 text-pos-xs text-pos-muted">
+            <Text className="mt-1 text-pos-xs text-pos-text-muted">
               Registered: {new Date(item.registered_at).toLocaleDateString()}
             </Text>
             
             {canManageDevices && (
               <View className="mt-3 flex-row gap-2">
                 <Pressable
-                  className="rounded-lg border border-white/10 bg-surface px-3 py-1.5"
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5"
                   onPress={() => {
                     setEditingDeviceId(item.id);
                     setEditingName(item.device_name);
@@ -239,17 +208,17 @@ export default function SettingsScreen() {
                 
                 {item.status === DEVICE_STATUS.ACTIVE ? (
                   <Pressable
-                    className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5"
+                    className="rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-3 py-1.5"
                     onPress={() => handleDeactivateDevice(item)}
                   >
-                    <Text className="text-pos-xs text-red-400">Deactivate</Text>
+                    <Text className="text-pos-xs text-pos-danger">Deactivate</Text>
                   </Pressable>
                 ) : (
                   <Pressable
-                    className="rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-1.5"
+                    className="rounded-lg border border-pos-success/20 bg-pos-success-muted px-3 py-1.5"
                     onPress={() => handleReactivateDevice(item)}
                   >
-                    <Text className="text-pos-xs text-green-400">Reactivate</Text>
+                    <Text className="text-pos-xs text-pos-success">Reactivate</Text>
                   </Pressable>
                 )}
               </View>
@@ -262,33 +231,32 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-surface p-6">
-      {/* Current Device Info */}
       <View className="mb-6">
-        <Text className="mb-3 text-pos-lg font-semibold text-pos-text-strong">
+        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
           Current Device
         </Text>
-        <View className="rounded-lg bg-surface-soft p-4">
+        <View className="rounded-xl bg-surface-card p-4">
           <View className="gap-2">
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Name:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Name:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {registration?.device?.device_name || 'Not set'}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Branch:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Branch:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {registration?.branch?.name || 'Not set'}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Model:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Model:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {deviceInfo?.model || 'Unknown'}
               </Text>
             </View>
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-muted">Device ID:</Text>
+              <Text className="text-pos-sm text-pos-text-muted">Device ID:</Text>
               <Text className="text-pos-sm text-pos-text">
                 {deviceInfo?.deviceId?.slice(0, 8)}...
               </Text>
@@ -297,10 +265,9 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Branch Devices */}
       {canManageDevices && (
         <View className="mb-6">
-          <Text className="mb-3 text-pos-lg font-semibold text-pos-text-strong">
+          <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
             Branch Devices
           </Text>
           
@@ -309,8 +276,8 @@ export default function SettingsScreen() {
               <ActivityIndicator size="large" color={Brand.primary} />
             </View>
           ) : devices.length === 0 ? (
-            <View className="rounded-lg bg-surface-soft p-4">
-              <Text className="text-pos-sm text-pos-muted">
+            <View className="rounded-xl bg-surface-card p-4">
+              <Text className="text-pos-sm text-pos-text-muted">
                 No devices registered for this branch.
               </Text>
             </View>
@@ -325,26 +292,24 @@ export default function SettingsScreen() {
         </View>
       )}
 
-      {/* Printer Settings (Placeholder) */}
       <View className="mb-6">
-        <Text className="mb-3 text-pos-lg font-semibold text-pos-text-strong">
+        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
           Printer Settings
         </Text>
-        <View className="rounded-lg bg-surface-soft p-4">
-          <Text className="text-pos-sm text-pos-muted">
+        <View className="rounded-xl bg-surface-card p-4">
+          <Text className="text-pos-sm text-pos-text-muted">
             Printer configuration will be available in Step 9.
           </Text>
         </View>
       </View>
 
-      {/* Device Management */}
       <View className="p-4">
-        <Text className="mb-4 text-pos-lg font-semibold text-pos-text-strong">
+        <Text className="mb-4 text-pos-lg font-semibold text-pos-text">
           Device Management
         </Text>
 
         <Pressable
-          className="mb-4 rounded-lg bg-red-500 p-4"
+          className="mb-4 rounded-xl bg-pos-danger p-4"
           onPress={handleResetDevice}
         >
           <Text className="text-center text-pos-base font-semibold text-white">
@@ -353,12 +318,11 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
-      {/* App Info */}
-      <View className="rounded-lg bg-surface-soft p-4">
-        <Text className="text-pos-sm text-pos-muted">
+      <View className="rounded-xl bg-surface-card p-4">
+        <Text className="text-pos-sm text-pos-text-muted">
           POS Tempest v1.0.0
         </Text>
-        <Text className="mt-1 text-pos-xs text-pos-muted">
+        <Text className="mt-1 text-pos-xs text-pos-text-faint">
           Offline-first restaurant POS
         </Text>
       </View>

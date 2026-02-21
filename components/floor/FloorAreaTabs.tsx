@@ -9,24 +9,19 @@ interface FloorAreaTabsProps {
   onSelectArea: (areaId: number) => void;
 }
 
-/**
- * Horizontal tabs for floor areas (Indoor, Outdoor, VIP, etc.)
- * Provides navigation between different floor sections.
- */
 export function FloorAreaTabs({ floorAreas, selectedAreaId, onSelectArea }: FloorAreaTabsProps) {
   if (floorAreas.length === 0) {
     return null;
   }
 
   return (
-    <View className="mb-4 border-b border-white/10">
+    <View className="border-b border-border bg-surface-card px-4 py-3">
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 4 }}
       >
         {floorAreas.map((area) => {
-          // Ensure both IDs are numbers for comparison
           const areaId = typeof area.id === 'string' ? parseInt(area.id, 10) : area.id;
           const isSelected = areaId === selectedAreaId;
           
@@ -34,17 +29,18 @@ export function FloorAreaTabs({ floorAreas, selectedAreaId, onSelectArea }: Floo
             <Pressable
               key={area.id}
               onPress={() => onSelectArea(areaId)}
-              className={`mr-2 px-6 py-3 ${
-                isSelected 
-                  ? 'border-b-2 border-primary' 
-                  : ''
-              }`}
+              className="mr-2 rounded-xl px-5 py-3"
+              style={{
+                backgroundColor: isSelected ? '#6366F1' : 'transparent',
+                borderWidth: isSelected ? 0 : 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+              }}
             >
               <Text 
-                className={`text-pos-lg font-semibold ${
+                className={`text-pos-base font-semibold ${
                   isSelected 
-                    ? 'text-primary' 
-                    : 'text-pos-muted'
+                    ? 'text-white' 
+                    : 'text-pos-text-muted'
                 }`}
               >
                 {area.name}

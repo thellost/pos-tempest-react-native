@@ -10,45 +10,41 @@ interface OrderItemRowProps {
   onRemove: (itemId: number) => void;
 }
 
-/**
- * Single order item row.
- * Shows qty, name, modifiers, subtotal.
- * Tap to edit qty/notes, swipe to remove.
- */
 export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowProps) {
   const itemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
 
   return (
     <View
-      className={`mb-2 border border-white/10 bg-surface-soft p-3 ${
+      className={`mb-3 overflow-hidden bg-surface-card p-4 ${
         item.is_voided ? 'opacity-50' : ''
       }`}
-      style={{ borderRadius: 4 }}
+      style={{ borderRadius: 12 }}
     >
-      <View className="mb-2 flex-row items-start justify-between">
-        <View className="flex-1">
-          <Text className="text-pos-base font-semibold text-pos-text-strong">
+      <View className="mb-3 flex-row items-start justify-between">
+        <View className="flex-1 pr-3">
+          <Text className="text-pos-base font-semibold text-pos-text">
             {item.menu_item_name}
           </Text>
           {item.is_voided && (
-            <Text className="text-pos-xs text-pos-danger">VOIDED</Text>
+            <View className="mt-1 self-start rounded-md bg-pos-danger-muted px-2 py-0.5">
+              <Text className="text-pos-xs font-semibold text-pos-danger">VOIDED</Text>
+            </View>
           )}
         </View>
         {!item.is_voided && (
           <Pressable
             onPress={() => onRemove(itemId)}
-            className="ml-2 px-2 py-1"
-            style={{ backgroundColor: 'rgba(220,38,38,0.2)', borderRadius: 2 }}
+            className="rounded-lg bg-pos-danger-muted px-3 py-1.5"
           >
-            <Text className="text-pos-xs text-pos-danger">Remove</Text>
+            <Text className="text-pos-xs font-semibold text-pos-danger">Remove</Text>
           </Pressable>
         )}
       </View>
 
       {item.modifiers.length > 0 && (
-        <View className="mb-2">
+        <View className="mb-3 rounded-lg bg-surface-raised p-2">
           {item.modifiers.map((modifier, index) => (
-            <Text key={index} className="text-pos-xs text-pos-muted">
+            <Text key={index} className="text-pos-xs text-pos-text-muted">
               + {modifier.modifier_name}
               {modifier.extra_price > 0 && ` (+${formatIDR(modifier.extra_price)})`}
             </Text>
@@ -57,39 +53,41 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
       )}
 
       {item.notes && (
-        <Text className="mb-2 text-pos-xs italic text-pos-muted">
-          Note: {item.notes}
-        </Text>
+        <View className="mb-3 rounded-lg bg-accent-muted px-3 py-2">
+          <Text className="text-pos-xs italic text-accent">
+            📝 {item.notes}
+          </Text>
+        </View>
       )}
 
       <View className="flex-row items-center justify-between">
         {!item.is_voided && (
-          <View className="flex-row items-center">
+          <View className="flex-row items-center gap-2">
             <Pressable
               onPress={() => onUpdateQuantity(itemId, item.quantity - 1)}
-              className="h-8 w-8 items-center justify-center bg-surface"
-              style={{ borderRadius: 4 }}
+              className="h-9 w-9 items-center justify-center bg-surface-raised"
+              style={{ borderRadius: 8 }}
             >
-              <Text className="text-pos-lg text-pos-text-strong">-</Text>
+              <Text className="text-pos-base text-pos-text">−</Text>
             </Pressable>
-            <Text className="mx-3 text-pos-base font-semibold text-pos-text-strong">
+            <Text className="min-w-[28px] text-center text-pos-base font-bold text-pos-text">
               {item.quantity}
             </Text>
             <Pressable
               onPress={() => onUpdateQuantity(itemId, item.quantity + 1)}
-              className="h-8 w-8 items-center justify-center bg-surface"
-              style={{ borderRadius: 4 }}
+              className="h-9 w-9 items-center justify-center bg-surface-raised"
+              style={{ borderRadius: 8 }}
             >
-              <Text className="text-pos-lg text-pos-text-strong">+</Text>
+              <Text className="text-pos-base text-pos-text">+</Text>
             </Pressable>
           </View>
         )}
 
-        <View className="items-end">
-          <Text className="text-pos-sm text-pos-muted">
-            {formatIDR(item.unit_price + item.modifier_total)} x {item.quantity}
+        <View className="flex-1 items-end">
+          <Text className="text-pos-xs text-pos-text-faint">
+            {formatIDR(item.unit_price + item.modifier_total)} × {item.quantity}
           </Text>
-          <Text className="text-pos-lg font-bold text-toast-orange-3">
+          <Text className="text-pos-lg font-bold text-accent">
             {formatIDR(item.total)}
           </Text>
         </View>

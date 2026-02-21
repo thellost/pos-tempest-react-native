@@ -4,15 +4,6 @@ import { Redirect, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-/**
- * Secure PIN unlock screen for quick re-authentication.
- * Features:
- * - Rate limiting with progressive lockout
- * - Attempt tracking with visual feedback
- * - Auto-lockout after max failed attempts
- * - Secure PIN validation
- * - Emergency sign-out option
- */
 export default function PinScreen() {
   const { 
     authUser, 
@@ -31,7 +22,6 @@ export default function PinScreen() {
 
   const maskedPin = useMemo(() => '•'.repeat(pin.length), [pin]);
 
-  // Update lock timer
   useEffect(() => {
     if (isPinLocked && pinResetInMs > 0) {
       setLockTimeRemaining(Math.ceil(pinResetInMs / 1000));
@@ -50,7 +40,6 @@ export default function PinScreen() {
     }
   }, [isPinLocked, pinResetInMs]);
 
-  // Clear error after 3 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(null), 3000);
@@ -81,7 +70,6 @@ export default function PinScreen() {
       const result = await unlockWithPin(candidate);
 
       if (!result.success) {
-        // Use fresh state from the returned object, not stale hook values
         if (result.isLocked) {
           const minutes = Math.ceil(result.resetInMs / 60000);
           setError(`Too many attempts. Locked for ${minutes} minutes.`);
@@ -94,7 +82,6 @@ export default function PinScreen() {
         return;
       }
 
-      // Success - navigation handled by auth layout
       setError(null);
       setPin('');
       router.replace('/(app)/floor');
@@ -108,11 +95,10 @@ export default function PinScreen() {
       return;
     }
 
-    setError(null); // Clear error on new input
+    setError(null);
     const nextPin = `${pin}${digit}`;
     setPin(nextPin);
 
-    // Auto-submit when 6 digits entered
     if (nextPin.length === 6) {
       submitPin(nextPin);
     }
@@ -140,7 +126,7 @@ export default function PinScreen() {
     try {
       await signOut();
       router.replace('/(auth)/login');
-    } catch (err) {
+    } catch {
       setError('Sign out failed. Try again.');
     }
   }
@@ -157,69 +143,66 @@ export default function PinScreen() {
 
   return (
     <View className="flex-1 items-center justify-center bg-surface px-6">
-      <View className="w-full max-w-md rounded-2xl border border-white/10 bg-surface-soft p-6">
-        {/* Header */}
-        <Text className="text-center text-pos-2xl font-bold text-pos-text-strong">
-          🔐 Enter PIN
+      <View className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-8">
+        <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
+          <Text className="text-3xl">🔐</Text>
+        </View>
+        <Text className="text-center text-pos-2xl font-bold text-pos-text">
+          Enter PIN
         </Text>
-        <Text className="mt-2 text-center text-pos-sm text-pos-muted">
+        <Text className="mt-2 text-center text-pos-sm text-pos-text-muted">
           {authUser?.email ?? 'Locked session'}
         </Text>
 
-        {/* Lock Warning */}
         {isPinLocked && lockTimeRemaining > 0 && (
-          <View className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-            <Text className="text-center text-pos-sm font-semibold text-red-400">
+          <View className="mt-5 rounded-xl border border-pos-danger/30 bg-pos-danger-muted p-4">
+            <Text className="text-center text-pos-sm font-semibold text-pos-danger">
               Too many failed attempts
             </Text>
-            <Text className="mt-1 text-center text-pos-base font-bold text-red-300">
+            <Text className="mt-1 text-center text-pos-base font-bold text-pos-danger">
               Locked for {formatLockTime(lockTimeRemaining)}
             </Text>
           </View>
         )}
 
-        {/* Attempts Warning */}
         {!isPinLocked && pinAttempts > 0 && pinAttempts <= 2 && (
-          <View className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
-            <Text className="text-center text-pos-sm text-yellow-400">
-              ⚠️ {pinAttempts} {pinAttempts === 1 ? 'attempt' : 'attempts'} remaining
+          <View className="mt-5 rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-4">
+            <Text className="text-center text-pos-sm text-pos-warning">
+              {pinAttempts} {pinAttempts === 1 ? 'attempt' : 'attempts'} remaining
             </Text>
           </View>
         )}
 
-        {/* PIN Display */}
-        <View className={`mt-6 rounded-lg border px-4 py-3 ${
+        <View className={`mt-6 rounded-xl border px-4 py-4 ${
           isPinLocked 
-            ? 'border-red-500/30 bg-red-500/5' 
+            ? 'border-pos-danger/30 bg-pos-danger-muted' 
             : error 
-            ? 'border-yellow-500/30 bg-yellow-500/5' 
-            : 'border-white/10 bg-surface'
+            ? 'border-pos-warning/30 bg-pos-warning-muted' 
+            : 'border-border bg-surface'
         }`}>
           <View className="flex-row items-center justify-center">
             {loading && <ActivityIndicator size="small" color={Brand.primary} className="mr-2" />}
-            <Text className={`text-center text-pos-xl tracking-[10px] ${
+            <Text className={`text-center text-pos-xl tracking-[12px] ${
               isPinLocked 
-                ? 'text-red-400' 
+                ? 'text-pos-danger' 
                 : error 
-                ? 'text-yellow-400' 
-                : 'text-pos-text-strong'
+                ? 'text-pos-warning' 
+                : 'text-pos-text'
             }`}>
               {maskedPin || '------'}
             </Text>
           </View>
         </View>
 
-        {/* Error Message */}
         {error && (
           <Text className={`mt-3 text-center text-pos-sm font-semibold ${
-            isPinLocked ? 'text-red-400' : 'text-yellow-400'
+            isPinLocked ? 'text-pos-danger' : 'text-pos-warning'
           }`}>
             {error}
           </Text>
         )}
 
-        {/* PIN Keypad */}
-        <View className="mt-5 flex-row flex-wrap justify-between">
+        <View className="mt-6 flex-row flex-wrap justify-between">
           {keys.map((key) => {
             const isAction = key === 'C' || key === '⌫';
             const isDisabled = loading || (isPinLocked && key !== 'C');
@@ -227,12 +210,12 @@ export default function PinScreen() {
             return (
               <Pressable
                 key={key}
-                className={`mb-3 h-16 w-[31%] items-center justify-center rounded-lg border ${
+                className={`mb-3 h-16 w-[31%] items-center justify-center rounded-xl border ${
                   isDisabled
-                    ? 'border-white/5 bg-surface/30'
+                    ? 'border-border bg-surface-card/50'
                     : isAction
-                    ? 'border-white/10 bg-surface active:bg-surface-soft'
-                    : 'border-brand/30 bg-brand/20 active:bg-brand/30'
+                    ? 'border-border bg-surface-card'
+                    : 'border-accent/30 bg-accent-muted'
                 }`}
                 disabled={isDisabled}
                 onPress={() => {
@@ -246,10 +229,10 @@ export default function PinScreen() {
                 }}>
                 <Text className={`text-pos-xl font-semibold ${
                   isDisabled
-                    ? 'text-pos-muted/30'
+                    ? 'text-pos-text-faint/50'
                     : isAction
-                    ? 'text-pos-muted'
-                    : 'text-brand'
+                    ? 'text-pos-text-muted'
+                    : 'text-accent'
                 }`}>
                   {key}
                 </Text>
@@ -258,19 +241,17 @@ export default function PinScreen() {
           })}
         </View>
 
-        {/* Sign Out Button */}
         <Pressable
-          className="mt-4 rounded-lg border border-white/10 bg-surface p-3 active:bg-surface-soft"
+          className="mt-4 rounded-xl border border-border bg-surface-card p-4"
           onPress={onSignOut}
           disabled={loading}>
-          <Text className="text-center text-pos-sm text-pos-muted">
+          <Text className="text-center text-pos-sm text-pos-text-muted">
             Sign out and use different account
           </Text>
         </Pressable>
 
-        {/* Security Info */}
-        <Text className="mt-3 text-center text-pos-xs text-pos-muted/70">
-          🔒 PIN is validated securely without sending over network
+        <Text className="mt-4 text-center text-pos-xs text-pos-text-faint">
+          PIN is validated securely without sending over network
         </Text>
       </View>
     </View>

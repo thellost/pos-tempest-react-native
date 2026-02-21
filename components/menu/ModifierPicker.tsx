@@ -21,11 +21,6 @@ interface ModifierPickerProps {
   onCancel: () => void;
 }
 
-/**
- * Bottom sheet/modal for selecting modifiers for a menu item.
- * Respects is_required, min_selections, max_selections.
- * For weight-based items, includes a numeric input for weight.
- */
 export function ModifierPicker({
   visible,
   menuItem,
@@ -39,7 +34,6 @@ export function ModifierPicker({
 
   const isWeightBased = menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED;
 
-  // Toggle modifier selection
   const toggleModifier = (groupId: number, group: ModifierGroupWithModifiers, modifierId: number) => {
     const newSelected = new Map(selectedModifiers);
     const groupModifiers = Array.from(newSelected.values()).filter(
@@ -47,12 +41,9 @@ export function ModifierPicker({
     );
 
     if (newSelected.has(modifierId)) {
-      // Deselect
       newSelected.delete(modifierId);
     } else {
-      // Check max_selections
       if (groupModifiers.length >= group.max_selections) {
-        // Remove the first selected modifier in this group
         const firstModifier = groupModifiers[0];
         if (firstModifier) {
           const firstModifierId = Array.from(newSelected.entries()).find(
@@ -64,7 +55,6 @@ export function ModifierPicker({
         }
       }
 
-      // Add the new modifier
       const modifier = group.modifiers.find(m => {
         const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
         return mId === modifierId;
@@ -83,9 +73,7 @@ export function ModifierPicker({
     setSelectedModifiers(newSelected);
   };
 
-  // Validate and confirm
   const handleConfirm = () => {
-    // Validate required groups
     for (const group of modifierGroups) {
       const groupModifiers = Array.from(selectedModifiers.values()).filter(
         m => m.modifier_group_name === group.name
@@ -97,7 +85,6 @@ export function ModifierPicker({
       }
     }
 
-    // Validate weight for weight-based items
     if (isWeightBased && (!weight || parseFloat(weight) <= 0)) {
       alert('Please enter a valid weight');
       return;
@@ -106,13 +93,11 @@ export function ModifierPicker({
     const weightValue = isWeightBased ? parseFloat(weight) : null;
     onConfirm(Array.from(selectedModifiers.values()), weightValue, notes);
 
-    // Reset state
     setSelectedModifiers(new Map());
     setWeight('');
     setNotes('');
   };
 
-  // Calculate total price
   const calculateTotal = (): number => {
     let basePrice = menuItem.price;
 
@@ -135,54 +120,57 @@ export function ModifierPicker({
       transparent={true}
       onRequestClose={onCancel}
     >
-      <View className="flex-1 justify-end bg-black/50">
-        <View className="max-h-[80%] rounded-t-3xl bg-surface p-6">
-          {/* Header */}
-          <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-pos-2xl font-bold text-pos-text-strong">
-              {menuItem.name}
-            </Text>
-            <Pressable onPress={onCancel}>
-              <Text className="text-pos-xl text-pos-muted">✕</Text>
+      <View className="flex-1 justify-end bg-black/60">
+        <View className="max-h-[85%] rounded-t-3xl bg-surface-soft p-6">
+          <View className="mb-5 flex-row items-center justify-between">
+            <View>
+              <Text className="text-pos-2xl font-bold text-pos-text">
+                {menuItem.name}
+              </Text>
+              <Text className="mt-1 text-pos-sm text-pos-text-muted">
+                {formatIDR(menuItem.price)}
+                {isWeightBased && ` per ${menuItem.unit_of_measure}`}
+              </Text>
+            </View>
+            <Pressable 
+              onPress={onCancel}
+              className="h-10 w-10 items-center justify-center rounded-full bg-surface-card"
+            >
+              <Text className="text-pos-lg text-pos-text-muted">✕</Text>
             </Pressable>
           </View>
 
-          <ScrollView className="mb-4 flex-1">
-            {/* Weight input for weight-based items */}
+          <ScrollView className="mb-4 flex-1" showsVerticalScrollIndicator={false}>
             {isWeightBased && (
-              <View className="mb-4">
-                <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">
+              <View className="mb-5">
+                <Text className="mb-2 text-pos-base font-semibold text-pos-text">
                   Weight ({menuItem.unit_of_measure})
                 </Text>
                 <TextInput
-                  className="rounded-lg border border-white/20 bg-surface-soft px-4 py-3 text-pos-base text-pos-text-strong"
+                  className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
                   placeholder={`Enter weight in ${menuItem.unit_of_measure}`}
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#64748B"
                   keyboardType="numeric"
                   value={weight}
                   onChangeText={setWeight}
                 />
-                <Text className="mt-1 text-pos-sm text-pos-muted">
-                  {formatIDR(menuItem.price)} per {menuItem.unit_of_measure}
-                </Text>
               </View>
             )}
 
-            {/* Modifier groups */}
             {modifierGroups.map((group) => {
               const groupId = typeof group.id === 'string' ? parseInt(group.id, 10) : group.id;
 
               return (
-                <View key={group.id} className="mb-4">
-                  <View className="mb-2 flex-row items-center justify-between">
-                    <Text className="text-pos-base font-semibold text-pos-text-strong">
+                <View key={group.id} className="mb-5">
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <Text className="text-pos-base font-semibold text-pos-text">
                       {group.name}
-                      {group.is_required && <Text className="text-red-500"> *</Text>}
+                      {group.is_required && <Text className="text-pos-danger"> *</Text>}
                     </Text>
-                    <Text className="text-pos-xs text-pos-muted">
+                    <Text className="text-pos-xs text-pos-text-faint">
                       {group.min_selections === group.max_selections
                         ? `Select ${group.min_selections}`
-                        : `Select ${group.min_selections}-${group.max_selections}`}
+                        : `${group.min_selections}-${group.max_selections}`}
                     </Text>
                   </View>
 
@@ -194,30 +182,29 @@ export function ModifierPicker({
                       <Pressable
                         key={modifier.id}
                         onPress={() => toggleModifier(groupId, group, modifierId)}
-                        className={`mb-2 flex-row items-center justify-between rounded-lg border p-3 ${
-                          isSelected
-                            ? 'border-primary bg-primary/10'
-                            : 'border-white/10 bg-surface-soft'
-                        }`}
+                        className="mb-2 flex-row items-center justify-between rounded-xl p-4"
+                        style={{
+                          backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : '#1A1F2C',
+                          borderWidth: 1,
+                          borderColor: isSelected ? '#6366F1' : 'rgba(255, 255, 255, 0.06)',
+                        }}
                       >
                         <View className="flex-row items-center">
                           <View
-                            className={`mr-3 h-5 w-5 items-center justify-center rounded-full border-2 ${
-                              isSelected
-                                ? 'border-primary bg-primary'
-                                : 'border-white/30'
+                            className={`mr-3 h-5 w-5 items-center justify-center rounded-full ${
+                              isSelected ? 'bg-accent' : 'bg-surface-raised'
                             }`}
                           >
                             {isSelected && (
                               <Text className="text-pos-xs text-white">✓</Text>
                             )}
                           </View>
-                          <Text className="text-pos-base text-pos-text-strong">
+                          <Text className="text-pos-base text-pos-text">
                             {modifier.name}
                           </Text>
                         </View>
                         {modifier.extra_price > 0 && (
-                          <Text className="text-pos-sm text-primary">
+                          <Text className="text-pos-sm font-semibold text-accent">
                             +{formatIDR(modifier.extra_price)}
                           </Text>
                         )}
@@ -228,15 +215,14 @@ export function ModifierPicker({
               );
             })}
 
-            {/* Notes */}
             <View className="mb-4">
-              <Text className="mb-2 text-pos-base font-semibold text-pos-text-strong">
-                Special Instructions (Optional)
+              <Text className="mb-2 text-pos-base font-semibold text-pos-text">
+                Special Instructions
               </Text>
               <TextInput
-                className="rounded-lg border border-white/20 bg-surface-soft px-4 py-3 text-pos-base text-pos-text-strong"
+                className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
                 placeholder="e.g., Extra spicy, No ice"
-                placeholderTextColor="#666"
+                placeholderTextColor="#64748B"
                 multiline
                 numberOfLines={3}
                 value={notes}
@@ -245,17 +231,16 @@ export function ModifierPicker({
             </View>
           </ScrollView>
 
-          {/* Footer */}
-          <View className="flex-row items-center justify-between border-t border-white/10 pt-4">
+          <View className="flex-row items-center justify-between border-t border-border pt-5">
             <View>
-              <Text className="text-pos-xs text-pos-muted">Total</Text>
-              <Text className="text-pos-2xl font-bold text-primary">
+              <Text className="text-pos-xs text-pos-text-muted">Total</Text>
+              <Text className="text-pos-2xl font-bold text-accent">
                 {formatIDR(calculateTotal())}
               </Text>
             </View>
             <Pressable
               onPress={handleConfirm}
-              className="rounded-lg bg-primary px-8 py-3"
+              className="rounded-xl bg-accent px-8 py-4"
             >
               <Text className="text-pos-base font-semibold text-white">
                 Add to Order

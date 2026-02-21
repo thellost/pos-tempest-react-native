@@ -12,7 +12,7 @@ interface CategoryTabsProps {
   onSelectSubCategory: (subCategoryId: number | null) => void;
 }
 
-const DEFAULT_BUTTON_COLOR = '#334155';
+const DEFAULT_BUTTON_COLOR = '#475569';
 
 export function CategoryTabs({
   categories,
@@ -32,61 +32,56 @@ export function CategoryTabs({
   }, [onSelectSubCategory]);
 
   if (categories.length === 0) {
-    return null;
+    return (
+      <View className="border-b border-border bg-surface-soft px-5 py-4">
+        <Text className="text-pos-sm text-pos-text-muted">
+          Loading categories...
+        </Text>
+      </View>
+    );
   }
 
   return (
     <View className="bg-surface-soft">
-      {/* Main Category Tabs - Connected Tab Group Style */}
-      <View className="flex-row border-b border-white/10">
+      <View className="border-b border-border">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 4 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}
           className="flex-grow-0"
         >
-          {categories.map((category, index) => {
+          {categories.map((category) => {
             const categoryId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
             const isSelected = categoryId === selectedCategoryId;
             const backgroundColor = category.button_color || DEFAULT_BUTTON_COLOR;
-            const isFirst = index === 0;
-            const isLast = index === categories.length - 1;
 
             return (
               <Pressable
                 key={`category-${category.id}`}
                 onPress={() => handleCategoryPress(categoryId)}
-                className={`min-h-pos-touch justify-center px-5 ${
-                  isFirst ? 'rounded-tl' : ''
-                } ${isLast ? 'rounded-tr' : ''}`}
+                className="mr-2 min-h-pos-touch justify-center px-5"
                 style={{
                   backgroundColor: isSelected ? backgroundColor : 'transparent',
-                  borderRightWidth: isLast ? 0 : 1,
-                  borderRightColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  borderWidth: isSelected ? 0 : 1,
+                  borderColor: 'rgba(255,255,255,0.08)',
                 }}
               >
                 <Text
                   className={`text-pos-base font-semibold ${
-                    isSelected ? 'text-white' : 'text-pos-muted'
+                    isSelected ? 'text-white' : 'text-pos-text-muted'
                   }`}
                 >
                   {category.name}
                 </Text>
-                {isSelected && (
-                  <View
-                    className="absolute bottom-0 left-0 right-0 h-1 rounded-t"
-                    style={{ backgroundColor: '#803500' }}
-                  />
-                )}
               </Pressable>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Sub-Category Pills - Connected Style */}
       {subCategories.length > 0 && (
-        <View className="flex-row border-b border-white/10 bg-surface px-2 py-2">
+        <View className="border-b border-border bg-surface px-3 py-3">
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -94,47 +89,45 @@ export function CategoryTabs({
           >
             <Pressable
               onPress={() => onSelectSubCategory(null)}
-              className={`items-center justify-center px-4 py-2 ${
-                selectedSubCategoryId === null
-                  ? 'bg-toast-orange-3'
-                  : 'bg-transparent'
-              }`}
+              className="mr-2 items-center justify-center rounded-lg px-4 py-2"
+              style={{
+                backgroundColor: selectedSubCategoryId === null ? '#6366F1' : 'transparent',
+                borderWidth: selectedSubCategoryId === null ? 0 : 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+              }}
             >
               <Text
                 className={`text-pos-sm font-medium ${
-                  selectedSubCategoryId === null ? 'text-white' : 'text-pos-muted'
+                  selectedSubCategoryId === null ? 'text-white' : 'text-pos-text-muted'
                 }`}
               >
                 All
               </Text>
             </Pressable>
 
-            <View className="mx-1 h-auto w-px bg-white/10" />
-
-            {subCategories.map((subCategory, index) => {
+            {subCategories.map((subCategory) => {
               const subCategoryId = typeof subCategory.id === 'string' ? parseInt(subCategory.id, 10) : subCategory.id;
               const isSelected = subCategoryId === selectedSubCategoryId;
 
               return (
-                <View key={`sub-category-${subCategory.id}`} className="flex-row items-center">
-                  <Pressable
-                    onPress={() => handleSubCategoryPress(subCategoryId)}
-                    className={`items-center justify-center px-4 py-2 ${
-                      isSelected ? 'bg-toast-orange-3' : 'bg-transparent'
+                <Pressable
+                  key={`sub-category-${subCategory.id}`}
+                  onPress={() => handleSubCategoryPress(subCategoryId)}
+                  className="mr-2 items-center justify-center rounded-lg px-4 py-2"
+                  style={{
+                    backgroundColor: isSelected ? '#6366F1' : 'transparent',
+                    borderWidth: isSelected ? 0 : 1,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <Text
+                    className={`text-pos-sm font-medium ${
+                      isSelected ? 'text-white' : 'text-pos-text-muted'
                     }`}
                   >
-                    <Text
-                      className={`text-pos-sm font-medium ${
-                        isSelected ? 'text-white' : 'text-pos-muted'
-                      }`}
-                    >
-                      {subCategory.name}
-                    </Text>
-                  </Pressable>
-                  {index < subCategories.length - 1 && (
-                    <View className="mx-1 h-auto w-px bg-white/10" />
-                  )}
-                </View>
+                    {subCategory.name}
+                  </Text>
+                </Pressable>
               );
             })}
           </ScrollView>

@@ -59,55 +59,59 @@ export function OrderPanel({
   const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
 
   return (
-    <View className="flex-1 border-l border-white/10 bg-surface-soft">
-      <View className="border-b border-white/10 bg-surface-soft px-4 py-3">
+    <View className="flex-1 border-r border-border bg-surface-soft">
+      <View className="border-b border-border bg-surface-card px-5 py-4">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-pos-xl font-bold text-pos-text-strong">
+            <Text className="text-pos-xl font-bold text-pos-text">
               {order?.order_number ?? 'New Order'}
             </Text>
           </View>
-          <View className="flex-row items-center">
+          <View className="flex-row items-center gap-2">
             <Pressable
-              className="px-3 py-1"
+              className="px-4 py-2"
               style={{
-                backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#5f5f5f' : 'transparent',
-                borderRadius: 2,
+                backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#6366F1' : 'transparent',
+                borderRadius: 10,
+                borderWidth: order?.order_type === ORDER_TYPE.DINE_IN ? 0 : 1,
+                borderColor: 'rgba(255,255,255,0.12)',
               }}
             >
-              <Text className="text-pos-sm font-medium text-white">Dine-in</Text>
+              <Text className={`text-pos-sm font-semibold ${order?.order_type === ORDER_TYPE.DINE_IN ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
             </Pressable>
             <Pressable
-              className="ml-1 px-3 py-1"
+              className="px-4 py-2"
               style={{
-                backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#5f5f5f' : 'transparent',
-                borderRadius: 2,
+                backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#6366F1' : 'transparent',
+                borderRadius: 10,
+                borderWidth: order?.order_type === ORDER_TYPE.TAKEAWAY ? 0 : 1,
+                borderColor: 'rgba(255,255,255,0.12)',
               }}
             >
-              <Text className="text-pos-sm font-medium text-white">Takeaway</Text>
+              <Text className={`text-pos-sm font-semibold ${order?.order_type === ORDER_TYPE.TAKEAWAY ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
             </Pressable>
           </View>
         </View>
 
-        <View className="mt-3 flex-row items-center justify-between">
-          <Text className="text-pos-sm text-pos-muted">Guests</Text>
-          <View className="flex-row items-center">
+        <View className="mt-4 flex-row items-center justify-between">
+          <Text className="text-pos-sm text-pos-text-muted">Guests</Text>
+          <View className="flex-row items-center gap-3">
             <Pressable
               onPress={handleGuestDecrease}
-              className="h-8 w-8 items-center justify-center bg-surface"
-              style={{ borderRadius: 4 }}
+              className="h-9 w-9 items-center justify-center bg-surface-raised"
+              style={{ borderRadius: 8 }}
             >
-              <Text className="text-pos-lg text-pos-text-strong">-</Text>
+              <Text className="text-pos-lg text-pos-text">−</Text>
             </Pressable>
-            <Text className="mx-4 min-w-[32px] text-center text-pos-lg font-bold text-pos-text-strong">
+            <Text className="min-w-[32px] text-center text-pos-lg font-bold text-pos-text">
               {guestCount}
             </Text>
             <Pressable
               onPress={handleGuestIncrease}
-              className="h-8 w-8 items-center justify-center bg-surface"
-              style={{ borderRadius: 4 }}
+              className="h-9 w-9 items-center justify-center bg-surface-raised"
+              style={{ borderRadius: 8 }}
             >
-              <Text className="text-pos-lg text-pos-text-strong">+</Text>
+              <Text className="text-pos-lg text-pos-text">+</Text>
             </Pressable>
           </View>
         </View>
@@ -115,13 +119,16 @@ export function OrderPanel({
 
       <ScrollView
         className="flex-1 px-4"
-        contentContainerStyle={{ paddingVertical: 12 }}
+        contentContainerStyle={{ paddingVertical: 16 }}
         showsVerticalScrollIndicator={false}
       >
         {items.length === 0 ? (
-          <View className="items-center justify-center py-12">
-            <Text className="text-pos-lg text-pos-muted">No items added</Text>
-            <Text className="mt-1 text-pos-sm text-pos-muted">
+          <View className="items-center justify-center py-16">
+            <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+              <Text className="text-3xl">🍽️</Text>
+            </View>
+            <Text className="text-pos-base text-pos-text-muted">No items added</Text>
+            <Text className="mt-1 text-pos-sm text-pos-text-faint">
               Tap menu items to add
             </Text>
           </View>
@@ -134,10 +141,10 @@ export function OrderPanel({
         {order ? (
           <OrderTotals order={order} />
         ) : (
-          <View className="border-t border-white/10 py-3">
+          <View className="border-t border-border py-4">
             <View className="flex-row justify-between">
-              <Text className="text-pos-lg font-bold text-pos-text-strong">Total</Text>
-              <Text className="text-pos-2xl font-bold text-toast-orange-3">
+              <Text className="text-pos-base font-semibold text-pos-text-muted">Total</Text>
+              <Text className="text-pos-2xl font-bold text-accent">
                 {formatIDR(emptySubtotal)}
               </Text>
             </View>
