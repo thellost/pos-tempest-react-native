@@ -1,6 +1,16 @@
-import { useEffect, useRef } from 'react';
+import {
+    Children,
+    Fragment,
+    Profiler,
+    createElement,
+    useLayoutEffect,
+    useRef,
+    type ProfilerOnRenderCallback,
+    type ReactNode,
+} from 'react';
 
 const TAG = '[⏱ perf]';
+const ENABLE_RENDER_PROFILER = process.env.EXPO_PUBLIC_ENABLE_RENDER_PROFILER === 'true';
 
 /**
  * High-resolution timestamp in milliseconds.
@@ -52,7 +62,7 @@ export function useRenderTimer(componentName: string): void {
   // Capture start time BEFORE effects run (during render phase)
   renderStart.current = nowMs();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const elapsed = nowMs() - renderStart.current;
     logPerf(`render:${componentName}`, elapsed);
   });
@@ -68,7 +78,7 @@ export function useRenderTimer(componentName: string): void {
 export function useMountTimer(componentName: string): void {
   const mountStart = useRef(nowMs());
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     logPerf(`mount:${componentName}`, nowMs() - mountStart.current);
   }, [componentName]);
 }
@@ -115,4 +125,42 @@ export function timedSync<T>(
   const result = fn();
   logPerf(label, nowMs() - start, meta);
   return result;
+}
+
+const onProfilerRender: ProfilerOnRenderCallback = (
+  id,
+  phase,
+  actualDuration,
+  baseDuration,
+  startTime,
+  commitTime
+) => {
+  if (!__DEV__) return;
+
+  logPerf(`profiler:${id}:${phase}`, actualDuration, {
+    baseDuration: Math.round(baseDuration * 100) / 100,
+    startTime: Math.round(startTime * 100) / 100,
+    commitTime: Math.round(commitTime * 100) / 100,
+  });
+};
+
+interface PerfProfilerProps {
+  id: string;
+  children: ReactNode;
+}
+
+export function PerfProfiler({ id, children }: PerfProfilerProps) {
+  const normalizedChildren = Children.toArray(children).filter((child) => {
+    if (typeof child !== 'string') {
+      return true;
+    }
+
+    return child.trim().length > 0;
+  });
+
+  if (!__DEV__ || !ENABLE_RENDER_PROFILER) {
+    return createElement(Fragment, null, ...normalizedChildren);
+  }
+
+  return createElement(Profiler, { id, onRender: onProfilerRender }, ...normalizedChildren);
 }

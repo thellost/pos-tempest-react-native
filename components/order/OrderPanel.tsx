@@ -1,10 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
-import { useRenderTimer } from '@/utils/perf-debug';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
 import { OrderTotals } from './OrderTotals';
@@ -32,8 +31,6 @@ export function OrderPanel({
   onPayment,
   onHold,
 }: OrderPanelProps) {
-  useRenderTimer('OrderPanel');
-
   const activeItems = items.filter(i => !i.is_voided);
   const hasItems = activeItems.length > 0;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
@@ -48,16 +45,16 @@ export function OrderPanel({
     onGuestCountChange(guestCount + 1);
   }, [guestCount, onGuestCountChange]);
 
-  const renderItem = useCallback((item: OrderItem & { modifiers: OrderItemModifier[] }) => {
-    return (
+  const renderedItems = useMemo(() => {
+    return items.map((item) => (
       <OrderItemRow
         key={`order-item-${item.id}`}
         item={item}
         onUpdateQuantity={onUpdateQuantity}
         onRemove={onRemoveItem}
       />
-    );
-  }, [onUpdateQuantity, onRemoveItem]);
+    ));
+  }, [items, onUpdateQuantity, onRemoveItem]);
 
   const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
 
@@ -138,7 +135,7 @@ export function OrderPanel({
             </Text>
           </View>
         ) : (
-          items.map(renderItem)
+          renderedItems
         )}
       </ScrollView>
 

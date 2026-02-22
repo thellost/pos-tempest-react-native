@@ -2,6 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useEffect, useMemo, useRef } from 'react';
 
 import type { Category, MenuItem, MenuItemModifierGroup, Modifier, ModifierGroup } from '@/db/models';
+import { powersync } from '@/db/provider';
 import { useAuth } from './use-auth';
 
 export interface MenuItemWithModifiers extends MenuItem {
@@ -90,9 +91,6 @@ export function useMenu() {
   const queryTimersRef = useRef<Record<string, number>>({
     categories: nowMs(),
     menuItems: nowMs(),
-    modifierGroups: nowMs(),
-    modifiers: nowMs(),
-    mappings: nowMs(),
     inventory: nowMs(),
   });
   const queryLoggedRef = useRef<Record<string, boolean>>({});
@@ -105,18 +103,6 @@ export function useMenu() {
 
   const { data: menuItems = [], isLoading: menuItemsLoading } = useQuery<MenuItem>(
     `SELECT * FROM menu_items ORDER BY sort_order ASC`
-  );
-
-  const { data: modifierGroups = [], isLoading: modifierGroupsLoading } = useQuery<ModifierGroup>(
-    `SELECT * FROM modifier_groups WHERE is_active = 1 ORDER BY sort_order ASC`
-  );
-
-  const { data: modifiers = [], isLoading: modifiersLoading } = useQuery<Modifier>(
-    `SELECT * FROM modifiers WHERE is_active = 1 ORDER BY sort_order ASC`
-  );
-
-  const { data: menuItemModifierGroups = [], isLoading: mappingsLoading } = useQuery<MenuItemModifierGroup>(
-    `SELECT * FROM menu_item_modifier_groups ORDER BY sort_order ASC`
   );
 
   const { data: inventoryData = [], isLoading: inventoryLoading } = useQuery<InventoryRow>(
@@ -140,27 +126,6 @@ export function useMenu() {
   }, [menuItems]);
 
   useEffect(() => {
-    if (!queryLoggedRef.current.modifierGroups && !modifierGroupsLoading) {
-      queryLoggedRef.current.modifierGroups = true;
-      logPerf('useMenu:query:modifierGroups', nowMs() - queryTimersRef.current.modifierGroups, { rows: modifierGroups.length });
-    }
-  }, [modifierGroups, modifierGroupsLoading]);
-
-  useEffect(() => {
-    if (!queryLoggedRef.current.modifiers && !modifiersLoading) {
-      queryLoggedRef.current.modifiers = true;
-      logPerf('useMenu:query:modifiers', nowMs() - queryTimersRef.current.modifiers, { rows: modifiers.length });
-    }
-  }, [modifiers, modifiersLoading]);
-
-  useEffect(() => {
-    if (!queryLoggedRef.current.mappings && !mappingsLoading) {
-      queryLoggedRef.current.mappings = true;
-      logPerf('useMenu:query:mappings', nowMs() - queryTimersRef.current.mappings, { rows: menuItemModifierGroups.length });
-    }
-  }, [menuItemModifierGroups, mappingsLoading]);
-
-  useEffect(() => {
     if (!queryLoggedRef.current.inventory && !inventoryLoading) {
       queryLoggedRef.current.inventory = true;
       logPerf('useMenu:query:inventory', nowMs() - queryTimersRef.current.inventory, { rows: inventoryData.length });
@@ -169,9 +134,8 @@ export function useMenu() {
 
   const resolvedCategories = categories.length > 0 ? categories : menuCache.categories;
   const resolvedMenuItems = menuItems.length > 0 ? menuItems : menuCache.menuItems;
-  const resolvedModifierGroups = modifierGroups.length > 0 ? modifierGroups : menuCache.modifierGroups;
-  const resolvedModifiers = modifiers.length > 0 ? modifiers : menuCache.modifiers;
-  const resolvedMappings = menuItemModifierGroups.length > 0 ? menuItemModifierGroups : menuCache.menuItemModifierGroups;
+  const resolvedModifierGroups = menuCache.modifierGroups;
+  const resolvedModifiers = menuCache.modifiers;
   const resolvedInventoryData = inventoryData.length > 0 ? inventoryData : menuCache.inventoryData;
 
   useEffect(() => {
@@ -185,24 +149,6 @@ export function useMenu() {
       menuCache.menuItems = menuItems;
     }
   }, [menuItems]);
-
-  useEffect(() => {
-    if (modifierGroups.length > 0) {
-      menuCache.modifierGroups = modifierGroups;
-    }
-  }, [modifierGroups]);
-
-  useEffect(() => {
-    if (modifiers.length > 0) {
-      menuCache.modifiers = modifiers;
-    }
-  }, [modifiers]);
-
-  useEffect(() => {
-    if (menuItemModifierGroups.length > 0) {
-      menuCache.menuItemModifierGroups = menuItemModifierGroups;
-    }
-  }, [menuItemModifierGroups]);
 
   useEffect(() => {
     if (inventoryData.length > 0) {
@@ -348,71 +294,68 @@ export function useMenu() {
     };
   }, [categoryById]);
 
-  const modifierGroupById = useMemo(() => {
-    const map = new Map<number, ModifierGroup>();
-    for (const group of resolvedModifierGroups) {
-      const id = toNumber(group.id);
-      if (id !== null) {
-        map.set(id, group);
-      }
-    }
-    return map;
-  }, [resolvedModifierGroups]);
-
-  const modifiersByGroupId = useMemo(() => {
-    const map = new Map<number, Modifier[]>();
-    for (const modifier of resolvedModifiers) {
-      const groupId = toNumber(modifier.modifier_group_id);
-      if (groupId === null) {
-        continue;
-      }
-      const existing = map.get(groupId) || [];
-      existing.push(modifier);
-      map.set(groupId, existing);
-    }
-    return map;
-  }, [resolvedModifiers]);
-
-  const modifierGroupIdsByMenuItemId = useMemo(() => {
-    const map = new Map<number, number[]>();
-    for (const mapping of resolvedMappings) {
-      const menuItemId = toNumber(mapping.menu_item_id);
-      const groupId = toNumber(mapping.modifier_group_id);
-      if (menuItemId === null || groupId === null) {
-        continue;
-      }
-
-      const existing = map.get(menuItemId) || [];
-      existing.push(groupId);
-      map.set(menuItemId, existing);
-    }
-    return map;
-  }, [resolvedMappings]);
-
   const getModifierGroupsForMenuItem = async (menuItemId: number): Promise<ModifierGroupWithModifiers[]> => {
     try {
+      const queryStart = nowMs();
       const id = toNumber(menuItemId);
       if (id === null) {
         return [];
       }
 
-      const groupIds = modifierGroupIdsByMenuItemId.get(id) || [];
-      if (groupIds.length === 0) {
+      const groups = await powersync.getAll<ModifierGroup>(
+        `SELECT mg.*
+         FROM menu_item_modifier_groups mimg
+         INNER JOIN modifier_groups mg ON mg.id = mimg.modifier_group_id
+         WHERE mimg.menu_item_id = ? AND mg.is_active = 1
+         ORDER BY mimg.sort_order ASC, mg.sort_order ASC`,
+        [id]
+      );
+
+      if (groups.length === 0) {
         return [];
       }
 
-      const groupsWithModifiers = groupIds
-        .map((groupId) => {
-          const group = modifierGroupById.get(groupId);
-          if (!group) {
-            return null;
-          }
-          return {
-            ...group,
-            modifiers: modifiersByGroupId.get(groupId) || [],
-          };
-        })
-        .filter((group): group is ModifierGroupWithModifiers => group !== null);
+      const groupIds = groups
+        .map((group) => toNumber(group.id))
+        .filter((groupId): groupId is number => groupId !== null);
+
+      const placeholders = groupIds.map(() => '?').join(', ');
+      const modifiers = groupIds.length > 0
+        ? await powersync.getAll<Modifier>(
+          `SELECT * FROM modifiers
+           WHERE is_active = 1 AND modifier_group_id IN (${placeholders})
+           ORDER BY sort_order ASC`,
+          groupIds
+        )
+        : [];
+
+      const modifiersByGroupId = new Map<number, Modifier[]>();
+      for (const modifier of modifiers) {
+        const groupId = toNumber(modifier.modifier_group_id);
+        if (groupId === null) {
+          continue;
+        }
+        const existing = modifiersByGroupId.get(groupId) || [];
+        existing.push(modifier);
+        modifiersByGroupId.set(groupId, existing);
+      }
+
+      const groupsWithModifiers = groups.map((group) => {
+        const groupId = toNumber(group.id) || 0;
+        return {
+          ...group,
+          modifiers: modifiersByGroupId.get(groupId) || [],
+        };
+      });
+
+      menuCache.modifierGroups = groups;
+      menuCache.modifiers = modifiers;
+
+      logPerf('useMenu:query:modifier_groups_for_item', nowMs() - queryStart, {
+        menuItemId: id,
+        groups: groups.length,
+        modifiers: modifiers.length,
+      });
 
       return groupsWithModifiers;
     } catch (error) {
@@ -474,9 +417,6 @@ export function useMenu() {
     isHydrating:
       categoriesLoading ||
       menuItemsLoading ||
-      modifierGroupsLoading ||
-      modifiersLoading ||
-      mappingsLoading ||
       inventoryLoading,
   };
 }

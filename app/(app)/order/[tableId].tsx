@@ -1,16 +1,16 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, InteractionManager, Text, View } from 'react-native';
 
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
-import { ORDER_TYPE } from '@/constants/enums';
+import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
+import { powersync } from '@/db/provider';
 import { useAuth } from '@/hooks/use-auth';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
-import { useTables } from '@/hooks/use-tables';
 import type { SelectedModifier } from '@/services/order.service';
 import {
   addItemToOrder,
@@ -19,7 +19,7 @@ import {
   removeItemFromOrder,
   updateItemQuantity,
 } from '@/services/order.service';
-import { logPerf, nowMs, timedAsync, useMountTimer, useRenderTimer } from '@/utils/perf-debug';
+import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
 
 export default function OrderScreen() {
   const { tableId, orderId } = useLocalSearchParams<{ tableId: string; orderId?: string }>();
@@ -40,8 +40,51 @@ interface OrderScreenContentProps {
   orderId?: string;
 }
 
+interface OrderTableData {
+  id: number | string;
+  table_number: string;
+  floor_area_name: string;
+  active_order_id: number | null;
+  active_order_number: string | null;
+  guest_count: number | null;
+  order_total: number | null;
+  order_created_at: string | null;
+  order_status: string | null;
+}
+
+async function getOrderTableById(tableId: number): Promise<OrderTableData | null> {
+  try {
+    const result = await powersync.getOptional<OrderTableData>(
+      `SELECT 
+        t.*,
+        fa.name as floor_area_name,
+        o.id as active_order_id,
+        o.order_number as active_order_number,
+        o.guest_count,
+        o.total as order_total,
+        o.created_at as order_created_at,
+        o.status as order_status
+      FROM tables t
+      LEFT JOIN floor_areas fa ON t.floor_area_id = fa.id
+      LEFT JOIN orders o ON t.id = o.table_id 
+        AND o.status NOT IN (?, ?, ?)
+      WHERE t.id = ?`,
+      [
+        ORDER_STATUS.COMPLETED,
+        ORDER_STATUS.CANCELLED,
+        ORDER_STATUS.SERVED,
+        tableId,
+      ]
+    );
+
+    return result || null;
+  } catch (error) {
+    console.error('[OrderScreen] Error fetching table by ID:', error);
+    return null;
+  }
+}
+
 function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
-  useRenderTimer('OrderScreenContent');
   useMountTimer('OrderScreenContent');
   const screenBootRef = useRef(nowMs());
 
@@ -49,7 +92,6 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
   const { user } = useAuth();
-  const { getTableById } = useTables();
   const {
     topLevelCategories,
     getSubCategories,
@@ -57,6 +99,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     getCategoryById,
     getModifierGroupsForMenuItem,
     isLoading: menuLoading,
+    isHydrating: menuHydrating,
     categories,
     menuItems,
   } = useMenu();
@@ -72,6 +115,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const [showModifierPicker, setShowModifierPicker] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemWithInventory | null>(null);
   const [menuItemModifiers, setMenuItemModifiers] = useState<ModifierGroupWithModifiers[]>([]);
+  const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
@@ -88,7 +132,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
 
         const tableData = await timedAsync(
           'query:getTableById',
-          () => getTableById(tableIdNum),
+          () => getOrderTableById(tableIdNum),
           { tableId: tableIdNum }
         );
         setTable(tableData);
@@ -130,7 +174,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     };
 
     loadData();
-  }, [tableIdNum, orderIdNum, user, getTableById]);
+  }, [tableIdNum, orderIdNum, user]);
 
   useEffect(() => {
     if (topLevelCategories.length > 0 && !selectedCategoryId) {
@@ -238,6 +282,18 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     setSelectedSubCategoryId(subCategoryId);
   }, []);
 
+  const handleSendToKitchen = useCallback(() => {
+    console.log('Send to Kitchen');
+  }, []);
+
+  const handlePayment = useCallback(() => {
+    console.log('Payment');
+  }, []);
+
+  const handleHold = useCallback(() => {
+    console.log('Hold Order');
+  }, []);
+
   const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
     const start = nowMs();
     const result = orderItems.reduce<Record<number, number>>((accumulator, orderItem) => {
@@ -326,6 +382,21 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     return result;
   }, [allMenuItems, selectedSubCategoryId]);
 
+  useEffect(() => {
+    if (menuItemsList.length === 0) {
+      setIsMenuGridReady(false);
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsMenuGridReady(true);
+    });
+
+    return () => {
+      task.cancel();
+    };
+  }, [menuItemsList]);
+
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
@@ -335,7 +406,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     );
   }
 
-  if (menuLoading) {
+  if (menuLoading || menuHydrating) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
         <ActivityIndicator size="large" color="#6366F1" />
@@ -362,26 +433,23 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }
 
   return (
-    <View className="flex-1 bg-surface">
+    <PerfProfiler id="OrderScreenContent">
+      <View className="flex-1 bg-surface">
       <View className="flex-1 flex-row">
         <View className="w-[30%]">
-          <OrderPanel
-            order={order}
-            items={orderItems}
-            guestCount={guestCount}
-            onGuestCountChange={handleGuestCountChange}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onSendToKitchen={() => {
-              console.log('Send to Kitchen');
-            }}
-            onPayment={() => {
-              console.log('Payment');
-            }}
-            onHold={() => {
-              console.log('Hold Order');
-            }}
-          />
+          <PerfProfiler id="OrderPanel">
+            <OrderPanel
+              order={order}
+              items={orderItems}
+              guestCount={guestCount}
+              onGuestCountChange={handleGuestCountChange}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onSendToKitchen={handleSendToKitchen}
+              onPayment={handlePayment}
+              onHold={handleHold}
+            />
+          </PerfProfiler>
         </View>
 
         <View className="w-[70%] flex-1">
@@ -400,23 +468,33 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
             </View>
           </View>
 
-          <CategoryTabs
-            categories={topLevelCategories}
-            subCategories={subCategories}
-            selectedCategoryId={selectedCategoryId}
-            selectedSubCategoryId={selectedSubCategoryId}
-            onSelectCategory={handleSelectCategory}
-            onSelectSubCategory={handleSelectSubCategory}
-          />
+          <PerfProfiler id="CategoryTabs">
+            <CategoryTabs
+              categories={topLevelCategories}
+              subCategories={subCategories}
+              selectedCategoryId={selectedCategoryId}
+              selectedSubCategoryId={selectedSubCategoryId}
+              onSelectCategory={handleSelectCategory}
+              onSelectSubCategory={handleSelectSubCategory}
+            />
+          </PerfProfiler>
 
-          <MenuGrid
-            items={menuItemsList}
-            category={currentCategory}
-            subCategoryName={currentSubCategory?.name}
-            quantitiesByMenuItemId={quantitiesByMenuItemId}
-            onItemPress={handleMenuItemPress}
-            onDecrementItem={handleMenuItemDecrement}
-          />
+          {isMenuGridReady ? (
+            <PerfProfiler id="MenuGrid">
+              <MenuGrid
+                items={menuItemsList}
+                category={currentCategory}
+                subCategoryName={currentSubCategory?.name}
+                quantitiesByMenuItemId={quantitiesByMenuItemId}
+                onItemPress={handleMenuItemPress}
+                onDecrementItem={handleMenuItemDecrement}
+              />
+            </PerfProfiler>
+          ) : (
+            <View className="flex-1 items-center justify-center bg-surface">
+              <ActivityIndicator size="small" color="#6366F1" />
+            </View>
+          )}
         </View>
       </View>
 
@@ -433,6 +511,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
           }}
         />
       )}
-    </View>
+      </View>
+    </PerfProfiler>
   );
 }

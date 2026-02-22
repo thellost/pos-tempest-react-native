@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { ORDER_STATUS } from '@/constants/enums';
 import type { OrderStatus } from '@/constants/enums';
+import { ORDER_STATUS } from '@/constants/enums';
 
 interface OrderActionsProps {
   orderStatus: OrderStatus;

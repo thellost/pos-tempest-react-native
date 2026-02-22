@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { OrderItem, OrderItemModifier } from '@/db/models';
@@ -25,13 +24,13 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
           <Text className="text-pos-sm font-semibold text-pos-text" numberOfLines={2}>
             {item.menu_item_name}
           </Text>
-          {item.is_voided && (
+          {item.is_voided ? (
             <View className="mt-1 self-start rounded bg-pos-danger-muted px-1.5 py-0.5">
               <Text className="text-[10px] font-semibold text-pos-danger">VOIDED</Text>
             </View>
-          )}
+          ) : null}
         </View>
-        {!item.is_voided && (
+        {!item.is_voided ? (
           <Pressable
             onPress={() => onRemove(itemId)}
             className="rounded bg-pos-danger-muted px-2 py-1"
@@ -39,10 +38,10 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
           >
             <Text className="text-[10px] font-semibold text-pos-danger">Remove</Text>
           </Pressable>
-        )}
+        ) : null}
       </View>
 
-      {item.modifiers.length > 0 && (
+      {item.modifiers.length > 0 ? (
         <View className="mb-2 rounded bg-surface-raised p-1.5">
           {item.modifiers.map((modifier, index) => (
             <Text key={index} className="text-[10px] text-pos-text-muted">
@@ -51,18 +50,18 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
             </Text>
           ))}
         </View>
-      )}
+      ) : null}
 
-      {item.notes && (
+      {Boolean(item.notes) ? (
         <View className="mb-2 rounded bg-accent-muted px-2 py-1">
           <Text className="text-[10px] italic text-accent" numberOfLines={1}>
             📝 {item.notes}
           </Text>
         </View>
-      )}
+      ) : null}
 
       <View className="flex-row items-center justify-between">
-        {!item.is_voided && (
+        {!item.is_voided ? (
           <View className="flex-row items-center gap-1.5">
             <Pressable
               onPress={() => onUpdateQuantity(itemId, item.quantity - 1)}
@@ -82,7 +81,7 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
               <Text className="text-pos-sm text-pos-text">+</Text>
             </Pressable>
           </View>
-        )}
+        ) : null}
 
         <View className="flex-1 items-end">
           <Text className="text-[10px] text-pos-text-faint">

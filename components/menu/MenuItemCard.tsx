@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
@@ -12,8 +11,8 @@ interface MenuItemCardProps {
   categoryColor?: string | null;
   categoryName?: string | null;
   quantity?: number;
-  onPress: () => void;
-  onDecrement?: () => void;
+  onPressItem: (item: MenuItemWithInventory) => void;
+  onDecrementItem?: (item: MenuItemWithInventory) => void;
 }
 
 export function MenuItemCard({ 
@@ -21,8 +20,8 @@ export function MenuItemCard({
   categoryColor, 
   categoryName,
   quantity = 0, 
-  onPress, 
-  onDecrement 
+  onPressItem, 
+  onDecrementItem 
 }: MenuItemCardProps) {
   const isWeightBased = item.pricing_type === PRICING_TYPE.WEIGHT_BASED;
   const isAvailable = Boolean(item.is_available);
@@ -30,16 +29,16 @@ export function MenuItemCard({
   const accentColor = categoryColor || DEFAULT_BUTTON_COLOR;
   const displayCategory = categoryName || 'Food & Drink';
 
-  const handleAdd = useCallback(() => {
+  const handleAdd = () => {
     if (isAvailable) {
-      onPress();
+      onPressItem(item);
     }
-  }, [isAvailable, onPress]);
+  };
 
-  const handleDecrement = useCallback(() => {
-    if (!isAvailable || !onDecrement || quantity <= 0) return;
-    onDecrement();
-  }, [isAvailable, onDecrement, quantity]);
+  const handleDecrement = () => {
+    if (!isAvailable || !onDecrementItem || quantity <= 0) return;
+    onDecrementItem(item);
+  };
 
   return (
     <View

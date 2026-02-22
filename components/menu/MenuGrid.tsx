@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Dimensions, RefreshControl, Text, View } from 'react-native';
+
+import { FlashList } from '@shopify/flash-list';
 
 import type { Category } from '@/db/models';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
-import { useRenderTimer } from '@/utils/perf-debug';
 import { MenuItemCard } from './MenuItemCard';
 
 const { width } = Dimensions.get('window');
@@ -31,8 +32,6 @@ export function MenuGrid({
   onDecrementItem,
   onRefresh,
 }: MenuGridProps) {
-  useRenderTimer('MenuGrid');
-
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -45,10 +44,6 @@ export function MenuGrid({
     }
   }, [onRefresh]);
 
-  const handleItemPress = useCallback((item: MenuItemWithInventory) => {
-    onItemPress(item);
-  }, [onItemPress]);
-
   const getItemQuantity = useCallback((item: MenuItemWithInventory): number => {
     const itemId = typeof item.id === 'string' ? parseInt(item.id as string, 10) : item.id;
     return quantitiesByMenuItemId?.[itemId] || 0;
@@ -56,7 +51,44 @@ export function MenuGrid({
 
   const displayCategoryName = subCategoryName || category?.name || 'Food & Drink';
 
-  if (items.length === 0) {
+  const gridWidth = width * 0.70 - GRID_PADDING * 2;
+  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
+  const itemHeight = itemWidth * ASPECT_RATIO;
+
+  const renderItem = useCallback(({ item, index }: { item: MenuItemWithInventory; index: number }) => {
+    const isLastColumn = (index + 1) % COLUMNS === 0;
+
+    return (
+      <View
+        style={{
+          width: itemWidth,
+          height: itemHeight,
+          marginRight: isLastColumn ? 0 : GAP,
+          marginBottom: GAP,
+        }}
+      >
+        <MenuItemCard
+          item={item}
+          categoryColor={category?.button_color}
+          categoryName={displayCategoryName}
+          quantity={getItemQuantity(item)}
+          onPressItem={onItemPress}
+          onDecrementItem={onDecrementItem}
+        />
+      </View>
+    );
+  }, [
+    itemWidth,
+    itemHeight,
+    GAP,
+    category?.button_color,
+    displayCategoryName,
+    getItemQuantity,
+    onItemPress,
+    onDecrementItem,
+  ]);
+
+  const renderEmptyState = useCallback(() => {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-8">
         <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
@@ -70,17 +102,22 @@ export function MenuGrid({
         </Text>
       </View>
     );
-  }
+  }, [category]);
 
-  const gridWidth = width * 0.70 - GRID_PADDING * 2;
-  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
-  const itemHeight = itemWidth * ASPECT_RATIO;
+  const keyExtractor = useCallback((item: MenuItemWithInventory) => `menu-item-${item.id}`, []);
 
   return (
-    <ScrollView
+    <FlashList
       className="flex-1 bg-surface"
-      contentContainerStyle={{ padding: GRID_PADDING }}
+      data={items}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      numColumns={COLUMNS}
+      ListEmptyComponent={renderEmptyState}
+      contentContainerStyle={{ padding: GRID_PADDING, flexGrow: items.length === 0 ? 1 : 0 }}
       showsVerticalScrollIndicator={false}
+      drawDistance={120}
+      removeClippedSubviews
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -91,30 +128,6 @@ export function MenuGrid({
           />
         ) : undefined
       }
-    >
-      <View 
-        className="flex-row flex-wrap" 
-        style={{ gap: GAP }}
-      >
-        {items.map((item) => (
-          <View
-            key={`menu-item-${item.id}`}
-            style={{
-              width: itemWidth,
-              height: itemHeight,
-            }}
-          >
-            <MenuItemCard
-              item={item}
-              categoryColor={category?.button_color}
-              categoryName={displayCategoryName}
-              quantity={getItemQuantity(item)}
-              onPress={() => handleItemPress(item)}
-              onDecrement={() => onDecrementItem?.(item)}
-            />
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+    />
   );
 }

@@ -5,9 +5,15 @@ import 'react-native-url-polyfill/auto'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
-// Enforce minimum 5000ms lock timeout to prevent race conditions during auth token refresh
+// Enforce minimum lock timeout to reduce token-refresh lock contention warnings
 const lock: typeof processLock = (name, acquireTimeout, fn) => {
-  return processLock(name, Math.max(acquireTimeout, 5000), fn)
+  const requestedTimeout =
+    typeof acquireTimeout === 'number' && Number.isFinite(acquireTimeout)
+      ? acquireTimeout
+      : 0
+
+  const safeTimeout = Math.max(requestedTimeout, 15000)
+  return processLock(name, safeTimeout, fn)
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
