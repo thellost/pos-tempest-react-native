@@ -3,6 +3,7 @@ import { Dimensions, RefreshControl, ScrollView, Text, View } from 'react-native
 
 import type { Category } from '@/db/models';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
+import { useRenderTimer } from '@/utils/perf-debug';
 import { MenuItemCard } from './MenuItemCard';
 
 const { width } = Dimensions.get('window');
@@ -30,6 +31,8 @@ export function MenuGrid({
   onDecrementItem,
   onRefresh,
 }: MenuGridProps) {
+  useRenderTimer('MenuGrid');
+
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {

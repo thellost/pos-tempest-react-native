@@ -19,6 +19,7 @@ import {
   removeItemFromOrder,
   updateItemQuantity,
 } from '@/services/order.service';
+import { logPerf, nowMs, timedAsync, useMountTimer, useRenderTimer } from '@/utils/perf-debug';
 
 export default function OrderScreen() {
   const { tableId, orderId } = useLocalSearchParams<{ tableId: string; orderId?: string }>();
@@ -40,6 +41,10 @@ interface OrderScreenContentProps {
 }
 
 function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
+  useRenderTimer('OrderScreenContent');
+  useMountTimer('OrderScreenContent');
+  const screenBootRef = useRef(nowMs());
+
   const tableIdNum = parseInt(tableId, 10);
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
@@ -77,27 +82,40 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     hasLoadedRef.current = true;
 
     const loadData = async () => {
+      const loadStart = nowMs();
       try {
         setIsLoading(true);
 
-        const tableData = await getTableById(tableIdNum);
+        const tableData = await timedAsync(
+          'query:getTableById',
+          () => getTableById(tableIdNum),
+          { tableId: tableIdNum }
+        );
         setTable(tableData);
 
         if (orderIdNum) {
-          const orderData = await getOrderWithItems(orderIdNum);
+          const orderData = await timedAsync(
+            'query:getOrderWithItems',
+            () => getOrderWithItems(orderIdNum),
+            { orderId: orderIdNum }
+          );
           if (orderData) {
             setOrder(orderData.order);
             setOrderItems(orderData.items);
             setGuestCount(orderData.order.guest_count || 0);
           }
         } else if (user && tableData) {
-          const newOrder = await createOrder(
-            user.branch_id,
-            tableIdNum,
-            user.id,
-            null,
-            ORDER_TYPE.DINE_IN,
-            0
+          const newOrder = await timedAsync(
+            'query:createOrder',
+            () => createOrder(
+              user.branch_id,
+              tableIdNum,
+              user.id,
+              null,
+              ORDER_TYPE.DINE_IN,
+              0
+            ),
+            { branchId: user.branch_id, tableId: tableIdNum }
           );
           setOrder(newOrder);
           setOrderItems([]);
@@ -106,6 +124,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
         console.error('[OrderScreen] Error loading data:', error);
       } finally {
         setIsLoading(false);
+        logPerf('loadData:total', nowMs() - loadStart);
+        logPerf('OrderScreen:bootToDataReady', nowMs() - screenBootRef.current);
       }
     };
 
@@ -124,7 +144,11 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const reloadOrder = useCallback(async () => {
     if (!order) return;
     const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-    const orderData = await getOrderWithItems(currentOrderId);
+    const orderData = await timedAsync(
+      'query:reloadOrder',
+      () => getOrderWithItems(currentOrderId),
+      { orderId: currentOrderId }
+    );
     if (orderData) {
       setOrder(orderData.order);
       setOrderItems(orderData.items);
@@ -141,7 +165,11 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
 
     try {
       const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-      await addItemToOrder(currentOrderId, item, 1, modifiers, notes, weight);
+      await timedAsync(
+        'query:addItemToOrder',
+        () => addItemToOrder(currentOrderId, item, 1, modifiers, notes, weight),
+        { orderId: currentOrderId, menuItem: item.name }
+      );
       await reloadOrder();
     } catch (error) {
       console.error('[OrderScreen] Error adding item to order:', error);
@@ -211,7 +239,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, []);
 
   const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
-    return orderItems.reduce<Record<number, number>>((accumulator, orderItem) => {
+    const start = nowMs();
+    const result = orderItems.reduce<Record<number, number>>((accumulator, orderItem) => {
       if (orderItem.is_voided) {
         return accumulator;
       }
@@ -226,6 +255,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
       accumulator[menuItemId] = (accumulator[menuItemId] || 0) + quantity;
       return accumulator;
     }, {});
+    logPerf('useMemo:quantitiesByMenuItemId', nowMs() - start, { itemCount: orderItems.length });
+    return result;
   }, [orderItems]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
@@ -272,17 +303,27 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }) : undefined;
   
   const allMenuItems = useMemo(() => {
-    return selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
+    const start = nowMs();
+    const result = selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
+    logPerf('useMemo:allMenuItems', nowMs() - start, { categoryId: selectedCategoryId, count: result.length });
+    return result;
   }, [selectedCategoryId, getMenuItemsByCategory]);
   
   const menuItemsList = useMemo(() => {
-    if (!selectedSubCategoryId) return allMenuItems;
-    return allMenuItems.filter((item: MenuItemWithInventory) => {
-      const itemCategoryId = typeof item.category_id === 'string'
-        ? parseInt(item.category_id as string, 10)
-        : item.category_id;
-      return itemCategoryId === selectedSubCategoryId;
-    });
+    const start = nowMs();
+    let result: MenuItemWithInventory[];
+    if (!selectedSubCategoryId) {
+      result = allMenuItems;
+    } else {
+      result = allMenuItems.filter((item: MenuItemWithInventory) => {
+        const itemCategoryId = typeof item.category_id === 'string'
+          ? parseInt(item.category_id as string, 10)
+          : item.category_id;
+        return itemCategoryId === selectedSubCategoryId;
+      });
+    }
+    logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
+    return result;
   }, [allMenuItems, selectedSubCategoryId]);
 
   if (isLoading) {

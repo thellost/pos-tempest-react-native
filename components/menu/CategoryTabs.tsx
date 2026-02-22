@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { Category } from '@/db/models';
+import { useRenderTimer } from '@/utils/perf-debug';
 
 interface CategoryTabsProps {
   categories: Category[];
@@ -22,6 +23,8 @@ export function CategoryTabs({
   onSelectCategory,
   onSelectSubCategory,
 }: CategoryTabsProps) {
+  useRenderTimer('CategoryTabs');
+
   const handleCategoryPress = useCallback((categoryId: number) => {
     onSelectCategory(categoryId);
     onSelectSubCategory(null);
