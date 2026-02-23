@@ -6,11 +6,23 @@ import type { FloorArea } from '@/db/models';
 interface FloorAreaTabsProps {
   floorAreas: FloorArea[];
   selectedAreaId: number | null;
-  onSelectArea: (areaId: number) => void;
+  onSelectArea: (areaId: number | null, isTakeaway?: boolean) => void;
+  showTakeawayTab?: boolean;
+  isTakeawaySelected?: boolean;
+  activeTakeawayCount?: number;
 }
 
-export function FloorAreaTabs({ floorAreas, selectedAreaId, onSelectArea }: FloorAreaTabsProps) {
-  if (floorAreas.length === 0) {
+const TAKEAWAY_TAB_ID = 'takeaway';
+
+export function FloorAreaTabs({ 
+  floorAreas, 
+  selectedAreaId, 
+  onSelectArea,
+  showTakeawayTab = true,
+  isTakeawaySelected = false,
+  activeTakeawayCount = 0,
+}: FloorAreaTabsProps) {
+  if (floorAreas.length === 0 && !showTakeawayTab) {
     return null;
   }
 
@@ -23,12 +35,12 @@ export function FloorAreaTabs({ floorAreas, selectedAreaId, onSelectArea }: Floo
       >
         {floorAreas.map((area) => {
           const areaId = typeof area.id === 'string' ? parseInt(area.id, 10) : area.id;
-          const isSelected = areaId === selectedAreaId;
+          const isSelected = areaId === selectedAreaId && !isTakeawaySelected;
           
           return (
             <Pressable
               key={area.id}
-              onPress={() => onSelectArea(areaId)}
+              onPress={() => onSelectArea(areaId, false)}
               className="mr-2 rounded-xl px-5 py-3"
               style={{
                 backgroundColor: isSelected ? '#6366F1' : 'transparent',
@@ -48,6 +60,39 @@ export function FloorAreaTabs({ floorAreas, selectedAreaId, onSelectArea }: Floo
             </Pressable>
           );
         })}
+        
+        {showTakeawayTab && (
+          <Pressable
+            onPress={() => onSelectArea(null, true)}
+            className="mr-2 flex-row items-center rounded-xl px-5 py-3"
+            style={{
+              backgroundColor: isTakeawaySelected ? '#F59E0B' : 'transparent',
+              borderWidth: isTakeawaySelected ? 0 : 1,
+              borderColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <Text className="mr-2 text-base">🛍</Text>
+            <Text 
+              className={`text-pos-base font-semibold ${
+                isTakeawaySelected 
+                  ? 'text-white' 
+                  : 'text-pos-text-muted'
+              }`}
+            >
+              Takeaway
+            </Text>
+            {activeTakeawayCount > 0 && (
+              <View 
+                className="ml-2 rounded-full px-2 py-0.5"
+                style={{ backgroundColor: isTakeawaySelected ? 'rgba(255,255,255,0.3)' : '#F59E0B' }}
+              >
+                <Text className="text-xs font-bold text-white">
+                  {activeTakeawayCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );

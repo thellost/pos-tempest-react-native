@@ -194,6 +194,50 @@ devices: {
 
 ---
 
+#### Step 6b — Takeaway Order Quick Access
+
+**Goal:** Allow staff to create and manage takeaway orders directly from the floor plan without selecting a table.
+
+**Actions:**
+- Add "Takeaway" button in floor plan header (next to table stats)
+  - Tap → creates new takeaway order → navigates to order screen
+  - Visual: bag icon, distinct from table cards
+- Add "Takeaway" tab in `FloorAreaTabs` component
+  - Shows list of active takeaway orders (pending, confirmed, preparing)
+  - Each item: order number, customer name (if assigned), total, elapsed time
+  - Tap → resume existing takeaway order
+- Create `app/(app)/order/takeaway.tsx` route
+  - Same UI as table order screen but:
+    - `order_type = 'takeaway'`
+    - `table_id = null`
+    - Header shows "Takeaway Order" + order number
+    - Optional customer assignment at top
+- Update `createOrder()` in `order.service.ts` to accept `tableId: number | null`
+- Create `hooks/use-takeaway.ts` — query active takeaway orders reactively
+
+**UI Reference:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Floor Plan                                                     │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│
+│  │ Available│ │ Occupied │ │ Reserved │ │  Total   │ │ Takeaway││
+│  │    12    │ │     4    │ │     2    │ │    18    │ │   +    ││
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ [Indoor] [Outdoor] [VIP] [Takeaway ←]                          │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────┐  ┌─────────────────────┐               │
+│  │ ORD-260223-A1B-001  │  │ ORD-260223-A1B-002  │               │
+│  │ Rp 125.000          │  │ Rp 89.000           │               │
+│  │ 12 mins ago         │  │ 5 mins ago          │               │
+│  └─────────────────────┘  └─────────────────────┘               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Verification:** Tap "Takeaway" button → new takeaway order created → order screen opens with takeaway type. Tap "Takeaway" tab → see list of active takeaway orders → tap to resume.
+
+---
+
 ### Step 7 — Menu Display & Order Creation (Core POS)
 
 **Goal:** The main order-taking screen — split panel with menu grid on the left and order summary on the right (Toast POS style). This step is broken into 6 sub-steps for manageability.

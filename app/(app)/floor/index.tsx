@@ -1,11 +1,13 @@
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
 import { TableCard } from '@/components/floor/TableCard';
 import { TABLE_STATUS } from '@/constants/enums';
 import { useTables } from '@/hooks/use-tables';
+import { useTakeaway, type TakeawayOrder } from '@/hooks/use-takeaway';
 
 export default function FloorScreen() {
   const {
@@ -16,17 +18,25 @@ export default function FloorScreen() {
     occupiedTablesCount,
     reservedTablesCount,
     totalTablesCount,
-    isLoading,
+    isLoading: tablesLoading,
   } = useTables();
 
-  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(
-    floorAreas.length > 0 ? (typeof floorAreas[0].id === 'string' ? parseInt(floorAreas[0].id, 10) : floorAreas[0].id) : null
-  );
+  const {
+    takeawayOrders,
+    activeTakeawayCount,
+    isLoading: takeawayLoading,
+    getOrderElapsedMinutes: getTakeawayElapsedMinutes,
+  } = useTakeaway();
 
-  if (floorAreas.length > 0 && selectedAreaId === null) {
-    const firstAreaId = typeof floorAreas[0].id === 'string' ? parseInt(floorAreas[0].id, 10) : floorAreas[0].id;
-    setSelectedAreaId(firstAreaId);
-  }
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [isTakeawaySelected, setIsTakeawaySelected] = useState(false);
+
+  useEffect(() => {
+    if (floorAreas.length > 0 && selectedAreaId === null && !isTakeawaySelected) {
+      const firstAreaId = typeof floorAreas[0].id === 'string' ? parseInt(floorAreas[0].id, 10) : floorAreas[0].id;
+      setSelectedAreaId(firstAreaId);
+    }
+  }, [floorAreas, selectedAreaId, isTakeawaySelected]);
 
   const currentTables = selectedAreaId ? getTablesForArea(selectedAreaId) : [];
 
@@ -47,6 +57,29 @@ export default function FloorScreen() {
       });
     }
   };
+
+  const handleTakeawayPress = () => {
+    router.push('/(app)/order/takeaway');
+  };
+
+  const handleTakeawayOrderPress = (order: TakeawayOrder) => {
+    router.push({
+      pathname: '/(app)/order/takeaway',
+      params: { orderId: String(order.id) },
+    });
+  };
+
+  const handleSelectArea = (areaId: number | null, isTakeaway?: boolean) => {
+    if (isTakeaway) {
+      setIsTakeawaySelected(true);
+      setSelectedAreaId(null);
+    } else {
+      setIsTakeawaySelected(false);
+      setSelectedAreaId(areaId);
+    }
+  };
+
+  const isLoading = tablesLoading || takeawayLoading;
 
   if (isLoading) {
     return (
@@ -74,8 +107,17 @@ export default function FloorScreen() {
   return (
     <View className="flex-1 bg-surface">
       <View className="border-b border-border bg-surface-card px-5 py-5">
-        <Text className="mb-4 text-pos-3xl font-bold text-pos-text">Floor Plan</Text>
-        <View className="flex-row items-center gap-6">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-pos-3xl font-bold text-pos-text">Floor Plan</Text>
+          <Pressable
+            onPress={handleTakeawayPress}
+            className="flex-row items-center rounded-xl bg-amber-500 px-5 py-3 active:bg-amber-600"
+          >
+            <Text className="mr-2 text-lg">🛍</Text>
+            <Text className="text-pos-base font-bold text-white">Takeaway</Text>
+          </Pressable>
+        </View>
+        <View className="mt-4 flex-row items-center gap-6">
           <View className="rounded-xl bg-status-available-muted px-4 py-2">
             <Text className="text-pos-xs text-pos-text-muted">Available</Text>
             <Text className="text-pos-xl font-bold text-status-available">{availableTablesCount}</Text>
@@ -98,14 +140,64 @@ export default function FloorScreen() {
       <FloorAreaTabs
         floorAreas={floorAreas}
         selectedAreaId={selectedAreaId}
-        onSelectArea={setSelectedAreaId}
+        onSelectArea={handleSelectArea}
+        showTakeawayTab={true}
+        isTakeawaySelected={isTakeawaySelected}
+        activeTakeawayCount={activeTakeawayCount}
       />
 
       <ScrollView 
         className="flex-1 bg-surface"
         contentContainerStyle={{ padding: 16 }}
       >
-        {currentTables.length === 0 ? (
+        {isTakeawaySelected ? (
+          takeawayOrders.length === 0 ? (
+            <View className="items-center justify-center py-16">
+              <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+                <Text className="text-3xl">🛍</Text>
+              </View>
+              <Text className="text-pos-base text-pos-text-muted">No active takeaway orders</Text>
+              <Pressable
+                onPress={handleTakeawayPress}
+                className="mt-4 rounded-xl bg-amber-500 px-6 py-3 active:bg-amber-600"
+              >
+                <Text className="text-pos-base font-bold text-white">Create Takeaway Order</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-4">
+              {takeawayOrders.map((order) => (
+                <Pressable
+                  key={`takeaway-${order.id}`}
+                  onPress={() => handleTakeawayOrderPress(order)}
+                  className="w-[31%] rounded-xl bg-surface-card p-4 active:bg-surface-raised"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-pos-lg font-bold text-pos-text">
+                      🛍 {order.order_number}
+                    </Text>
+                    <Text className="text-pos-xs text-pos-text-muted">
+                      {getTakeawayElapsedMinutes(order.created_at)}m ago
+                    </Text>
+                  </View>
+                  {order.customer_name && (
+                    <Text className="mt-1 text-pos-sm text-pos-text-muted">
+                      {order.customer_name}
+                    </Text>
+                  )}
+                  <View className="mt-2 flex-row items-center justify-between">
+                    <Text className="text-pos-base font-semibold text-pos-text">
+                      Rp {order.total.toLocaleString('id-ID')}
+                    </Text>
+                    <View className="rounded-full bg-amber-500/20 px-2 py-0.5">
+                      <Text className="text-pos-xs text-amber-500">{order.status}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )
+        ) : currentTables.length === 0 ? (
           <View className="items-center justify-center py-16">
             <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
               <Text className="text-3xl">🪑</Text>

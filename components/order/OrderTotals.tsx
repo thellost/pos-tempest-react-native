@@ -13,7 +13,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
   const showRounding = order.rounding_amount !== 0;
 
   return (
-    <View className="rounded-xl bg-surface-card p-4">
+    <View className="rounded-sm bg-surface-card p-4">
       <View className="flex-row justify-between py-1.5">
         <Text className="text-pos-sm text-pos-text-muted">Subtotal</Text>
         <Text className="text-pos-sm font-medium text-pos-text">

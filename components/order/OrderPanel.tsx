@@ -11,7 +11,7 @@ import { OrderTotals } from './OrderTotals';
 interface OrderPanelProps {
   order: Order | null;
   items: (OrderItem & { modifiers: OrderItemModifier[] })[];
-  guestCount: number;
+  guestCount: number | null;
   onGuestCountChange: (count: number) => void;
   onUpdateQuantity: (itemId: number, newQuantity: number) => void;
   onRemoveItem: (itemId: number) => void;
@@ -38,13 +38,15 @@ export function OrderPanel({
   const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
 
   const handleGuestDecrease = useCallback(() => {
-    if (guestCount > 0) {
+    if (guestCount !== null && guestCount > 0) {
       onGuestCountChange(guestCount - 1);
     }
   }, [guestCount, onGuestCountChange]);
 
   const handleGuestIncrease = useCallback(() => {
-    onGuestCountChange(guestCount + 1);
+    if (guestCount !== null) {
+      onGuestCountChange(guestCount + 1);
+    }
   }, [guestCount, onGuestCountChange]);
 
   const renderedItems = useMemo(() => {
@@ -71,38 +73,40 @@ export function OrderPanel({
           </View>
           <View className="flex-row items-center gap-1.5">
             <Pressable
-              className={`px-3 py-1.5 rounded-md active:opacity-70 ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
+              className={`px-3 py-1.5 rounded-sm active:opacity-70 ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
               <Text className={`text-pos-xs font-semibold ${isDineIn ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
             </Pressable>
             <Pressable
-              className={`px-3 py-1.5 rounded-md active:opacity-70 ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
+              className={`px-3 py-1.5 rounded-sm active:opacity-70 ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
               <Text className={`text-pos-xs font-semibold ${isTakeaway ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
             </Pressable>
           </View>
         </View>
 
-        <View className="mt-3 flex-row items-center justify-between">
-          <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
-          <View className="flex-row items-center gap-2">
-            <Pressable
-              onPress={handleGuestDecrease}
-              className="h-7 w-7 items-center justify-center rounded bg-surface-raised active:opacity-60"
-            >
-              <Text className="text-pos-sm text-pos-text">−</Text>
-            </Pressable>
-            <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
-              {guestCount}
-            </Text>
-            <Pressable
-              onPress={handleGuestIncrease}
-              className="h-7 w-7 items-center justify-center rounded bg-surface-raised active:opacity-60"
-            >
-              <Text className="text-pos-sm text-pos-text">+</Text>
-            </Pressable>
+        {guestCount !== null && (
+          <View className="mt-3 flex-row items-center justify-between">
+            <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={handleGuestDecrease}
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+              >
+                <Text className="text-pos-sm text-pos-text">−</Text>
+              </Pressable>
+              <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
+                {guestCount}
+              </Text>
+              <Pressable
+                onPress={handleGuestIncrease}
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+              >
+                <Text className="text-pos-sm text-pos-text">+</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       <ScrollView

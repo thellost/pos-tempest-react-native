@@ -49,7 +49,7 @@ export function OrderActions({
         <Pressable
           onPress={handleHold}
           disabled={!hasItems}
-          className="min-h-pos-touch flex-1 items-center justify-center rounded-lg"
+          className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
           style={({ pressed }) => ({
             backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
             borderWidth: 1,
@@ -66,7 +66,7 @@ export function OrderActions({
         <Pressable
           onPress={handleSendToKitchen}
           disabled={!canSend}
-          className="min-h-pos-touch flex-1 items-center justify-center rounded-lg"
+          className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
           style={({ pressed }) => ({
             backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
             borderWidth: 1,
@@ -84,7 +84,7 @@ export function OrderActions({
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className="mt-2 min-h-pos-touch items-center justify-center rounded-lg"
+        className="mt-2 min-h-pos-touch items-center justify-center rounded-sm"
         style={({ pressed }) => ({
           backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
           borderWidth: 1,

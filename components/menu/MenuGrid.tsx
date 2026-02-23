@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, RefreshControl, Text, View } from 'react-native';
 
 import { FlashList } from '@shopify/flash-list';
@@ -54,6 +54,10 @@ export function MenuGrid({
   const gridWidth = width * 0.70 - GRID_PADDING * 2;
   const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
   const itemHeight = itemWidth * ASPECT_RATIO;
+  const contentContainerStyle = useMemo(
+    () => ({ padding: GRID_PADDING, flexGrow: items.length === 0 ? 1 : 0 }),
+    [items.length]
+  );
 
   const renderItem = useCallback(({ item, index }: { item: MenuItemWithInventory; index: number }) => {
     const isLastColumn = (index + 1) % COLUMNS === 0;
@@ -114,7 +118,7 @@ export function MenuGrid({
       renderItem={renderItem}
       numColumns={COLUMNS}
       ListEmptyComponent={renderEmptyState}
-      contentContainerStyle={{ padding: GRID_PADDING, flexGrow: items.length === 0 ? 1 : 0 }}
+      contentContainerStyle={contentContainerStyle}
       showsVerticalScrollIndicator={false}
       drawDistance={120}
       removeClippedSubviews

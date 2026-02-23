@@ -32,6 +32,9 @@ export function CategoryTabs({
   }, [onSelectSubCategory]);
 
   const renderedCategoryTabs = useMemo(() => {
+    if (__DEV__ && categories.length > 0) {
+      console.log('[CategoryTabs] Categories:', categories.map(c => ({ name: c.name, button_color: c.button_color })));
+    }
     return categories.map((category) => {
       const categoryId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
       const isSelected = categoryId === selectedCategoryId;
@@ -41,7 +44,7 @@ export function CategoryTabs({
         <Pressable
           key={`category-${category.id}`}
           onPress={() => handleCategoryPress(categoryId)}
-          className={`flex-1 items-center justify-center py-3 rounded-md active:opacity-70 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
+          className={`flex-1 items-center justify-center py-3 rounded-sm active:opacity-70 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
           style={{ backgroundColor: baseColor }}
         >
           <Text
@@ -59,12 +62,31 @@ export function CategoryTabs({
     return subCategories.map((subCategory) => {
       const subCategoryId = typeof subCategory.id === 'string' ? parseInt(subCategory.id, 10) : subCategory.id;
       const isSelected = subCategoryId === selectedSubCategoryId;
+      const hasCustomColor = Boolean(subCategory.button_color);
+
+      if (hasCustomColor) {
+        return (
+          <Pressable
+            key={`sub-category-${subCategory.id}`}
+            onPress={() => handleSubCategoryPress(subCategoryId)}
+            className={`items-center justify-center px-3 py-2 rounded-sm active:opacity-70 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
+            style={{ backgroundColor: subCategory.button_color! }}
+          >
+            <Text
+              className="text-pos-xs font-semibold text-white"
+              numberOfLines={1}
+            >
+              {subCategory.name}
+            </Text>
+          </Pressable>
+        );
+      }
 
       return (
         <Pressable
           key={`sub-category-${subCategory.id}`}
           onPress={() => handleSubCategoryPress(subCategoryId)}
-          className={`items-center justify-center px-3 py-2 rounded-md active:opacity-70 ${isSelected ? 'bg-brand' : 'bg-surface-elevated'}`}
+          className={`items-center justify-center px-3 py-2 rounded-sm active:opacity-70 ${isSelected ? 'bg-brand' : 'bg-surface-elevated'}`}
         >
           <Text
             className={`text-pos-xs font-semibold ${
@@ -102,7 +124,7 @@ export function CategoryTabs({
         <View className="flex-row gap-2 border-t border-border px-4 py-2">
           <Pressable
             onPress={() => onSelectSubCategory(null)}
-            className={`items-center justify-center px-3 py-2 rounded-md active:opacity-70 ${selectedSubCategoryId === null ? 'bg-brand' : 'bg-surface-elevated'}`}
+            className={`items-center justify-center px-3 py-2 rounded-sm active:opacity-70 ${selectedSubCategoryId === null ? 'bg-brand' : 'bg-surface-elevated'}`}
           >
             <Text
               className={`text-pos-xs font-semibold ${
