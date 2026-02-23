@@ -1,6 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, InteractionManager, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, InteractionManager, Text, View } from 'react-native';
 
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
@@ -87,6 +87,7 @@ async function getOrderTableById(tableId: number): Promise<OrderTableData | null
 function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   useMountTimer('OrderScreenContent');
   const screenBootRef = useRef(nowMs());
+  const router = useRouter();
 
   const tableIdNum = parseInt(tableId, 10);
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
@@ -283,15 +284,21 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, []);
 
   const handleSendToKitchen = useCallback(() => {
-    console.log('Send to Kitchen');
+    Alert.alert('Kitchen', 'Send to kitchen is ready. Ticket workflow will be added in the next step.');
   }, []);
 
   const handlePayment = useCallback(() => {
-    console.log('Payment');
-  }, []);
+    if (!order) {
+      Alert.alert('Payment', 'No active order found. Please add items first.');
+      return;
+    }
+
+    const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+    router.push({ pathname: '/(app)/checkout/[orderId]', params: { orderId: String(currentOrderId) } });
+  }, [order, router]);
 
   const handleHold = useCallback(() => {
-    console.log('Hold Order');
+    Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
   }, []);
 
   const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {

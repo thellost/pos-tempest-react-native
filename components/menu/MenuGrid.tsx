@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 const GRID_PADDING = 10;
 const GAP = 6;
 const COLUMNS = 4;
-const ASPECT_RATIO = 0.95;
+const ASPECT_RATIO = 0.5;
 
 interface MenuGridProps {
   items: MenuItemWithInventory[];

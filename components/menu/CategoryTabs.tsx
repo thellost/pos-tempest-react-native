@@ -41,13 +41,8 @@ export function CategoryTabs({
         <Pressable
           key={`category-${category.id}`}
           onPress={() => handleCategoryPress(categoryId)}
-          className="flex-1 items-center justify-center py-3"
-          style={({ pressed }) => ({
-            backgroundColor: baseColor,
-            borderRadius: 6,
-            opacity: pressed ? 0.7 : (isSelected ? 1 : 0.5),
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-          })}
+          className={`flex-1 items-center justify-center py-3 rounded-md active:opacity-70 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
+          style={{ backgroundColor: baseColor }}
         >
           <Text
             className="text-pos-sm font-bold text-white"
@@ -69,12 +64,7 @@ export function CategoryTabs({
         <Pressable
           key={`sub-category-${subCategory.id}`}
           onPress={() => handleSubCategoryPress(subCategoryId)}
-          className="items-center justify-center px-3 py-2"
-          style={({ pressed }) => ({
-            backgroundColor: isSelected ? '#6366F1' : '#2A3142',
-            borderRadius: 6,
-            opacity: pressed ? 0.7 : 1,
-          })}
+          className={`items-center justify-center px-3 py-2 rounded-md active:opacity-70 ${isSelected ? 'bg-brand' : 'bg-surface-elevated'}`}
         >
           <Text
             className={`text-pos-xs font-semibold ${
@@ -112,12 +102,7 @@ export function CategoryTabs({
         <View className="flex-row gap-2 border-t border-border px-4 py-2">
           <Pressable
             onPress={() => onSelectSubCategory(null)}
-            className="items-center justify-center px-3 py-2"
-            style={({ pressed }) => ({
-              backgroundColor: selectedSubCategoryId === null ? '#6366F1' : '#2A3142',
-              borderRadius: 6,
-              opacity: pressed ? 0.7 : 1,
-            })}
+            className={`items-center justify-center px-3 py-2 rounded-md active:opacity-70 ${selectedSubCategoryId === null ? 'bg-brand' : 'bg-surface-elevated'}`}
           >
             <Text
               className={`text-pos-xs font-semibold ${

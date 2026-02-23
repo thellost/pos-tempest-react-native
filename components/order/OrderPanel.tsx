@@ -34,6 +34,8 @@ export function OrderPanel({
   const activeItems = items.filter(i => !i.is_voided);
   const hasItems = activeItems.length > 0;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
+  const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
+  const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
 
   const handleGuestDecrease = useCallback(() => {
     if (guestCount > 0) {
@@ -69,28 +71,14 @@ export function OrderPanel({
           </View>
           <View className="flex-row items-center gap-1.5">
             <Pressable
-              className="px-3 py-1.5"
-              style={({ pressed }) => ({
-                backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#6366F1' : 'transparent',
-                borderRadius: 6,
-                borderWidth: order?.order_type === ORDER_TYPE.DINE_IN ? 0 : 1,
-                borderColor: 'rgba(255,255,255,0.12)',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              className={`px-3 py-1.5 rounded-md active:opacity-70 ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
-              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.DINE_IN ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
+              <Text className={`text-pos-xs font-semibold ${isDineIn ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
             </Pressable>
             <Pressable
-              className="px-3 py-1.5"
-              style={({ pressed }) => ({
-                backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#6366F1' : 'transparent',
-                borderRadius: 6,
-                borderWidth: order?.order_type === ORDER_TYPE.TAKEAWAY ? 0 : 1,
-                borderColor: 'rgba(255,255,255,0.12)',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              className={`px-3 py-1.5 rounded-md active:opacity-70 ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
-              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.TAKEAWAY ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
+              <Text className={`text-pos-xs font-semibold ${isTakeaway ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
             </Pressable>
           </View>
         </View>
@@ -100,8 +88,7 @@ export function OrderPanel({
           <View className="flex-row items-center gap-2">
             <Pressable
               onPress={handleGuestDecrease}
-              className="h-7 w-7 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+              className="h-7 w-7 items-center justify-center rounded bg-surface-raised active:opacity-60"
             >
               <Text className="text-pos-sm text-pos-text">−</Text>
             </Pressable>
@@ -110,8 +97,7 @@ export function OrderPanel({
             </Text>
             <Pressable
               onPress={handleGuestIncrease}
-              className="h-7 w-7 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+              className="h-7 w-7 items-center justify-center rounded bg-surface-raised active:opacity-60"
             >
               <Text className="text-pos-sm text-pos-text">+</Text>
             </Pressable>

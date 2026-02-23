@@ -49,14 +49,16 @@ export function OrderActions({
         <Pressable
           onPress={handleHold}
           disabled={!hasItems}
-          className="flex-1 items-center justify-center py-2.5"
+          className="min-h-pos-touch flex-1 items-center justify-center rounded-lg"
           style={({ pressed }) => ({
-            borderRadius: 8,
-            backgroundColor: hasItems ? '#222838' : '#1A1F2C',
+            backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
+            borderWidth: 1,
+            borderColor: hasItems ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.06)',
             opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
+            transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
           })}
         >
-          <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-text' : 'text-pos-text-faint'}`}>
+          <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-warning' : 'text-pos-text-faint'}`}>
             Hold
           </Text>
         </Pressable>
@@ -64,14 +66,16 @@ export function OrderActions({
         <Pressable
           onPress={handleSendToKitchen}
           disabled={!canSend}
-          className="flex-1 items-center justify-center py-2.5"
+          className="min-h-pos-touch flex-1 items-center justify-center rounded-lg"
           style={({ pressed }) => ({
-            borderRadius: 8,
             backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
+            borderWidth: 1,
+            borderColor: canSend ? '#818CF8' : 'rgba(255, 255, 255, 0.06)',
             opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
+            transform: [{ scale: pressed && canSend ? 0.98 : 1 }],
           })}
         >
-          <Text className={`text-pos-sm font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
+          <Text className={`text-pos-sm font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
             {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
           </Text>
         </Pressable>
@@ -80,14 +84,16 @@ export function OrderActions({
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className="mt-2 items-center justify-center py-3"
+        className="mt-2 min-h-pos-touch items-center justify-center rounded-lg"
         style={({ pressed }) => ({
-          borderRadius: 8,
           backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
+          borderWidth: 1,
+          borderColor: canPayment ? '#34D399' : 'rgba(255, 255, 255, 0.06)',
           opacity: !canPayment ? 0.4 : pressed ? 0.7 : 1,
+          transform: [{ scale: pressed && canPayment ? 0.98 : 1 }],
         })}
       >
-        <Text className={`text-pos-base font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
+        <Text className={`text-pos-base font-bold ${canPayment ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
           Payment
         </Text>
       </Pressable>

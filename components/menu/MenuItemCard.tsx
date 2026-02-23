@@ -50,8 +50,7 @@ export function MenuItemCard({
       <Pressable 
         onPress={handleAdd} 
         disabled={!isAvailable} 
-        className="flex-1 px-3 pb-1.5 pt-2"
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        className="flex-1 px-3 pb-1.5 pt-2 active:opacity-70"
       >
         <Text className="text-[10px] text-pos-text-faint" numberOfLines={1}>
           {displayCategory}
@@ -73,8 +72,7 @@ export function MenuItemCard({
         <Pressable
           onPress={handleDecrement}
           disabled={!isAvailable || quantity <= 0}
-          className="h-6 w-6 items-center justify-center border border-border bg-surface-raised"
-          style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+          className="h-6 w-6 items-center justify-center rounded border border-border bg-surface-raised active:opacity-60"
         >
           <Text className="text-[12px] text-pos-text">−</Text>
         </Pressable>
@@ -86,8 +84,7 @@ export function MenuItemCard({
         <Pressable
           onPress={handleAdd}
           disabled={!isAvailable}
-          className="h-6 w-6 items-center justify-center border border-border bg-surface-raised"
-          style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+          className="h-6 w-6 items-center justify-center rounded border border-border bg-surface-raised active:opacity-60"
         >
           <Text className="text-[12px] text-pos-text">+</Text>
         </Pressable>

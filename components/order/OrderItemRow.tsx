@@ -14,10 +14,9 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
 
   return (
     <View
-      className={`mb-2 overflow-hidden bg-surface-card p-3 ${
+      className={`mb-2 overflow-hidden rounded-lg bg-surface-card p-3 ${
         item.is_voided ? 'opacity-50' : ''
       }`}
-      style={{ borderRadius: 8 }}
     >
       <View className="mb-2 flex-row items-start justify-between">
         <View className="flex-1 pr-2">
@@ -33,8 +32,7 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
         {!item.is_voided ? (
           <Pressable
             onPress={() => onRemove(itemId)}
-            className="rounded bg-pos-danger-muted px-2 py-1"
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            className="rounded bg-pos-danger-muted px-2 py-1 active:opacity-60"
           >
             <Text className="text-[10px] font-semibold text-pos-danger">Remove</Text>
           </Pressable>
@@ -65,8 +63,7 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
           <View className="flex-row items-center gap-1.5">
             <Pressable
               onPress={() => onUpdateQuantity(itemId, item.quantity - 1)}
-              className="h-6 w-6 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+              className="h-6 w-6 items-center justify-center rounded bg-surface-raised active:opacity-60"
             >
               <Text className="text-pos-sm text-pos-text">−</Text>
             </Pressable>
@@ -75,8 +72,7 @@ export function OrderItemRow({ item, onUpdateQuantity, onRemove }: OrderItemRowP
             </Text>
             <Pressable
               onPress={() => onUpdateQuantity(itemId, item.quantity + 1)}
-              className="h-6 w-6 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
+              className="h-6 w-6 items-center justify-center rounded bg-surface-raised active:opacity-60"
             >
               <Text className="text-pos-sm text-pos-text">+</Text>
             </Pressable>
