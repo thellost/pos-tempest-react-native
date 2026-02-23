@@ -14,6 +14,7 @@ interface OrderPanelProps {
   guestCount: number | null;
   onGuestCountChange: (count: number) => void;
   onUpdateQuantity: (itemId: number, newQuantity: number) => void;
+  onUpdateNotes: (itemId: number, notes: string) => void;
   onRemoveItem: (itemId: number) => void;
   onSendToKitchen: () => void;
   onPayment: () => void;
@@ -26,6 +27,7 @@ export function OrderPanel({
   guestCount,
   onGuestCountChange,
   onUpdateQuantity,
+  onUpdateNotes,
   onRemoveItem,
   onSendToKitchen,
   onPayment,
@@ -55,10 +57,11 @@ export function OrderPanel({
         key={`order-item-${item.id}`}
         item={item}
         onUpdateQuantity={onUpdateQuantity}
+        onUpdateNotes={onUpdateNotes}
         onRemove={onRemoveItem}
       />
     ));
-  }, [items, onUpdateQuantity, onRemoveItem]);
+  }, [items, onUpdateNotes, onUpdateQuantity, onRemoveItem]);
 
   const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
 

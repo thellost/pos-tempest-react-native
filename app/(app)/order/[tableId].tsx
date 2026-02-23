@@ -17,6 +17,7 @@ import {
   createOrder,
   getOrderWithItems,
   removeItemFromOrder,
+  updateItemNotes,
   updateItemQuantity,
 } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
@@ -270,6 +271,15 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     }
   }, [reloadOrder]);
 
+  const handleUpdateNotes = useCallback(async (itemId: number, notes: string) => {
+    try {
+      await updateItemNotes(itemId, notes);
+      await reloadOrder();
+    } catch (error) {
+      console.error('[OrderScreen] Error updating item notes:', error);
+    }
+  }, [reloadOrder]);
+
   const handleGuestCountChange = useCallback((count: number) => {
     setGuestCount(count);
   }, []);
@@ -445,17 +455,18 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
       <View className="flex-1 flex-row">
         <View className="w-[30%]">
           <PerfProfiler id="OrderPanel">
-            <OrderPanel
-              order={order}
-              items={orderItems}
-              guestCount={guestCount}
-              onGuestCountChange={handleGuestCountChange}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onSendToKitchen={handleSendToKitchen}
-              onPayment={handlePayment}
-              onHold={handleHold}
-            />
+              <OrderPanel
+                order={order}
+                items={orderItems}
+                guestCount={guestCount}
+                onGuestCountChange={handleGuestCountChange}
+                onUpdateQuantity={handleUpdateQuantity}
+                onUpdateNotes={handleUpdateNotes}
+                onRemoveItem={handleRemoveItem}
+                onSendToKitchen={handleSendToKitchen}
+                onPayment={handlePayment}
+                onHold={handleHold}
+              />
           </PerfProfiler>
         </View>
 

@@ -16,6 +16,7 @@ import {
   createOrder,
   getOrderWithItems,
   removeItemFromOrder,
+  updateItemNotes,
   updateItemQuantity,
 } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
@@ -204,6 +205,15 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     }
   }, [reloadOrder]);
 
+  const handleUpdateNotes = useCallback(async (itemId: number, notes: string) => {
+    try {
+      await updateItemNotes(itemId, notes);
+      await reloadOrder();
+    } catch (error) {
+      console.error('[TakeawayOrder] Error updating item notes:', error);
+    }
+  }, [reloadOrder]);
+
   const handleSelectCategory = useCallback((categoryId: number) => {
     setSelectedCategoryId(categoryId);
     setSelectedSubCategoryId(null);
@@ -381,6 +391,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
               guestCount={null}
               onGuestCountChange={() => {}}
               onUpdateQuantity={handleUpdateQuantity}
+              onUpdateNotes={handleUpdateNotes}
               onRemoveItem={handleRemoveItem}
               onSendToKitchen={handleSendToKitchen}
               onPayment={handlePayment}
