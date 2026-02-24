@@ -8,14 +8,19 @@ import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
 import { ORDER_TYPE } from '@/constants/enums';
 import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
+import type { OrderItemDisplay, CartItem } from '@/components/order/types';
+import { cartItemToDisplay, generateLocalId,
+} from '@/components/order/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import type { SelectedModifier } from '@/services/order.service';
 import {
   addItemToOrder,
+  confirmOrder,
   createOrder,
   getOrderWithItems,
   removeItemFromOrder,
+  updateItemModifiers,
   updateItemNotes,
   updateItemQuantity,
 } from '@/services/order.service';
@@ -52,6 +57,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<(OrderItem & { modifiers: OrderItemModifier[] })[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +65,10 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const [showModifierPicker, setShowModifierPicker] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemWithInventory | null>(null);
   const [menuItemModifiers, setMenuItemModifiers] = useState<ModifierGroupWithModifiers[]>([]);
+  const [editingOrderItemId, setEditingOrderItemId] = useState<number | null>(null);
+  const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+  const [editingItemNotes, setEditingItemNotes] = useState<string>('');
+  const [editingItemModifiers, setEditingItemModifiers] = useState<SelectedModifier[]>([]);
   const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
   const hasLoadedRef = useRef(false);
@@ -84,21 +94,6 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
             setOrder(orderData.order);
             setOrderItems(orderData.items);
           }
-        } else if (user) {
-          const newOrder = await timedAsync(
-            'query:createTakeawayOrder',
-            () => createOrder(
-              user.branch_id,
-              null,
-              user.id,
-              null,
-              ORDER_TYPE.TAKEAWAY,
-              null
-            ),
-            { branchId: user.branch_id }
-          );
-          setOrder(newOrder);
-          setOrderItems([]);
         }
       } catch (error) {
         console.error('[TakeawayOrder] Error loading data:', error);
@@ -110,7 +105,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     };
 
     loadData();
-  }, [orderIdNum, user]);
+  }, [orderIdNum]);
 
   useEffect(() => {
     if (topLevelCategories.length > 0 && !selectedCategoryId) {
@@ -141,20 +136,39 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     weight: number | null,
     notes: string
   ) => {
-    if (!order) return;
+    if (!user) return;
 
-    try {
-      const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-      await timedAsync(
-        'query:addItemToOrder',
-        () => addItemToOrder(currentOrderId, item, 1, modifiers, notes, weight),
-        { orderId: currentOrderId, menuItem: item.name }
-      );
-      await reloadOrder();
-    } catch (error) {
-      console.error('[TakeawayOrder] Error adding item to order:', error);
+    if (order) {
+      try {
+        const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+        await timedAsync(
+          'query:addItemToOrder',
+          () => addItemToOrder(currentOrderId, item, 1, modifiers, notes, weight),
+          { orderId: currentOrderId, menuItem: item.name }
+        );
+        await reloadOrder();
+      } catch (error) {
+        console.error('[TakeawayOrder] Error adding item to order:', error);
+      }
+    } else {
+      const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
+      const basePrice = weight ? item.price * weight : item.price;
+      const total = basePrice + modifierTotal;
+      const newCartItem: CartItem = {
+        id: generateLocalId(),
+        menu_item_id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+        menu_item_name: item.name,
+        quantity: 1,
+        unit_price: item.price,
+        modifier_total: modifierTotal,
+        total: total,
+        notes: notes || null,
+        modifiers,
+        weight,
+      };
+      setCartItems(prev => [...prev, newCartItem]);
     }
-  }, [order, reloadOrder]);
+  }, [order, reloadOrder, user]);
 
   const handleMenuItemPress = useCallback(async (item: MenuItemWithInventory) => {
     try {
@@ -181,27 +195,73 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   ) => {
     if (!selectedMenuItem) return;
 
-    await addItemToOrderHandler(selectedMenuItem, modifiers, weight, notes);
+    if (editingCartItemId) {
+      setCartItems(prev => prev.map(item => {
+        if (item.id !== editingCartItemId) return item;
+        const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
+        const basePrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
+        const total = (basePrice + modifierTotal) * item.quantity;
+        return {
+          ...item,
+          modifiers,
+          notes: notes || null,
+          weight,
+          modifier_total: modifierTotal,
+          total,
+        };
+      }));
+      setEditingCartItemId(null);
+      setEditingItemNotes('');
+      setEditingItemModifiers([]);
+    } else if (editingOrderItemId) {
+      await updateItemModifiers(editingOrderItemId, modifiers);
+      await updateItemNotes(editingOrderItemId, notes);
+      await reloadOrder();
+      setEditingOrderItemId(null);
+      setEditingItemNotes('');
+      setEditingItemModifiers([]);
+    } else {
+      await addItemToOrderHandler(selectedMenuItem, modifiers, weight, notes);
+    }
     setShowModifierPicker(false);
     setSelectedMenuItem(null);
     setMenuItemModifiers([]);
-  }, [selectedMenuItem, addItemToOrderHandler]);
+  }, [selectedMenuItem, editingCartItemId, editingOrderItemId, cartItems, addItemToOrderHandler, reloadOrder]);
 
-  const handleUpdateQuantity = useCallback(async (itemId: number, newQuantity: number) => {
-    try {
-      await updateItemQuantity(itemId, newQuantity);
-      await reloadOrder();
-    } catch (error) {
-      console.error('[TakeawayOrder] Error updating quantity:', error);
+  const handleUpdateQuantity = useCallback(async (itemId: number | string, newQuantity: number) => {
+    if (typeof itemId === 'string') {
+      if (newQuantity <= 0) {
+        setCartItems(prev => prev.filter(item => item.id !== itemId));
+      } else {
+        setCartItems(prev => prev.map(item => {
+          if (item.id !== itemId) return item;
+          return {
+            ...item,
+            quantity: newQuantity,
+            total: (item.unit_price + item.modifier_total) * newQuantity,
+          };
+        }));
+      }
+    } else {
+      try {
+        await updateItemQuantity(itemId, newQuantity);
+        await reloadOrder();
+      } catch (error) {
+        console.error('[TakeawayOrder] Error updating quantity:', error);
+      }
     }
   }, [reloadOrder]);
 
-  const handleRemoveItem = useCallback(async (itemId: number) => {
-    try {
-      await removeItemFromOrder(itemId);
-      await reloadOrder();
-    } catch (error) {
-      console.error('[TakeawayOrder] Error removing item:', error);
+  const handleRemoveItem = useCallback(async (itemId: number | string) => {
+    if (typeof itemId === 'string') {
+      setCartItems(prev => prev.filter(item => item.id !== itemId));
+    } else {
+      try {
+        await removeItemFromOrder(itemId);
+        await reloadOrder();
+      } catch (error) {
+        console.error('[TakeawayOrder] Error removing item:', error);
+      }
     }
   }, [reloadOrder]);
 
@@ -213,6 +273,63 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       console.error('[TakeawayOrder] Error updating item notes:', error);
     }
   }, [reloadOrder]);
+
+  const handleEditModifiers = useCallback(async (itemId: number | string) => {
+    if (typeof itemId === 'string') {
+      const cartItem = cartItems.find(item => item.id === itemId);
+      if (!cartItem) return;
+
+      const menuItem = menuItems.find(m => {
+        const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
+        return mId === cartItem.menu_item_id;
+      });
+      if (!menuItem) return;
+
+      const modifiers = await getModifierGroupsForMenuItem(cartItem.menu_item_id);
+      setSelectedMenuItem(menuItem);
+      setMenuItemModifiers(modifiers);
+      setEditingCartItemId(itemId);
+      setEditingItemModifiers(cartItem.modifiers);
+      setEditingItemNotes(cartItem.notes ?? '');
+      setShowModifierPicker(true);
+    } else {
+      const targetItem = orderItems.find((item) => {
+        const currentId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+        return currentId === itemId;
+      });
+
+      if (!targetItem) return;
+
+      const menuItemId = typeof targetItem.menu_item_id === 'string'
+        ? parseInt(targetItem.menu_item_id as string, 10)
+        : targetItem.menu_item_id;
+      const menuItem = menuItems.find((item) => {
+        const currentId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+        return currentId === menuItemId;
+      });
+
+      if (!menuItem) return;
+
+      const modifiers = await getModifierGroupsForMenuItem(menuItemId);
+      const selectedModifiers = targetItem.modifiers.map((modifier) => {
+        const modifierId = typeof modifier.modifier_id === 'string'
+          ? parseInt(modifier.modifier_id as string, 10)
+          : modifier.modifier_id;
+        return {
+          modifier_id: modifierId,
+          modifier_name: modifier.modifier_name,
+          modifier_group_name: modifier.modifier_group_name,
+          extra_price: modifier.extra_price,
+        };
+      });
+      setSelectedMenuItem(menuItem);
+      setMenuItemModifiers(modifiers);
+      setEditingOrderItemId(itemId);
+      setEditingItemNotes(targetItem.notes ?? '');
+      setEditingItemModifiers(selectedModifiers);
+      setShowModifierPicker(true);
+    }
+  }, [getModifierGroupsForMenuItem, menuItems, orderItems, cartItems]);
 
   const handleSelectCategory = useCallback((categoryId: number) => {
     setSelectedCategoryId(categoryId);
@@ -241,63 +358,130 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
   }, []);
 
+  const handleConfirmOrder = useCallback(async () => {
+    if (!user) return;
+    if (cartItems.length === 0 && !order) return;
+
+    try {
+      if (order) {
+        const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+        await confirmOrder(currentOrderId);
+        await reloadOrder();
+      } else {
+        const newOrder = await createOrder(
+          user.branch_id,
+          null,
+          user.id,
+          null,
+          ORDER_TYPE.TAKEAWAY,
+          null
+        );
+        const orderId = typeof newOrder.id === 'string' ? parseInt(newOrder.id, 10) : newOrder.id;
+
+        for (const cartItem of cartItems) {
+          const menuItem = menuItems.find(m => {
+            const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
+            return mId === cartItem.menu_item_id;
+          });
+          if (menuItem) {
+            await addItemToOrder(orderId, menuItem, cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight);
+          }
+        }
+
+        await confirmOrder(orderId);
+
+        const orderData = await getOrderWithItems(orderId);
+        if (orderData) {
+          setOrder(orderData.order);
+          setOrderItems(orderData.items);
+        }
+        setCartItems([]);
+      }
+    } catch (error) {
+      console.error('[TakeawayOrder] Error confirming order:', error);
+    }
+  }, [user, cartItems, order, menuItems, reloadOrder]);
+
   const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
     const start = nowMs();
-    const result = orderItems.reduce<Record<number, number>>((accumulator, orderItem) => {
-      if (orderItem.is_voided) {
-        return accumulator;
-      }
+    const result: Record<number, number> = {};
 
-      const menuItemId = typeof orderItem.menu_item_id === 'string'
-        ? parseInt(orderItem.menu_item_id as string, 10)
-        : orderItem.menu_item_id;
-      const quantity = typeof orderItem.quantity === 'string'
-        ? parseInt(orderItem.quantity as string, 10)
-        : orderItem.quantity;
+    if (order) {
+      orderItems.forEach((orderItem) => {
+        if (orderItem.is_voided) return;
+        const menuItemId = typeof orderItem.menu_item_id === 'string'
+          ? parseInt(orderItem.menu_item_id as string, 10)
+          : orderItem.menu_item_id;
+        const quantity = typeof orderItem.quantity === 'string'
+          ? parseInt(orderItem.quantity as string, 10)
+          : orderItem.quantity;
+        result[menuItemId] = (result[menuItemId] || 0) + quantity;
+      });
+    } else {
+      cartItems.forEach((cartItem) => {
+        result[cartItem.menu_item_id] = (result[cartItem.menu_item_id] || 0) + cartItem.quantity;
+      });
+    }
 
-      accumulator[menuItemId] = (accumulator[menuItemId] || 0) + quantity;
-      return accumulator;
-    }, {});
-    logPerf('useMemo:quantitiesByMenuItemId', nowMs() - start, { itemCount: orderItems.length });
+    logPerf('useMemo:quantitiesByMenuItemId', nowMs() - start, { itemCount: order ? orderItems.length : cartItems.length });
     return result;
-  }, [orderItems]);
+  }, [order, orderItems, cartItems]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
 
-    const matchingItems = orderItems.filter((orderItem) => {
-      const orderMenuItemId = typeof orderItem.menu_item_id === 'string'
-        ? parseInt(orderItem.menu_item_id as string, 10)
-        : orderItem.menu_item_id;
-      return orderMenuItemId === menuItemId && !orderItem.is_voided;
-    });
+    if (order) {
+      const matchingItems = orderItems.filter((orderItem) => {
+        const orderMenuItemId = typeof orderItem.menu_item_id === 'string'
+          ? parseInt(orderItem.menu_item_id as string, 10)
+          : orderItem.menu_item_id;
+        return orderMenuItemId === menuItemId && !orderItem.is_voided;
+      });
 
-    if (matchingItems.length === 0) {
-      return;
+      if (matchingItems.length === 0) return;
+
+      const targetOrderItem = matchingItems
+        .slice()
+        .sort((left, right) => {
+          const leftId = typeof left.id === 'string' ? parseInt(left.id as string, 10) : left.id;
+          const rightId = typeof right.id === 'string' ? parseInt(right.id as string, 10) : right.id;
+          return rightId - leftId;
+        })[0];
+
+      const targetItemId = typeof targetOrderItem.id === 'string'
+        ? parseInt(targetOrderItem.id as string, 10)
+        : targetOrderItem.id;
+      const currentQuantity = typeof targetOrderItem.quantity === 'string'
+        ? parseInt(targetOrderItem.quantity as string, 10)
+        : targetOrderItem.quantity;
+
+      try {
+        await updateItemQuantity(targetItemId, currentQuantity - 1);
+        await reloadOrder();
+      } catch (error) {
+        console.error('[TakeawayOrder] Error decrementing item quantity:', error);
+      }
+    } else {
+      const matchingItems = cartItems.filter(cartItem => cartItem.menu_item_id === menuItemId);
+      if (matchingItems.length === 0) return;
+
+      const targetItem = matchingItems[matchingItems.length - 1];
+      const newQuantity = targetItem.quantity - 1;
+
+      if (newQuantity <= 0) {
+        setCartItems(prev => prev.filter(item => item.id !== targetItem.id));
+      } else {
+        setCartItems(prev => prev.map(item => {
+          if (item.id !== targetItem.id) return item;
+          return {
+            ...item,
+            quantity: newQuantity,
+            total: (item.unit_price + item.modifier_total) * newQuantity,
+          };
+        }));
+      }
     }
-
-    const targetOrderItem = matchingItems
-      .slice()
-      .sort((left, right) => {
-        const leftId = typeof left.id === 'string' ? parseInt(left.id as string, 10) : left.id;
-        const rightId = typeof right.id === 'string' ? parseInt(right.id as string, 10) : right.id;
-        return rightId - leftId;
-      })[0];
-
-    const targetItemId = typeof targetOrderItem.id === 'string'
-      ? parseInt(targetOrderItem.id as string, 10)
-      : targetOrderItem.id;
-    const currentQuantity = typeof targetOrderItem.quantity === 'string'
-      ? parseInt(targetOrderItem.quantity as string, 10)
-      : targetOrderItem.quantity;
-
-    try {
-      await updateItemQuantity(targetItemId, currentQuantity - 1);
-      await reloadOrder();
-    } catch (error) {
-      console.error('[TakeawayOrder] Error decrementing item quantity:', error);
-    }
-  }, [orderItems, reloadOrder]);
+  }, [order, orderItems, cartItems, reloadOrder]);
 
   const currentCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
   const currentSubCategory = selectedSubCategoryId ? subCategories.find(c => {
@@ -328,6 +512,102 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
     return result;
   }, [allMenuItems, selectedSubCategoryId]);
+
+  const menuCategoryByItemId = useMemo(() => {
+    const map = new Map<number, { id: number; name: string }>();
+    menuItems.forEach((item) => {
+      const itemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+      const categoryId = typeof item.category_id === 'string'
+        ? parseInt(item.category_id as string, 10)
+        : item.category_id;
+      const category = categories.find((cat) => {
+        const catId = typeof cat.id === 'string' ? parseInt(cat.id, 10) : cat.id;
+        return catId === categoryId;
+      });
+      if (category) {
+        map.set(itemId, {
+          id: typeof category.id === 'string' ? parseInt(category.id, 10) : category.id,
+          name: category.name,
+        });
+      }
+    });
+    return map;
+  }, [menuItems, categories]);
+
+  const topLevelCategoryById = useMemo(() => {
+    const map = new Map<number, { id: number; name: string }>();
+    categories.forEach((category) => {
+      const catId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
+      const parentId = category.parent_id === null
+        ? null
+        : typeof category.parent_id === 'string'
+          ? parseInt(category.parent_id as string, 10)
+          : category.parent_id;
+      if (parentId === null) {
+        map.set(catId, { id: catId, name: category.name });
+      }
+    });
+    return map;
+  }, [categories]);
+
+  const topLevelBySubCategoryId = useMemo(() => {
+    const map = new Map<number, { id: number; name: string }>();
+    categories.forEach((category) => {
+      const catId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
+      const parentId = category.parent_id === null
+        ? null
+        : typeof category.parent_id === 'string'
+          ? parseInt(category.parent_id as string, 10)
+          : category.parent_id;
+      if (parentId !== null) {
+        const parent = topLevelCategoryById.get(parentId);
+        if (parent) {
+          map.set(catId, parent);
+        }
+      }
+    });
+    return map;
+  }, [categories, topLevelCategoryById]);
+
+  const itemsForPanel = useMemo<OrderItemDisplay[]>(() => {
+    if (order) {
+      return orderItems.map((item) => {
+        const itemId = typeof item.menu_item_id === 'string'
+          ? parseInt(item.menu_item_id as string, 10)
+          : item.menu_item_id;
+        const category = menuCategoryByItemId.get(itemId);
+        let groupName = category?.name ?? 'Other';
+
+        if (category) {
+          const parentName = topLevelBySubCategoryId.get(category.id)?.name;
+          const isTopLevel = topLevelCategoryById.has(category.id);
+          if (!isTopLevel && parentName) {
+            groupName = parentName;
+          }
+        }
+
+        return {
+          ...item,
+          category_group: groupName,
+        } as OrderItemDisplay;
+      });
+    } else {
+      return cartItems.map((item) => {
+        const category = menuCategoryByItemId.get(item.menu_item_id);
+        let groupName = category?.name ?? 'Other';
+
+        if (category) {
+          const parentName = topLevelBySubCategoryId.get(category.id)?.name;
+          const isTopLevel = topLevelCategoryById.has(category.id);
+          if (!isTopLevel && parentName) {
+            groupName = parentName;
+          }
+        }
+
+        return cartItemToDisplay(item, groupName);
+      });
+    }
+  }, [order, orderItems, cartItems, menuCategoryByItemId, topLevelBySubCategoryId, topLevelCategoryById]);
 
   useEffect(() => {
     if (menuItemsList.length === 0) {
@@ -387,11 +667,12 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
           <PerfProfiler id="OrderPanel">
             <OrderPanel
               order={order}
-              items={orderItems}
+              items={itemsForPanel}
               guestCount={null}
               onGuestCountChange={() => {}}
               onUpdateQuantity={handleUpdateQuantity}
-              onUpdateNotes={handleUpdateNotes}
+              onEditModifiers={handleEditModifiers}
+              onConfirmOrder={handleConfirmOrder}
               onRemoveItem={handleRemoveItem}
               onSendToKitchen={handleSendToKitchen}
               onPayment={handlePayment}
@@ -451,11 +732,18 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
           visible={showModifierPicker}
           menuItem={selectedMenuItem}
           modifierGroups={menuItemModifiers}
+          initialSelectedModifiers={editingOrderItemId || editingCartItemId ? editingItemModifiers : undefined}
+          initialNotes={editingOrderItemId || editingCartItemId ? editingItemNotes : undefined}
+          submitLabel={editingOrderItemId || editingCartItemId ? 'Update Item' : undefined}
           onConfirm={handleModifierConfirm}
           onCancel={() => {
             setShowModifierPicker(false);
             setSelectedMenuItem(null);
             setMenuItemModifiers([]);
+            setEditingOrderItemId(null);
+            setEditingCartItemId(null);
+            setEditingItemNotes('');
+            setEditingItemModifiers([]);
           }}
         />
       )}

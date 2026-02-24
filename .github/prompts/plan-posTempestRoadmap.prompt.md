@@ -335,6 +335,10 @@ const handleMenuItemPress = async (item: MenuItem) => {
   - "Hold" (secondary, outline)
   - "Payment" (secondary, outline)
   - Show "Sent HH:MM" timestamp after order sent (Toast pattern)
+- **Confirmation Gate:**
+  - Opening an order screen does not confirm the order
+  - Order is confirmed only after cashier confirms it (this is when it should be cooked)
+  - Hide "Hold" + "Send to Kitchen" until `ORDER_STATUS.CONFIRMED`
 - Create `components/order/OrderTotals.tsx` — totals breakdown component
 - Create `components/order/OrderActions.tsx` — action buttons component
 
@@ -355,6 +359,8 @@ const handleMenuItemPress = async (item: MenuItem) => {
   - Price: right-aligned in IDR format
   - Swipe left → reveal red "Remove" button
   - Tap row → open QuickEditModal
+  - Dense, receipt-like line items (compact per-item height)
+  - Overall list feels spacious through category grouping
 - Create `components/order/QuickEditModal.tsx`:
   - Full-screen modal (landscape tablet)
   - Qty stepper with + / - buttons
@@ -365,6 +371,9 @@ const handleMenuItemPress = async (item: MenuItem) => {
   - Voided: red "VOID" badge
   - Sent to kitchen: green checkmark icon
   - Modifier changed: yellow dot indicator
+- **Grouping:**
+  - Group order items by top-level categories only (`parent_id IS NULL`)
+  - Render category headers (e.g., "Makanan", "Minuman") with items listed underneath
 
 **Verification:** Swipe reveals delete, tap opens edit modal, qty updates reflect immediately in totals, long-press opens numpad.
 

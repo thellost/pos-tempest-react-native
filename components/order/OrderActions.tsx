@@ -22,6 +22,7 @@ export function OrderActions({
   onPayment,
 }: OrderActionsProps) {
   const isPending = orderStatus === ORDER_STATUS.PENDING;
+  const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
   const canSend = hasItems && isPending;
   const canPayment = hasItems && orderStatus !== ORDER_STATUS.CANCELLED;
 
@@ -45,41 +46,43 @@ export function OrderActions({
 
   return (
     <View className="border-t border-border bg-surface-card p-3">
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={handleHold}
-          disabled={!hasItems}
-          className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
-          style={({ pressed }) => ({
-            backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
-            borderWidth: 1,
-            borderColor: hasItems ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.06)',
-            opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
-            transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
-          })}
-        >
-          <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-warning' : 'text-pos-text-faint'}`}>
-            Hold
-          </Text>
-        </Pressable>
+      {isConfirmed && (
+        <View className="flex-row gap-2">
+          <Pressable
+            onPress={handleHold}
+            disabled={!hasItems}
+            className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
+            style={({ pressed }) => ({
+              backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
+              borderWidth: 1,
+              borderColor: hasItems ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.06)',
+              opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
+              transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
+            })}
+          >
+            <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-warning' : 'text-pos-text-faint'}`}>
+              Hold
+            </Text>
+          </Pressable>
 
-        <Pressable
-          onPress={handleSendToKitchen}
-          disabled={!canSend}
-          className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
-          style={({ pressed }) => ({
-            backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
-            borderWidth: 1,
-            borderColor: canSend ? '#818CF8' : 'rgba(255, 255, 255, 0.06)',
-            opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
-            transform: [{ scale: pressed && canSend ? 0.98 : 1 }],
-          })}
-        >
-          <Text className={`text-pos-sm font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
-            {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            onPress={handleSendToKitchen}
+            disabled={!canSend}
+            className="min-h-pos-touch flex-1 items-center justify-center rounded-sm"
+            style={({ pressed }) => ({
+              backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
+              borderWidth: 1,
+              borderColor: canSend ? '#818CF8' : 'rgba(255, 255, 255, 0.06)',
+              opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
+              transform: [{ scale: pressed && canSend ? 0.98 : 1 }],
+            })}
+          >
+            <Text className={`text-pos-sm font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
+              {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <Pressable
         onPress={handlePayment}

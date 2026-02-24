@@ -106,6 +106,20 @@ export async function createOrder(
 }
 
 /**
+ * Confirms an order (moves from pending to confirmed)
+ */
+export async function confirmOrder(orderId: number): Promise<void> {
+  const now = new Date().toISOString();
+
+  await powersync.execute(
+    `UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`,
+    [ORDER_STATUS.CONFIRMED, now, orderId]
+  );
+
+  console.log('[OrderService] Confirmed order:', orderId);
+}
+
+/**
  * Adds an item to an order
  */
 export async function addItemToOrder(
@@ -293,6 +307,67 @@ export async function updateItemNotes(orderItemId: number, notes: string): Promi
   );
 
   console.log('[OrderService] Updated item notes:', orderItemId);
+}
+
+/**
+ * Updates modifiers for an order item
+ */
+export async function updateItemModifiers(
+  orderItemId: number,
+  modifiers: SelectedModifier[]
+): Promise<void> {
+  const orderItem = await powersync.getOptional<OrderItem>(
+    `SELECT * FROM order_items WHERE id = ?`,
+    [orderItemId]
+  );
+
+  if (!orderItem) {
+    throw new Error('Order item not found');
+  }
+
+  await powersync.execute(
+    `DELETE FROM order_item_modifiers WHERE order_item_id = ?`,
+    [orderItemId]
+  );
+
+  for (const modifier of modifiers) {
+    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
+      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
+    );
+    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+
+    await powersync.execute(
+      `INSERT INTO order_item_modifiers (
+        id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        modId,
+        orderItemId,
+        modifier.modifier_id,
+        modifier.modifier_name,
+        modifier.modifier_group_name,
+        modifier.extra_price,
+      ]
+    );
+  }
+
+  const modifierTotal = modifiers.reduce((sum, mod) => sum + mod.extra_price, 0);
+  const itemPrice = orderItem.unit_price + modifierTotal;
+  const quantity = typeof orderItem.quantity === 'string'
+    ? parseInt(orderItem.quantity as string, 10)
+    : orderItem.quantity;
+  const newSubtotal = itemPrice * quantity;
+
+  await powersync.execute(
+    `UPDATE order_items 
+     SET modifier_total = ?, subtotal = ?, total = ?
+     WHERE id = ?`,
+    [modifierTotal, newSubtotal, newSubtotal, orderItemId]
+  );
+
+  await calculateOrderTotals(orderItem.order_id);
+
+  console.log('[OrderService] Updated item modifiers:', orderItemId);
 }
 
 /**
