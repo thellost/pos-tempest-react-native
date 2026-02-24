@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { Fragment, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
-import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
+import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
@@ -10,10 +11,12 @@ import { OrderTotals } from './OrderTotals';
 
 interface OrderPanelProps {
   order: Order | null;
-  items: (OrderItem & { modifiers: OrderItemModifier[] })[];
-  guestCount: number;
+  items: OrderItemDisplay[];
+  guestCount: number | null;
   onGuestCountChange: (count: number) => void;
   onUpdateQuantity: (itemId: number, newQuantity: number) => void;
+  onEditModifiers: (itemId: number) => void;
+  onConfirmOrder: () => void;
   onRemoveItem: (itemId: number) => void;
   onSendToKitchen: () => void;
   onPayment: () => void;
@@ -26,6 +29,8 @@ export function OrderPanel({
   guestCount,
   onGuestCountChange,
   onUpdateQuantity,
+  onEditModifiers,
+  onConfirmOrder,
   onRemoveItem,
   onSendToKitchen,
   onPayment,
@@ -34,27 +39,53 @@ export function OrderPanel({
   const activeItems = items.filter(i => !i.is_voided);
   const hasItems = activeItems.length > 0;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
+  const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
+  const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
+  const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
+  const showConfirmButton = !isConfirmed && hasItems;
 
   const handleGuestDecrease = useCallback(() => {
-    if (guestCount > 0) {
+    if (guestCount !== null && guestCount > 0) {
       onGuestCountChange(guestCount - 1);
     }
   }, [guestCount, onGuestCountChange]);
 
   const handleGuestIncrease = useCallback(() => {
-    onGuestCountChange(guestCount + 1);
+    if (guestCount !== null) {
+      onGuestCountChange(guestCount + 1);
+    }
   }, [guestCount, onGuestCountChange]);
 
   const renderedItems = useMemo(() => {
-    return items.map((item) => (
-      <OrderItemRow
-        key={`order-item-${item.id}`}
-        item={item}
-        onUpdateQuantity={onUpdateQuantity}
-        onRemove={onRemoveItem}
-      />
+    const grouped = items.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
+      const groupName = item.category_group?.trim() || 'Lainnya';
+      if (!accumulator[groupName]) {
+        accumulator[groupName] = [];
+      }
+      accumulator[groupName].push(item);
+      return accumulator;
+    }, {});
+
+    return Object.entries(grouped).map(([groupName, groupItems]) => (
+      <Fragment key={`group-${groupName}`}>
+        <View className="mb-1 mt-1 rounded-sm bg-surface-raised px-2 py-1">
+          <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-text-muted">
+            {groupName}
+          </Text>
+        </View>
+
+        {groupItems.map((item) => (
+          <OrderItemRow
+            key={`order-item-${item.id}`}
+            item={item}
+            onUpdateQuantity={onUpdateQuantity}
+            onEditModifiers={onEditModifiers}
+            onRemove={onRemoveItem}
+          />
+        ))}
+      </Fragment>
     ));
-  }, [items, onUpdateQuantity, onRemoveItem]);
+  }, [items, onEditModifiers, onUpdateQuantity, onRemoveItem]);
 
   const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
 
@@ -67,56 +98,54 @@ export function OrderPanel({
               {order?.order_number ?? 'New Order'}
             </Text>
           </View>
-          <View className="flex-row items-center gap-1.5">
+          <View className="flex-row items-center gap-2">
             <Pressable
-              className="px-3 py-1.5"
-              style={({ pressed }) => ({
-                backgroundColor: order?.order_type === ORDER_TYPE.DINE_IN ? '#6366F1' : 'transparent',
-                borderRadius: 6,
-                borderWidth: order?.order_type === ORDER_TYPE.DINE_IN ? 0 : 1,
-                borderColor: 'rgba(255,255,255,0.12)',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              className={`px-3 py-1.5 rounded-sm ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
-              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.DINE_IN ? 'text-white' : 'text-pos-text-muted'}`}>Dine-in</Text>
+              <Text className={`text-pos-xs font-semibold ${isDineIn ? 'text-white' : 'text-pos-text-muted'}`}>
+                Dine-in
+              </Text>
             </Pressable>
             <Pressable
-              className="px-3 py-1.5"
-              style={({ pressed }) => ({
-                backgroundColor: order?.order_type === ORDER_TYPE.TAKEAWAY ? '#6366F1' : 'transparent',
-                borderRadius: 6,
-                borderWidth: order?.order_type === ORDER_TYPE.TAKEAWAY ? 0 : 1,
-                borderColor: 'rgba(255,255,255,0.12)',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              className={`px-3 py-1.5 rounded-sm ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
             >
-              <Text className={`text-pos-xs font-semibold ${order?.order_type === ORDER_TYPE.TAKEAWAY ? 'text-white' : 'text-pos-text-muted'}`}>Takeaway</Text>
+              <Text className={`text-pos-xs font-semibold ${isTakeaway ? 'text-white' : 'text-pos-text-muted'}`}>
+                Takeaway
+              </Text>
             </Pressable>
+            {!isConfirmed && showConfirmButton && (
+              <Pressable
+                onPress={onConfirmOrder}
+                className="rounded-sm bg-amber-500 px-3 py-1.5 active:opacity-80"
+              >
+                <Text className="text-pos-xs font-semibold text-white">Confirm</Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
-        <View className="mt-3 flex-row items-center justify-between">
-          <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
-          <View className="flex-row items-center gap-2">
-            <Pressable
-              onPress={handleGuestDecrease}
-              className="h-7 w-7 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
-            >
-              <Text className="text-pos-sm text-pos-text">−</Text>
-            </Pressable>
-            <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
-              {guestCount}
-            </Text>
-            <Pressable
-              onPress={handleGuestIncrease}
-              className="h-7 w-7 items-center justify-center bg-surface-raised"
-              style={({ pressed }) => ({ borderRadius: 4, opacity: pressed ? 0.6 : 1 })}
-            >
-              <Text className="text-pos-sm text-pos-text">+</Text>
-            </Pressable>
+        {guestCount !== null && (
+          <View className="mt-3 flex-row items-center justify-between">
+            <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={handleGuestDecrease}
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+              >
+                <Text className="text-pos-sm text-pos-text">−</Text>
+              </Pressable>
+              <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
+                {guestCount}
+              </Text>
+              <Pressable
+                onPress={handleGuestIncrease}
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+              >
+                <Text className="text-pos-sm text-pos-text">+</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       <ScrollView
@@ -143,10 +172,10 @@ export function OrderPanel({
         {order ? (
           <OrderTotals order={order} />
         ) : (
-          <View className="border-t border-border py-3">
+          <View className="border-t border-border py-2">
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm font-semibold text-pos-text-muted">Total</Text>
-              <Text className="text-pos-xl font-bold text-accent">
+              <Text className="text-pos-xs font-semibold text-pos-text-muted">Total</Text>
+              <Text className="text-pos-lg font-bold text-accent">
                 {formatIDR(emptySubtotal)}
               </Text>
             </View>

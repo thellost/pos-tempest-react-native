@@ -27,7 +27,7 @@ export interface SelectedModifier {
  */
 export async function createOrder(
   branchId: number,
-  tableId: number,
+  tableId: number | null,
   cashierId: number,
   shiftId: number | null,
   orderType: string,
@@ -35,22 +35,22 @@ export async function createOrder(
 ): Promise<Order> {
   const now = new Date().toISOString();
 
-  // Check if table already has an active order
-  const existingOrder = await powersync.getOptional<Order>(
-    `SELECT * FROM orders 
-     WHERE table_id = ? AND status NOT IN (?, ?, ?)
-     ORDER BY created_at DESC LIMIT 1`,
-    [tableId, ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.SERVED]
-  );
+  if (tableId) {
+    const existingOrder = await powersync.getOptional<Order>(
+      `SELECT * FROM orders 
+       WHERE table_id = ? AND status NOT IN (?, ?, ?)
+       ORDER BY created_at DESC LIMIT 1`,
+      [tableId, ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.SERVED]
+    );
 
-  if (existingOrder) {
-    console.log('[OrderService] Found existing active order:', existingOrder.order_number);
-    return existingOrder;
+    if (existingOrder) {
+      console.log('[OrderService] Found existing active order:', existingOrder.order_number);
+      return existingOrder;
+    }
   }
 
   const orderNumber = await generateOrderNumber();
 
-  // Get the next order ID
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM orders`
   );
@@ -68,28 +68,29 @@ export async function createOrder(
       branchId,
       tableId,
       cashierId,
-      null, // customer_id
+      null,
       shiftId,
       orderType,
       ORDER_STATUS.PENDING,
       guestCount,
-      0, // subtotal
-      0, // discount_amount
-      0, // tax_amount
-      0, // service_charge
-      0, // rounding_amount
-      0, // total
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       PAYMENT_STATUS.UNPAID,
       now,
       now,
     ]
   );
 
-  // Update table status to occupied
-  await powersync.execute(
-    `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
-    [TABLE_STATUS.OCCUPIED, now, tableId]
-  );
+  if (tableId) {
+    await powersync.execute(
+      `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
+      [TABLE_STATUS.OCCUPIED, now, tableId]
+    );
+  }
 
   const order = await powersync.getOptional<Order>(
     `SELECT * FROM orders WHERE id = ?`,
@@ -102,6 +103,20 @@ export async function createOrder(
 
   console.log('[OrderService] Created order:', orderNumber);
   return order;
+}
+
+/**
+ * Confirms an order (moves from pending to confirmed)
+ */
+export async function confirmOrder(orderId: number): Promise<void> {
+  const now = new Date().toISOString();
+
+  await powersync.execute(
+    `UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`,
+    [ORDER_STATUS.CONFIRMED, now, orderId]
+  );
+
+  console.log('[OrderService] Confirmed order:', orderId);
 }
 
 /**
@@ -130,6 +145,39 @@ export async function addItemToOrder(
 
   // Calculate item subtotal
   const subtotal = (unitPrice + modifierTotal) * quantity;
+
+  const normalizedNotes = notes?.trim() ?? '';
+
+  // Fast path: merge repeated plain taps into existing row instead of creating duplicates.
+  // We only merge when there are no modifiers and no notes to avoid losing customization intent.
+  if (modifiers.length === 0 && normalizedNotes.length === 0) {
+    const existingItem = await powersync.getOptional<OrderItem>(
+      `SELECT * FROM order_items
+       WHERE order_id = ?
+         AND menu_item_id = ?
+         AND is_voided = 0
+         AND COALESCE(notes, '') = ''
+         AND modifier_total = 0
+         AND unit_price = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [orderId, menuItem.id, unitPrice]
+    );
+
+    if (existingItem) {
+      const existingQty = typeof existingItem.quantity === 'string'
+        ? parseInt(existingItem.quantity as unknown as string, 10)
+        : existingItem.quantity;
+
+      await updateItemQuantity(
+        typeof existingItem.id === 'string' ? parseInt(existingItem.id as unknown as string, 10) : existingItem.id,
+        existingQty + quantity
+      );
+
+      console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
+      return;
+    }
+  }
 
   // Get the next order item ID
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
@@ -250,6 +298,40 @@ export async function updateItemQuantity(orderItemId: number, newQuantity: numbe
 }
 
 /**
+ * Updates the base unit price of an order item (used for weight-based pricing updates)
+ */
+export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: number): Promise<void> {
+  if (newUnitPrice < 0) {
+    throw new Error('Unit price cannot be negative');
+  }
+
+  const orderItem = await powersync.getOptional<OrderItem>(
+    `SELECT * FROM order_items WHERE id = ?`,
+    [orderItemId]
+  );
+
+  if (!orderItem) {
+    throw new Error('Order item not found');
+  }
+
+  const quantity = typeof orderItem.quantity === 'string'
+    ? parseInt(orderItem.quantity as string, 10)
+    : orderItem.quantity;
+  const newSubtotal = (newUnitPrice + orderItem.modifier_total) * quantity;
+
+  await powersync.execute(
+    `UPDATE order_items
+     SET unit_price = ?, subtotal = ?, total = ?
+     WHERE id = ?`,
+    [newUnitPrice, newSubtotal, newSubtotal, orderItemId]
+  );
+
+  await calculateOrderTotals(orderItem.order_id);
+
+  console.log('[OrderService] Updated item unit price:', orderItemId, '->', newUnitPrice);
+}
+
+/**
  * Updates the notes for an order item
  */
 export async function updateItemNotes(orderItemId: number, notes: string): Promise<void> {
@@ -259,6 +341,67 @@ export async function updateItemNotes(orderItemId: number, notes: string): Promi
   );
 
   console.log('[OrderService] Updated item notes:', orderItemId);
+}
+
+/**
+ * Updates modifiers for an order item
+ */
+export async function updateItemModifiers(
+  orderItemId: number,
+  modifiers: SelectedModifier[]
+): Promise<void> {
+  const orderItem = await powersync.getOptional<OrderItem>(
+    `SELECT * FROM order_items WHERE id = ?`,
+    [orderItemId]
+  );
+
+  if (!orderItem) {
+    throw new Error('Order item not found');
+  }
+
+  await powersync.execute(
+    `DELETE FROM order_item_modifiers WHERE order_item_id = ?`,
+    [orderItemId]
+  );
+
+  for (const modifier of modifiers) {
+    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
+      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
+    );
+    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+
+    await powersync.execute(
+      `INSERT INTO order_item_modifiers (
+        id, order_item_id, modifier_id, modifier_name, modifier_group_name, extra_price
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        modId,
+        orderItemId,
+        modifier.modifier_id,
+        modifier.modifier_name,
+        modifier.modifier_group_name,
+        modifier.extra_price,
+      ]
+    );
+  }
+
+  const modifierTotal = modifiers.reduce((sum, mod) => sum + mod.extra_price, 0);
+  const itemPrice = orderItem.unit_price + modifierTotal;
+  const quantity = typeof orderItem.quantity === 'string'
+    ? parseInt(orderItem.quantity as string, 10)
+    : orderItem.quantity;
+  const newSubtotal = itemPrice * quantity;
+
+  await powersync.execute(
+    `UPDATE order_items 
+     SET modifier_total = ?, subtotal = ?, total = ?
+     WHERE id = ?`,
+    [modifierTotal, newSubtotal, newSubtotal, orderItemId]
+  );
+
+  await calculateOrderTotals(orderItem.order_id);
+
+  console.log('[OrderService] Updated item modifiers:', orderItemId);
 }
 
 /**

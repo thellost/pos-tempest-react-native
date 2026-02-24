@@ -1,14 +1,9 @@
-import React, { useState } from 'react';
-import {
-    Modal,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
+import { ModifierGroupRow } from '@/components/menu/ModifierGroupRow';
+import { WeightInput } from '@/components/menu/WeightInput';
 import type { ModifierGroupWithModifiers, MenuItemWithInventory } from '@/hooks/use-menu';
 import type { SelectedModifier } from '@/services/order.service';
 import { formatIDR } from '@/utils/currency';
@@ -19,6 +14,10 @@ interface ModifierPickerProps {
   modifierGroups: ModifierGroupWithModifiers[];
   onConfirm: (modifiers: SelectedModifier[], weight: number | null, notes: string) => void;
   onCancel: () => void;
+  initialSelectedModifiers?: SelectedModifier[];
+  initialNotes?: string;
+  initialWeight?: string;
+  submitLabel?: string;
 }
 
 export function ModifierPicker({
@@ -27,12 +26,42 @@ export function ModifierPicker({
   modifierGroups,
   onConfirm,
   onCancel,
+  initialSelectedModifiers,
+  initialNotes,
+  initialWeight,
+  submitLabel,
 }: ModifierPickerProps) {
   const [selectedModifiers, setSelectedModifiers] = useState<Map<number, SelectedModifier>>(new Map());
   const [weight, setWeight] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   const isWeightBased = menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED;
+
+  const sortedGroups = useMemo(() => {
+    return [...modifierGroups].sort((left, right) => {
+      if (left.is_required === right.is_required) return 0;
+      return left.is_required ? -1 : 1;
+    });
+  }, [modifierGroups]);
+
+  const selectedMapFromInitial = useMemo(() => {
+    if (!initialSelectedModifiers) return new Map<number, SelectedModifier>();
+    return new Map(initialSelectedModifiers.map((modifier: SelectedModifier) => [modifier.modifier_id, modifier]));
+  }, [initialSelectedModifiers]);
+
+  const normalizedInitialWeight = useMemo(() => {
+    if (!initialWeight) return '';
+    return initialWeight;
+  }, [initialWeight]);
+
+  const normalizedInitialNotes = useMemo(() => initialNotes ?? '', [initialNotes]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setSelectedModifiers(selectedMapFromInitial);
+    setWeight(normalizedInitialWeight);
+    setNotes(normalizedInitialNotes);
+  }, [visible, normalizedInitialNotes, normalizedInitialWeight, selectedMapFromInitial]);
 
   const toggleModifier = (groupId: number, group: ModifierGroupWithModifiers, modifierId: number) => {
     const newSelected = new Map(selectedModifiers);
@@ -73,8 +102,18 @@ export function ModifierPicker({
     setSelectedModifiers(newSelected);
   };
 
+  const isSelectionValid = useMemo(() => {
+    return sortedGroups.every((group) => {
+      if (!group.is_required) return true;
+      const groupModifiers = Array.from(selectedModifiers.values()).filter(
+        m => m.modifier_group_name === group.name
+      );
+      return groupModifiers.length >= group.min_selections;
+    });
+  }, [selectedModifiers, sortedGroups]);
+
   const handleConfirm = () => {
-    for (const group of modifierGroups) {
+    for (const group of sortedGroups) {
       const groupModifiers = Array.from(selectedModifiers.values()).filter(
         m => m.modifier_group_name === group.name
       );
@@ -113,16 +152,18 @@ export function ModifierPicker({
     return basePrice + modifierTotal;
   };
 
+  const canSubmit = isSelectionValid && (!isWeightBased || (weight && parseFloat(weight) > 0));
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={onCancel}
     >
-      <View className="flex-1 justify-end bg-black/60">
-        <View className="max-h-[85%] rounded-t-3xl bg-surface-soft p-6">
-          <View className="mb-5 flex-row items-center justify-between">
+      <View className="flex-1 bg-surface">
+        <View className="border-b border-border bg-surface-card px-6 py-4">
+          <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-pos-2xl font-bold text-pos-text">
                 {menuItem.name}
@@ -132,118 +173,80 @@ export function ModifierPicker({
                 {isWeightBased && ` per ${menuItem.unit_of_measure}`}
               </Text>
             </View>
-            <Pressable 
+            <Pressable
               onPress={onCancel}
-              className="h-10 w-10 items-center justify-center rounded-full bg-surface-card"
+              className="h-10 w-10 items-center justify-center rounded-full bg-surface-raised"
             >
               <Text className="text-pos-lg text-pos-text-muted">✕</Text>
             </Pressable>
           </View>
+        </View>
 
-          <ScrollView className="mb-4 flex-1" showsVerticalScrollIndicator={false}>
-            {isWeightBased && (
-              <View className="mb-5">
-                <Text className="mb-2 text-pos-base font-semibold text-pos-text">
-                  Weight ({menuItem.unit_of_measure})
-                </Text>
-                <TextInput
-                  className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
-                  placeholder={`Enter weight in ${menuItem.unit_of_measure}`}
-                  placeholderTextColor="#64748B"
-                  keyboardType="numeric"
-                  value={weight}
-                  onChangeText={setWeight}
-                />
-              </View>
-            )}
-
-            {modifierGroups.map((group) => {
-              const groupId = typeof group.id === 'string' ? parseInt(group.id, 10) : group.id;
-
-              return (
-                <View key={group.id} className="mb-5">
-                  <View className="mb-3 flex-row items-center justify-between">
-                    <Text className="text-pos-base font-semibold text-pos-text">
-                      {group.name}
-                      {group.is_required && <Text className="text-pos-danger"> *</Text>}
-                    </Text>
-                    <Text className="text-pos-xs text-pos-text-faint">
-                      {group.min_selections === group.max_selections
-                        ? `Select ${group.min_selections}`
-                        : `${group.min_selections}-${group.max_selections}`}
-                    </Text>
-                  </View>
-
-                  {group.modifiers.map((modifier) => {
-                    const modifierId = typeof modifier.id === 'string' ? parseInt(modifier.id, 10) : modifier.id;
-                    const isSelected = selectedModifiers.has(modifierId);
-
-                    return (
-                      <Pressable
-                        key={modifier.id}
-                        onPress={() => toggleModifier(groupId, group, modifierId)}
-                        className="mb-2 flex-row items-center justify-between rounded-xl p-4"
-                        style={{
-                          backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : '#1A1F2C',
-                          borderWidth: 1,
-                          borderColor: isSelected ? '#6366F1' : 'rgba(255, 255, 255, 0.06)',
-                        }}
-                      >
-                        <View className="flex-row items-center">
-                          <View
-                            className={`mr-3 h-5 w-5 items-center justify-center rounded-full ${
-                              isSelected ? 'bg-accent' : 'bg-surface-raised'
-                            }`}
-                          >
-                            {isSelected && (
-                              <Text className="text-pos-xs text-white">✓</Text>
-                            )}
-                          </View>
-                          <Text className="text-pos-base text-pos-text">
-                            {modifier.name}
-                          </Text>
-                        </View>
-                        {modifier.extra_price > 0 && (
-                          <Text className="text-pos-sm font-semibold text-accent">
-                            +{formatIDR(modifier.extra_price)}
-                          </Text>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              );
-            })}
-
-            <View className="mb-4">
-              <Text className="mb-2 text-pos-base font-semibold text-pos-text">
-                Special Instructions
+        <ScrollView className="flex-1 px-6 py-4" showsVerticalScrollIndicator={false}>
+          {isWeightBased && (
+            <View className="mb-6">
+              <Text className="mb-3 text-pos-base font-semibold text-pos-text">
+                Weight ({menuItem.unit_of_measure})
               </Text>
-              <TextInput
-                className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
-                placeholder="e.g., Extra spicy, No ice"
-                placeholderTextColor="#64748B"
-                multiline
-                numberOfLines={3}
-                value={notes}
-                onChangeText={setNotes}
+              <WeightInput
+                value={weight}
+                unitLabel={menuItem.unit_of_measure}
+                onChange={setWeight}
               />
             </View>
-          </ScrollView>
+          )}
 
-          <View className="flex-row items-center justify-between border-t border-border pt-5">
+          {sortedGroups.map((group) => {
+            const groupId = typeof group.id === 'string' ? parseInt(group.id, 10) : group.id;
+            const selectedIds = new Set(
+              Array.from(selectedModifiers.entries())
+                .filter(([, mod]) => mod.modifier_group_name === group.name)
+                .map(([id]) => id)
+            );
+
+            return (
+              <ModifierGroupRow
+                key={group.id}
+                group={group}
+                selectedModifierIds={selectedIds}
+                onToggle={(modifierId) => toggleModifier(groupId, group, modifierId)}
+              />
+            );
+          })}
+
+          <View className="mb-6">
+            <Text className="mb-2 text-pos-base font-semibold text-pos-text">
+              Special Instructions
+            </Text>
+            <TextInput
+              className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
+              placeholder="e.g., Extra spicy, No ice"
+              placeholderTextColor="#64748B"
+              multiline
+              numberOfLines={3}
+              value={notes}
+              onChangeText={setNotes}
+            />
+          </View>
+        </ScrollView>
+
+        <View className="border-t border-border bg-surface-card px-6 py-4">
+          <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-pos-xs text-pos-text-muted">Total</Text>
-              <Text className="text-pos-2xl font-bold text-accent">
+              <Text className="text-pos-2xl font-bold text-amber-400">
                 {formatIDR(calculateTotal())}
               </Text>
             </View>
             <Pressable
               onPress={handleConfirm}
-              className="rounded-xl bg-accent px-8 py-4"
+              disabled={!canSubmit}
+              className={`rounded-xl px-8 py-4 ${
+                canSubmit ? 'bg-amber-500' : 'bg-surface-raised'
+              }`}
             >
-              <Text className="text-pos-base font-semibold text-white">
-                Add to Order
+              <Text className={`text-pos-base font-semibold ${canSubmit ? 'text-white' : 'text-pos-text-muted'}`}>
+                {submitLabel ?? 'Add to Order'}
               </Text>
             </Pressable>
           </View>

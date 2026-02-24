@@ -22,6 +22,7 @@ export function OrderActions({
   onPayment,
 }: OrderActionsProps) {
   const isPending = orderStatus === ORDER_STATUS.PENDING;
+  const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
   const canSend = hasItems && isPending;
   const canPayment = hasItems && orderStatus !== ORDER_STATUS.CANCELLED;
 
@@ -44,50 +45,58 @@ export function OrderActions({
   }, [canPayment, onPayment]);
 
   return (
-    <View className="border-t border-border bg-surface-card p-3">
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={handleHold}
-          disabled={!hasItems}
-          className="flex-1 items-center justify-center py-2.5"
-          style={({ pressed }) => ({
-            borderRadius: 8,
-            backgroundColor: hasItems ? '#222838' : '#1A1F2C',
-            opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
-          })}
-        >
-          <Text className={`text-pos-sm font-semibold ${hasItems ? 'text-pos-text' : 'text-pos-text-faint'}`}>
-            Hold
-          </Text>
-        </Pressable>
+    <View className="border-t border-border bg-surface-card p-2">
+      {isConfirmed && (
+        <View className="flex-row gap-1.5">
+          <Pressable
+            onPress={handleHold}
+            disabled={!hasItems}
+            className="h-10 flex-1 items-center justify-center rounded-sm"
+            style={({ pressed }) => ({
+              backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
+              borderWidth: 1,
+              borderColor: hasItems ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.06)',
+              opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
+              transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
+            })}
+          >
+            <Text className={`text-pos-xs font-semibold ${hasItems ? 'text-pos-warning' : 'text-pos-text-faint'}`}>
+              Hold
+            </Text>
+          </Pressable>
 
-        <Pressable
-          onPress={handleSendToKitchen}
-          disabled={!canSend}
-          className="flex-1 items-center justify-center py-2.5"
-          style={({ pressed }) => ({
-            borderRadius: 8,
-            backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
-            opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
-          })}
-        >
-          <Text className={`text-pos-sm font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
-            {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            onPress={handleSendToKitchen}
+            disabled={!canSend}
+            className="h-10 flex-1 items-center justify-center rounded-sm"
+            style={({ pressed }) => ({
+              backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
+              borderWidth: 1,
+              borderColor: canSend ? '#818CF8' : 'rgba(255, 255, 255, 0.06)',
+              opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
+              transform: [{ scale: pressed && canSend ? 0.98 : 1 }],
+            })}
+          >
+            <Text className={`text-pos-xs font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
+              {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className="mt-2 items-center justify-center py-3"
+        className="mt-1.5 h-10 items-center justify-center rounded-sm"
         style={({ pressed }) => ({
-          borderRadius: 8,
           backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
+          borderWidth: 1,
+          borderColor: canPayment ? '#34D399' : 'rgba(255, 255, 255, 0.06)',
           opacity: !canPayment ? 0.4 : pressed ? 0.7 : 1,
+          transform: [{ scale: pressed && canPayment ? 0.98 : 1 }],
         })}
       >
-        <Text className={`text-pos-base font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
+        <Text className={`text-pos-sm font-bold ${canPayment ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
           Payment
         </Text>
       </Pressable>

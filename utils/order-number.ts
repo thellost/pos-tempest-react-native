@@ -1,21 +1,37 @@
 /**
- * Order number generator (ORD-YYYYMMDD-XXX).
+ * Order number generator (ORD-YYMMDD-{deviceId6}-{seq}).
+ * Device-scoped to prevent collisions when multiple POS terminals sync.
  */
 
+import { getOrCreateDeviceId } from '@/lib/device';
 import { powersync } from '@/db/provider';
 
 /**
- * Generate a new order number with auto-incrementing sequence.
- * @example generateOrderNumber() // "ORD-20260216-001"
+ * Gets a 6-character short device ID from the full UUID.
+ * Removes dashes and takes first 6 chars for readability.
+ */
+async function getShortDeviceId(): Promise<string> {
+  try {
+    const deviceId = await getOrCreateDeviceId();
+    return deviceId.replace(/-/g, '').slice(0, 6).toUpperCase();
+  } catch {
+    return 'LOCAL';
+  }
+}
+
+/**
+ * Generate a new order number with device-scoped auto-incrementing sequence.
+ * Format: ORD-YYMMDD-{deviceId6}-{seq}
+ * @example generateOrderNumber() // "ORD-260223-A1B2C3-001"
  */
 export async function generateOrderNumber(): Promise<string> {
   const today = new Date();
-  const year = today.getFullYear();
+  const year = String(today.getFullYear()).slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
-  const datePrefix = `ORD-${year}${month}${day}`;
+  const deviceShortId = await getShortDeviceId();
+  const datePrefix = `ORD-${year}${month}${day}-${deviceShortId}`;
   
-  // Get the count of orders created today
   const result = await powersync.getOptional<{ count: number }>(
     `SELECT COUNT(*) as count FROM orders WHERE order_number LIKE ?`,
     [`${datePrefix}%`]
@@ -28,17 +44,18 @@ export async function generateOrderNumber(): Promise<string> {
 }
 
 /**
- * Generate a kitchen ticket number with auto-incrementing sequence.
- * @example generateTicketNumber() // "KOT-20260216-001"
+ * Generate a kitchen ticket number with device-scoped auto-incrementing sequence.
+ * Format: KOT-YYMMDD-{deviceId6}-{seq}
+ * @example generateTicketNumber() // "KOT-260223-A1B2C3-001"
  */
 export async function generateTicketNumber(): Promise<string> {
   const today = new Date();
-  const year = today.getFullYear();
+  const year = String(today.getFullYear()).slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
-  const datePrefix = `KOT-${year}${month}${day}`;
+  const deviceShortId = await getShortDeviceId();
+  const datePrefix = `KOT-${year}${month}${day}-${deviceShortId}`;
   
-  // Get the count of tickets created today
   const result = await powersync.getOptional<{ count: number }>(
     `SELECT COUNT(*) as count FROM kitchen_order_tickets WHERE ticket_number LIKE ?`,
     [`${datePrefix}%`]
