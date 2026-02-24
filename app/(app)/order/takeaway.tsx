@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, InteractionManager, Text, View } from 'react-
 
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
+import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
 import type { CartItem, OrderItemDisplay } from '@/components/order/types';
@@ -62,6 +63,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const [showModifierPicker, setShowModifierPicker] = useState(false);
@@ -514,7 +516,13 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const menuItemsList = useMemo(() => {
     const start = nowMs();
     let result: MenuItemWithInventory[];
-    if (!selectedSubCategoryId) {
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = menuItems.filter((item: MenuItemWithInventory) => 
+        item.name.toLowerCase().includes(query)
+      );
+    } else if (!selectedSubCategoryId) {
       result = allMenuItems;
     } else {
       result = allMenuItems.filter((item: MenuItemWithInventory) => {
@@ -526,7 +534,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     }
     logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
     return result;
-  }, [allMenuItems, selectedSubCategoryId]);
+  }, [searchQuery, menuItems, allMenuItems, selectedSubCategoryId]);
 
   const menuCategoryByItemId = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
@@ -698,8 +706,8 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
 
         <View className="w-[70%] flex-1">
           <View className="border-b border-border bg-surface-card px-5 py-4">
-            <View className="flex-row items-center justify-between">
-              <View>
+            <View className="flex-row items-center">
+              <View className="flex-1">
                 <Text className="text-pos-2xl font-bold text-pos-text">
                   🛍 Takeaway
                 </Text>
@@ -709,6 +717,16 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
                   </Text>
                 )}
               </View>
+
+              <View className="w-[52%]">
+                <MenuSearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="mx-0 my-0"
+                />
+              </View>
+
+              <View className="flex-1" />
             </View>
           </View>
 

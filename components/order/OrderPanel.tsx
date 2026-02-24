@@ -172,10 +172,10 @@ export function OrderPanel({
         {order ? (
           <OrderTotals order={order} />
         ) : (
-          <View className="border-t border-border py-3">
+          <View className="border-t border-border py-2">
             <View className="flex-row justify-between">
-              <Text className="text-pos-sm font-semibold text-pos-text-muted">Total</Text>
-              <Text className="text-pos-xl font-bold text-accent">
+              <Text className="text-pos-xs font-semibold text-pos-text-muted">Total</Text>
+              <Text className="text-pos-lg font-bold text-accent">
                 {formatIDR(emptySubtotal)}
               </Text>
             </View>
