@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { Fragment, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
@@ -57,14 +57,33 @@ export function OrderPanel({
   }, [guestCount, onGuestCountChange]);
 
   const renderedItems = useMemo(() => {
-    return items.map((item) => (
-      <OrderItemRow
-        key={`order-item-${item.id}`}
-        item={item}
-        onUpdateQuantity={onUpdateQuantity}
-        onEditModifiers={onEditModifiers}
-        onRemove={onRemoveItem}
-      />
+    const grouped = items.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
+      const groupName = item.category_group?.trim() || 'Lainnya';
+      if (!accumulator[groupName]) {
+        accumulator[groupName] = [];
+      }
+      accumulator[groupName].push(item);
+      return accumulator;
+    }, {});
+
+    return Object.entries(grouped).map(([groupName, groupItems]) => (
+      <Fragment key={`group-${groupName}`}>
+        <View className="mb-1 mt-1 rounded-sm bg-surface-raised px-2 py-1">
+          <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-text-muted">
+            {groupName}
+          </Text>
+        </View>
+
+        {groupItems.map((item) => (
+          <OrderItemRow
+            key={`order-item-${item.id}`}
+            item={item}
+            onUpdateQuantity={onUpdateQuantity}
+            onEditModifiers={onEditModifiers}
+            onRemove={onRemoveItem}
+          />
+        ))}
+      </Fragment>
     ));
   }, [items, onEditModifiers, onUpdateQuantity, onRemoveItem]);
 

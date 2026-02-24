@@ -73,21 +73,12 @@ export function OrderItemRow({
       >
         <Pressable
           onPress={() => onEditModifiers(itemId)}
-          className="mb-2 overflow-hidden rounded-sm bg-surface-card p-3 active:opacity-90"
+          className="mb-1.5 overflow-hidden rounded-sm bg-surface-card px-2.5 py-2 active:opacity-90"
         >
-          <View className="flex-row items-start justify-between">
-            <View className="mr-3 items-center">
-              <Pressable
-                onPress={() => onUpdateQuantity(itemId, displayQuantity + 1)}
-                className="h-8 w-8 items-center justify-center rounded-full bg-surface-raised"
-              >
-                <Text className="text-pos-sm font-bold text-pos-text">{displayQuantity}</Text>
-              </Pressable>
-            </View>
-
-            <View className="flex-1 pr-2">
-              <View className="flex-row items-center">
-                <Text className="text-pos-sm font-semibold text-pos-text" numberOfLines={2}>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-1">
+              <View className="flex-row items-center gap-1">
+                <Text className="flex-1 text-pos-sm font-semibold text-pos-text" numberOfLines={1}>
                   {item.menu_item_name}
                 </Text>
                 {item.is_voided ? <OrderItemBadge variant="void" /> : null}
@@ -95,60 +86,58 @@ export function OrderItemRow({
                   <OrderItemBadge variant="modifiers" count={item.modifiers.length} />
                 ) : null}
               </View>
+
+              {(item.modifiers.length > 0 || Boolean(item.notes)) && (
+                <Text className="mt-0.5 text-[10px] text-pos-text-faint" numberOfLines={1}>
+                  {item.modifiers.length > 0
+                    ? item.modifiers.map((modifier) => modifier.modifier_name).join(', ')
+                    : item.notes}
+                </Text>
+              )}
             </View>
 
             {!item.is_voided ? (
-              <View className="ml-2 flex-row items-center gap-2">
+              <View className="ml-2 flex-row items-center gap-1.5">
                 <Pressable
                   onPress={() => onEditModifiers(itemId)}
-                  className="h-8 w-8 items-center justify-center rounded-full bg-amber-500/15"
+                  className="h-6 w-6 items-center justify-center rounded-full bg-amber-500/15"
                 >
-                  <MaterialIcons name="edit" size={16} color="#F59E0B" />
+                  <MaterialIcons name="edit" size={14} color="#F59E0B" />
                 </Pressable>
+
+                <Text className="text-pos-sm font-bold text-accent">
+                  {formatIDR(item.total)}
+                </Text>
                 <Pressable
                   onPress={() => {
                     closeSwipeable();
                     onRemove(itemId);
                   }}
-                  className="h-8 w-8 items-center justify-center rounded-full bg-pos-danger-muted"
+                  className="h-6 w-6 items-center justify-center rounded-full bg-pos-danger-muted"
                 >
-                  <MaterialIcons name="delete" size={18} color="#ef4444" />
+                  <MaterialIcons name="delete" size={14} color="#ef4444" />
                 </Pressable>
               </View>
             ) : null}
           </View>
 
-          {item.modifiers.length > 0 ? (
-            <View className="mt-2 rounded bg-surface-raised p-1.5">
-              {item.modifiers.map((modifier, index) => (
-                <Text key={index} className="text-[10px] text-pos-text-muted">
-                  + {modifier.modifier_name}
-                  {modifier.extra_price > 0 && ` (+${formatIDR(modifier.extra_price)})`}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
-          {Boolean(item.notes) ? (
-            <Text className="mt-2 text-[10px] italic text-accent" numberOfLines={1}>
-              📝 {item.notes}
-            </Text>
-          ) : null}
-
-          <View className="mt-2 flex-row items-center justify-between">
+          <View className="mt-1.5 flex-row items-center justify-between">
             {!item.is_voided ? (
               <View className="flex-row items-center gap-1.5">
                 <Pressable
                   onPress={() => onUpdateQuantity(itemId, displayQuantity - 1)}
-                  className="h-6 w-6 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                  className="h-5 w-5 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
                 >
-                  <Text className="text-pos-sm text-pos-text">−</Text>
+                  <Text className="text-[11px] text-pos-text">−</Text>
                 </Pressable>
+                <Text className="min-w-[14px] text-center text-[11px] font-semibold text-pos-text">
+                  {displayQuantity}
+                </Text>
                 <Pressable
                   onPress={() => onUpdateQuantity(itemId, displayQuantity + 1)}
-                  className="h-6 w-6 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                  className="h-5 w-5 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
                 >
-                  <Text className="text-pos-sm text-pos-text">+</Text>
+                  <Text className="text-[11px] text-pos-text">+</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -156,9 +145,6 @@ export function OrderItemRow({
             <View className="flex-1 items-end">
               <Text className="text-[10px] text-pos-text-faint">
                 {formatIDR(item.unit_price + item.modifier_total)} × {displayQuantity}
-              </Text>
-              <Text className="text-pos-sm font-bold text-accent">
-                {formatIDR(item.total)}
               </Text>
             </View>
           </View>
