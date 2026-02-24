@@ -120,6 +120,7 @@ export const appSchema = new Schema({
 		sort_order: column.integer,
 		created_at: column.text,
 		updated_at: column.text,
+		branch_id: column.text,
 	}),
 	modifier_groups: new Table({
 		name: column.text,

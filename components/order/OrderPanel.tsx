@@ -1,9 +1,9 @@
 import { Fragment, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { Order } from '@/db/models';
-import type { OrderItemDisplay } from '@/components/order/types';
 import { formatIDR } from '@/utils/currency';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';

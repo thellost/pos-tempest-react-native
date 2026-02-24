@@ -6,23 +6,25 @@ import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
-import { ORDER_TYPE } from '@/constants/enums';
-import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
-import type { OrderItemDisplay, CartItem } from '@/components/order/types';
-import { cartItemToDisplay, generateLocalId,
+import type { CartItem, OrderItemDisplay } from '@/components/order/types';
+import {
+    cartItemToDisplay, generateLocalId,
 } from '@/components/order/types';
+import { ORDER_TYPE, PRICING_TYPE } from '@/constants/enums';
+import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import type { SelectedModifier } from '@/services/order.service';
 import {
-  addItemToOrder,
-  confirmOrder,
-  createOrder,
-  getOrderWithItems,
-  removeItemFromOrder,
-  updateItemModifiers,
-  updateItemNotes,
-  updateItemQuantity,
+    addItemToOrder,
+    confirmOrder,
+    createOrder,
+    getOrderWithItems,
+    removeItemFromOrder,
+    updateItemModifiers,
+    updateItemNotes,
+    updateItemQuantity,
+    updateItemUnitPrice,
 } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
 
@@ -69,6 +71,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
   const [editingItemNotes, setEditingItemNotes] = useState<string>('');
   const [editingItemModifiers, setEditingItemModifiers] = useState<SelectedModifier[]>([]);
+  const [editingItemWeight, setEditingItemWeight] = useState<string>('');
   const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
   const hasLoadedRef = useRef(false);
@@ -159,7 +162,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
         menu_item_id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
         menu_item_name: item.name,
         quantity: 1,
-        unit_price: item.price,
+        unit_price: basePrice,
         modifier_total: modifierTotal,
         total: total,
         notes: notes || null,
@@ -199,13 +202,14 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       setCartItems(prev => prev.map(item => {
         if (item.id !== editingCartItemId) return item;
         const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
-        const basePrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
-        const total = (basePrice + modifierTotal) * item.quantity;
+        const weightedUnitPrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
+        const total = (weightedUnitPrice + modifierTotal) * item.quantity;
         return {
           ...item,
           modifiers,
           notes: notes || null,
           weight,
+          unit_price: weightedUnitPrice,
           modifier_total: modifierTotal,
           total,
         };
@@ -213,13 +217,18 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       setEditingCartItemId(null);
       setEditingItemNotes('');
       setEditingItemModifiers([]);
+      setEditingItemWeight('');
     } else if (editingOrderItemId) {
       await updateItemModifiers(editingOrderItemId, modifiers);
+      if (selectedMenuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && weight && weight > 0) {
+        await updateItemUnitPrice(editingOrderItemId, selectedMenuItem.price * weight);
+      }
       await updateItemNotes(editingOrderItemId, notes);
       await reloadOrder();
       setEditingOrderItemId(null);
       setEditingItemNotes('');
       setEditingItemModifiers([]);
+      setEditingItemWeight('');
     } else {
       await addItemToOrderHandler(selectedMenuItem, modifiers, weight, notes);
     }
@@ -291,6 +300,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       setEditingCartItemId(itemId);
       setEditingItemModifiers(cartItem.modifiers);
       setEditingItemNotes(cartItem.notes ?? '');
+      setEditingItemWeight(cartItem.weight ? cartItem.weight.toString() : '');
       setShowModifierPicker(true);
     } else {
       const targetItem = orderItems.find((item) => {
@@ -327,6 +337,11 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       setEditingOrderItemId(itemId);
       setEditingItemNotes(targetItem.notes ?? '');
       setEditingItemModifiers(selectedModifiers);
+      if (menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && menuItem.price > 0) {
+        setEditingItemWeight((targetItem.unit_price / menuItem.price).toString());
+      } else {
+        setEditingItemWeight('');
+      }
       setShowModifierPicker(true);
     }
   }, [getModifierGroupsForMenuItem, menuItems, orderItems, cartItems]);
@@ -734,6 +749,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
           modifierGroups={menuItemModifiers}
           initialSelectedModifiers={editingOrderItemId || editingCartItemId ? editingItemModifiers : undefined}
           initialNotes={editingOrderItemId || editingCartItemId ? editingItemNotes : undefined}
+          initialWeight={editingOrderItemId || editingCartItemId ? editingItemWeight : undefined}
           submitLabel={editingOrderItemId || editingCartItemId ? 'Update Item' : undefined}
           onConfirm={handleModifierConfirm}
           onCancel={() => {
@@ -744,6 +760,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
             setEditingCartItemId(null);
             setEditingItemNotes('');
             setEditingItemModifiers([]);
+            setEditingItemWeight('');
           }}
         />
       )}

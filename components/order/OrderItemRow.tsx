@@ -27,6 +27,12 @@ export function OrderItemRow({
   const displayQuantity = typeof item.quantity === 'string'
     ? parseInt(item.quantity as string, 10)
     : item.quantity;
+  const modifierText = item.modifiers.map((modifier) => modifier.modifier_name).join(', ');
+  const notesText = item.notes?.trim() ?? '';
+  const shouldBreakNotes = notesText.length > 28;
+  const itemMetaText = modifierText.length > 0 && notesText.length > 0
+    ? `${modifierText}${shouldBreakNotes ? ',\n' : ', '}${notesText}`
+    : [modifierText, notesText].filter((value) => value.length > 0).join(', ');
 
   const closeSwipeable = useCallback(() => {
     swipeableRef.current?.close();
@@ -87,40 +93,13 @@ export function OrderItemRow({
                 ) : null}
               </View>
 
-              {(item.modifiers.length > 0 || Boolean(item.notes)) && (
-                <Text className="mt-0.5 text-[10px] text-pos-text-faint" numberOfLines={1}>
-                  {item.modifiers.length > 0
-                    ? item.modifiers.map((modifier) => modifier.modifier_name).join(', ')
-                    : item.notes}
+              {itemMetaText.length > 0 && (
+                <Text className="mt-0.5 text-[10px] leading-4 text-pos-text-faint">
+                  {itemMetaText}
                 </Text>
               )}
             </View>
-
-            {!item.is_voided ? (
-              <View className="ml-2 flex-row items-center gap-1.5">
-                <Pressable
-                  onPress={() => onEditModifiers(itemId)}
-                  className="h-6 w-6 items-center justify-center rounded-full bg-amber-500/15"
-                >
-                  <MaterialIcons name="edit" size={14} color="#F59E0B" />
-                </Pressable>
-
-                <Text className="text-pos-sm font-bold text-accent">
-                  {formatIDR(item.total)}
-                </Text>
-                <Pressable
-                  onPress={() => {
-                    closeSwipeable();
-                    onRemove(itemId);
-                  }}
-                  className="h-6 w-6 items-center justify-center rounded-full bg-pos-danger-muted"
-                >
-                  <MaterialIcons name="delete" size={14} color="#ef4444" />
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-
+            
           <View className="mt-1.5 flex-row items-center justify-between">
             {!item.is_voided ? (
               <View className="flex-row items-center gap-1.5">
@@ -142,11 +121,23 @@ export function OrderItemRow({
               </View>
             ) : null}
 
-            <View className="flex-1 items-end">
-              <Text className="text-[10px] text-pos-text-faint">
-                {formatIDR(item.unit_price + item.modifier_total)} × {displayQuantity}
-              </Text>
-            </View>
+
+            {!item.is_voided ? (
+              <View className="ml-2 flex-row items-center gap-1.5">
+                <Pressable
+                  onPress={() => onEditModifiers(itemId)}
+                  className="h-6 w-6 items-center justify-center rounded-full bg-amber-500/15"
+                >
+                  <MaterialIcons name="edit" size={14} color="#F59E0B" />
+                </Pressable>
+
+                <Text className="text-pos-sm font-bold text-accent">
+                  {formatIDR(item.total)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
           </View>
         </Pressable>
       </Swipeable>

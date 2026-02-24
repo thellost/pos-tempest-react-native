@@ -298,6 +298,40 @@ export async function updateItemQuantity(orderItemId: number, newQuantity: numbe
 }
 
 /**
+ * Updates the base unit price of an order item (used for weight-based pricing updates)
+ */
+export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: number): Promise<void> {
+  if (newUnitPrice < 0) {
+    throw new Error('Unit price cannot be negative');
+  }
+
+  const orderItem = await powersync.getOptional<OrderItem>(
+    `SELECT * FROM order_items WHERE id = ?`,
+    [orderItemId]
+  );
+
+  if (!orderItem) {
+    throw new Error('Order item not found');
+  }
+
+  const quantity = typeof orderItem.quantity === 'string'
+    ? parseInt(orderItem.quantity as string, 10)
+    : orderItem.quantity;
+  const newSubtotal = (newUnitPrice + orderItem.modifier_total) * quantity;
+
+  await powersync.execute(
+    `UPDATE order_items
+     SET unit_price = ?, subtotal = ?, total = ?
+     WHERE id = ?`,
+    [newUnitPrice, newSubtotal, newSubtotal, orderItemId]
+  );
+
+  await calculateOrderTotals(orderItem.order_id);
+
+  console.log('[OrderService] Updated item unit price:', orderItemId, '->', newUnitPrice);
+}
+
+/**
  * Updates the notes for an order item
  */
 export async function updateItemNotes(orderItemId: number, notes: string): Promise<void> {
