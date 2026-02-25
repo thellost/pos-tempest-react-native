@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, InteractionManager, Text, View } from 'react-native';
 
@@ -7,27 +7,14 @@ import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
-import type { CartItem, OrderItemDisplay } from '@/components/order/types';
-import {
-    cartItemToDisplay, generateLocalId,
-} from '@/components/order/types';
-import { ORDER_TYPE, PRICING_TYPE } from '@/constants/enums';
-import type { Order, OrderItem, OrderItemModifier } from '@/db/models';
-import { useAuth } from '@/hooks/use-auth';
+import type { OrderItemDisplay } from '@/components/order/types';
+import { cartItemToDisplay } from '@/components/order/types';
+import { PRICING_TYPE } from '@/constants/enums';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
+import { useOrder } from '@/hooks/use-order';
 import type { SelectedModifier } from '@/services/order.service';
-import {
-    addItemToOrder,
-    confirmOrder,
-    createOrder,
-    getOrderWithItems,
-    removeItemFromOrder,
-    updateItemModifiers,
-    updateItemNotes,
-    updateItemQuantity,
-    updateItemUnitPrice,
-} from '@/services/order.service';
-import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
+import { confirmOrder as confirmOrderService } from '@/services/order.service';
+import { PerfProfiler, logPerf, nowMs, useMountTimer } from '@/utils/perf-debug';
 
 export default function TakeawayOrderScreen() {
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
@@ -41,11 +28,9 @@ interface TakeawayOrderContentProps {
 function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   useMountTimer('TakeawayOrderContent');
   const screenBootRef = useRef(nowMs());
-  const router = useRouter();
 
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
-  const { user } = useAuth();
   const {
     topLevelCategories,
     getSubCategories,
@@ -58,14 +43,12 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     menuItems,
   } = useMenu();
 
-  const [order, setOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<(OrderItem & { modifiers: OrderItemModifier[] })[]>([]);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
+  // Modifier picker UI state
   const [showModifierPicker, setShowModifierPicker] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemWithInventory | null>(null);
   const [menuItemModifiers, setMenuItemModifiers] = useState<ModifierGroupWithModifiers[]>([]);
@@ -74,43 +57,52 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const [editingItemNotes, setEditingItemNotes] = useState<string>('');
   const [editingItemModifiers, setEditingItemModifiers] = useState<SelectedModifier[]>([]);
   const [editingItemWeight, setEditingItemWeight] = useState<string>('');
-  const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
-  const hasLoadedRef = useRef(false);
+  const hasBootLoggedRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Order hook — manages all order state and lifecycle
+  const {
+    order,
+    orderItems,
+    cartItems,
+    pendingRoundItems,
+    isLoading: orderLoading,
+    currentRound,
+    roundSentAt,
+    addItemToOrder: addItemToOrderHandler,
+    updateQuantity,
+    removeItem,
+    updateNotes,
+    editModifiers,
+    confirmOrder: confirmOrderHook,
+    confirmRound: handleConfirmRound,
+    cancelRound: handleCancelRound,
+    sendToKitchen,
+    printBill,
+    goToPayment,
+    updateCartItem,
+    reload,
+    setOrder,
+    setOrderItems,
+  } = useOrder({
+    tableId: null,
+    orderId: orderIdNum,
+    orderType: 'takeaway',
+    menuItems,
+  });
+
+  const isLoading = orderLoading;
 
   const subCategories = selectedCategoryId ? getSubCategories(selectedCategoryId) : [];
 
+  // Log boot time once data is ready
   useEffect(() => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    const loadData = async () => {
-      const loadStart = nowMs();
-      try {
-        setIsLoading(true);
-
-        if (orderIdNum) {
-          const orderData = await timedAsync(
-            'query:getOrderWithItems',
-            () => getOrderWithItems(orderIdNum),
-            { orderId: orderIdNum }
-          );
-          if (orderData) {
-            setOrder(orderData.order);
-            setOrderItems(orderData.items);
-          }
-        }
-      } catch (error) {
-        console.error('[TakeawayOrder] Error loading data:', error);
-      } finally {
-        setIsLoading(false);
-        logPerf('loadData:total', nowMs() - loadStart);
-        logPerf('TakeawayOrder:bootToDataReady', nowMs() - screenBootRef.current);
-      }
-    };
-
-    loadData();
-  }, [orderIdNum]);
+    if (!isLoading && !menuLoading && !menuHydrating && !hasBootLoggedRef.current) {
+      hasBootLoggedRef.current = true;
+      logPerf('TakeawayOrder:bootToDataReady', nowMs() - screenBootRef.current);
+    }
+  }, [isLoading, menuLoading, menuHydrating]);
 
   useEffect(() => {
     if (topLevelCategories.length > 0 && !selectedCategoryId) {
@@ -120,60 +112,6 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       setSelectedCategoryId(firstCategoryId);
     }
   }, [topLevelCategories, selectedCategoryId]);
-
-  const reloadOrder = useCallback(async () => {
-    if (!order) return;
-    const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-    const orderData = await timedAsync(
-      'query:reloadOrder',
-      () => getOrderWithItems(currentOrderId),
-      { orderId: currentOrderId }
-    );
-    if (orderData) {
-      setOrder(orderData.order);
-      setOrderItems(orderData.items);
-    }
-  }, [order]);
-
-  const addItemToOrderHandler = useCallback(async (
-    item: MenuItemWithInventory,
-    modifiers: SelectedModifier[],
-    weight: number | null,
-    notes: string
-  ) => {
-    if (!user) return;
-
-    if (order) {
-      try {
-        const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-        await timedAsync(
-          'query:addItemToOrder',
-          () => addItemToOrder(currentOrderId, item, 1, modifiers, notes, weight),
-          { orderId: currentOrderId, menuItem: item.name }
-        );
-        await reloadOrder();
-      } catch (error) {
-        console.error('[TakeawayOrder] Error adding item to order:', error);
-      }
-    } else {
-      const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
-      const basePrice = weight ? item.price * weight : item.price;
-      const total = basePrice + modifierTotal;
-      const newCartItem: CartItem = {
-        id: generateLocalId(),
-        menu_item_id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
-        menu_item_name: item.name,
-        quantity: 1,
-        unit_price: basePrice,
-        modifier_total: modifierTotal,
-        total: total,
-        notes: notes || null,
-        modifiers,
-        weight,
-      };
-      setCartItems(prev => [...prev, newCartItem]);
-    }
-  }, [order, reloadOrder, user]);
 
   const handleMenuItemPress = useCallback(async (item: MenuItemWithInventory) => {
     try {
@@ -201,32 +139,27 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     if (!selectedMenuItem) return;
 
     if (editingCartItemId) {
-      setCartItems(prev => prev.map(item => {
-        if (item.id !== editingCartItemId) return item;
-        const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
-        const weightedUnitPrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
-        const total = (weightedUnitPrice + modifierTotal) * item.quantity;
-        return {
-          ...item,
-          modifiers,
-          notes: notes || null,
-          weight,
-          unit_price: weightedUnitPrice,
-          modifier_total: modifierTotal,
-          total,
-        };
-      }));
+      const modifierTotal = modifiers.reduce((sum, m) => sum + (Number(m.extra_price) || 0), 0);
+      const weightedUnitPrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
+      const currentCartItem = cartItems.find(i => i.id === editingCartItemId);
+      const quantity = currentCartItem?.quantity ?? 1;
+      updateCartItem(editingCartItemId, {
+        modifiers,
+        notes: notes || null,
+        weight,
+        unit_price: weightedUnitPrice,
+        modifier_total: modifierTotal,
+        total: (weightedUnitPrice + modifierTotal) * quantity,
+      });
       setEditingCartItemId(null);
       setEditingItemNotes('');
       setEditingItemModifiers([]);
       setEditingItemWeight('');
     } else if (editingOrderItemId) {
-      await updateItemModifiers(editingOrderItemId, modifiers);
-      if (selectedMenuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && weight && weight > 0) {
-        await updateItemUnitPrice(editingOrderItemId, selectedMenuItem.price * weight);
-      }
-      await updateItemNotes(editingOrderItemId, notes);
-      await reloadOrder();
+      const unitPrice = selectedMenuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && weight && weight > 0
+        ? selectedMenuItem.price * weight
+        : undefined;
+      await editModifiers(editingOrderItemId, modifiers, weight, notes, unitPrice);
       setEditingOrderItemId(null);
       setEditingItemNotes('');
       setEditingItemModifiers([]);
@@ -237,53 +170,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     setShowModifierPicker(false);
     setSelectedMenuItem(null);
     setMenuItemModifiers([]);
-  }, [selectedMenuItem, editingCartItemId, editingOrderItemId, cartItems, addItemToOrderHandler, reloadOrder]);
-
-  const handleUpdateQuantity = useCallback(async (itemId: number | string, newQuantity: number) => {
-    if (typeof itemId === 'string') {
-      if (newQuantity <= 0) {
-        setCartItems(prev => prev.filter(item => item.id !== itemId));
-      } else {
-        setCartItems(prev => prev.map(item => {
-          if (item.id !== itemId) return item;
-          return {
-            ...item,
-            quantity: newQuantity,
-            total: (item.unit_price + item.modifier_total) * newQuantity,
-          };
-        }));
-      }
-    } else {
-      try {
-        await updateItemQuantity(itemId, newQuantity);
-        await reloadOrder();
-      } catch (error) {
-        console.error('[TakeawayOrder] Error updating quantity:', error);
-      }
-    }
-  }, [reloadOrder]);
-
-  const handleRemoveItem = useCallback(async (itemId: number | string) => {
-    if (typeof itemId === 'string') {
-      setCartItems(prev => prev.filter(item => item.id !== itemId));
-    } else {
-      try {
-        await removeItemFromOrder(itemId);
-        await reloadOrder();
-      } catch (error) {
-        console.error('[TakeawayOrder] Error removing item:', error);
-      }
-    }
-  }, [reloadOrder]);
-
-  const handleUpdateNotes = useCallback(async (itemId: number, notes: string) => {
-    try {
-      await updateItemNotes(itemId, notes);
-      await reloadOrder();
-    } catch (error) {
-      console.error('[TakeawayOrder] Error updating item notes:', error);
-    }
-  }, [reloadOrder]);
+  }, [selectedMenuItem, editingCartItemId, editingOrderItemId, updateCartItem, editModifiers, addItemToOrderHandler]);
 
   const handleEditModifiers = useCallback(async (itemId: number | string) => {
     if (typeof itemId === 'string') {
@@ -366,83 +253,44 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
       Alert.alert('Payment', 'No active order found. Please add items first.');
       return;
     }
-
-    const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-    router.push({ pathname: '/(app)/checkout/[orderId]', params: { orderId: String(currentOrderId) } });
-  }, [order, router]);
+    goToPayment();
+  }, [order, goToPayment]);
 
   const handleHold = useCallback(() => {
     Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
   }, []);
 
-  const handleConfirmOrder = useCallback(async () => {
-    if (!user) return;
-    if (cartItems.length === 0 && !order) return;
+  const handlePrintBill = useCallback(() => {
+    if (!order) {
+      Alert.alert('Print Bill', 'No active order found.');
+      return;
+    }
+    Alert.alert('Print Bill', 'Bill printing will be implemented with Bluetooth printer integration.');
+  }, [order]);
 
+  // Confirm order — handles both re-confirming an existing draft order (loaded from DB)
+  // and creating a new order from local cart items.
+  const handleConfirmOrder = useCallback(async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (order) {
+        // Existing draft order loaded from DB — confirm it directly
         const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-        await confirmOrder(currentOrderId);
-        await reloadOrder();
+        await confirmOrderService(currentOrderId);
+        await reload();
       } else {
-        const newOrder = await createOrder(
-          user.branch_id,
-          null,
-          user.id,
-          null,
-          ORDER_TYPE.TAKEAWAY,
-          null
-        );
-        const orderId = typeof newOrder.id === 'string' ? parseInt(newOrder.id, 10) : newOrder.id;
-
-        for (const cartItem of cartItems) {
-          const menuItem = menuItems.find(m => {
-            const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-            return mId === cartItem.menu_item_id;
-          });
-          if (menuItem) {
-            await addItemToOrder(orderId, menuItem, cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight);
-          }
-        }
-
-        await confirmOrder(orderId);
-
-        const orderData = await getOrderWithItems(orderId);
-        if (orderData) {
-          setOrder(orderData.order);
-          setOrderItems(orderData.items);
-        }
-        setCartItems([]);
+        // New order from local cart — delegate to hook (creates order, adds items, confirms)
+        await confirmOrderHook();
       }
+      Alert.alert('Pesanan Dikonfirmasi', 'Pesanan berhasil dibuat.');
     } catch (error) {
       console.error('[TakeawayOrder] Error confirming order:', error);
+      Alert.alert('Error', 'Gagal mengkonfirmasi pesanan.');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [user, cartItems, order, menuItems, reloadOrder]);
-
-  const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
-    const start = nowMs();
-    const result: Record<number, number> = {};
-
-    if (order) {
-      orderItems.forEach((orderItem) => {
-        if (orderItem.is_voided) return;
-        const menuItemId = typeof orderItem.menu_item_id === 'string'
-          ? parseInt(orderItem.menu_item_id as string, 10)
-          : orderItem.menu_item_id;
-        const quantity = typeof orderItem.quantity === 'string'
-          ? parseInt(orderItem.quantity as string, 10)
-          : orderItem.quantity;
-        result[menuItemId] = (result[menuItemId] || 0) + quantity;
-      });
-    } else {
-      cartItems.forEach((cartItem) => {
-        result[cartItem.menu_item_id] = (result[cartItem.menu_item_id] || 0) + cartItem.quantity;
-      });
-    }
-
-    logPerf('useMemo:quantitiesByMenuItemId', nowMs() - start, { itemCount: order ? orderItems.length : cartItems.length });
-    return result;
-  }, [order, orderItems, cartItems]);
+  }, [isSubmitting, order, confirmOrderHook, reload]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
@@ -472,54 +320,61 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
         ? parseInt(targetOrderItem.quantity as string, 10)
         : targetOrderItem.quantity;
 
-      try {
-        await updateItemQuantity(targetItemId, currentQuantity - 1);
-        await reloadOrder();
-      } catch (error) {
-        console.error('[TakeawayOrder] Error decrementing item quantity:', error);
-      }
+      await updateQuantity(targetItemId, currentQuantity - 1);
     } else {
       const matchingItems = cartItems.filter(cartItem => cartItem.menu_item_id === menuItemId);
       if (matchingItems.length === 0) return;
 
       const targetItem = matchingItems[matchingItems.length - 1];
-      const newQuantity = targetItem.quantity - 1;
-
-      if (newQuantity <= 0) {
-        setCartItems(prev => prev.filter(item => item.id !== targetItem.id));
-      } else {
-        setCartItems(prev => prev.map(item => {
-          if (item.id !== targetItem.id) return item;
-          return {
-            ...item,
-            quantity: newQuantity,
-            total: (item.unit_price + item.modifier_total) * newQuantity,
-          };
-        }));
-      }
+      await updateQuantity(targetItem.id, targetItem.quantity - 1);
     }
-  }, [order, orderItems, cartItems, reloadOrder]);
+  }, [order, orderItems, cartItems, updateQuantity]);
+
+  const quantitiesByMenuItemId = useMemo<Record<number, number>>(() => {
+    const start = nowMs();
+    const result: Record<number, number> = {};
+
+    if (order) {
+      orderItems.forEach((orderItem) => {
+        if (orderItem.is_voided) return;
+        const menuItemId = typeof orderItem.menu_item_id === 'string'
+          ? parseInt(orderItem.menu_item_id as string, 10)
+          : orderItem.menu_item_id;
+        const quantity = typeof orderItem.quantity === 'string'
+          ? parseInt(orderItem.quantity as string, 10)
+          : orderItem.quantity;
+        result[menuItemId] = (result[menuItemId] || 0) + quantity;
+      });
+    } else {
+      cartItems.forEach((cartItem) => {
+        result[cartItem.menu_item_id] = (result[cartItem.menu_item_id] || 0) + cartItem.quantity;
+      });
+    }
+
+    logPerf('useMemo:quantitiesByMenuItemId', nowMs() - start, { itemCount: order ? orderItems.length : cartItems.length });
+    return result;
+  }, [order, orderItems, cartItems]);
 
   const currentCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
   const currentSubCategory = selectedSubCategoryId ? subCategories.find(c => {
     const catId = typeof c.id === 'string' ? parseInt(c.id, 10) : c.id;
     return catId === selectedSubCategoryId;
   }) : undefined;
-  
+
   const allMenuItems = useMemo(() => {
     const start = nowMs();
     const result = selectedCategoryId ? getMenuItemsByCategory(selectedCategoryId) : [];
     logPerf('useMemo:allMenuItems', nowMs() - start, { categoryId: selectedCategoryId, count: result.length });
     return result;
   }, [selectedCategoryId, getMenuItemsByCategory]);
-  
+
   const menuItemsList = useMemo(() => {
     const start = nowMs();
     let result: MenuItemWithInventory[];
-    
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      result = menuItems.filter((item: MenuItemWithInventory) => 
+      result = menuItems.filter((item: MenuItemWithInventory) =>
         item.name.toLowerCase().includes(query)
       );
     } else if (!selectedSubCategoryId) {
@@ -535,6 +390,21 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
     return result;
   }, [searchQuery, menuItems, allMenuItems, selectedSubCategoryId]);
+
+  useEffect(() => {
+    if (menuItemsList.length === 0) {
+      setIsMenuGridReady(true);
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsMenuGridReady(true);
+    });
+
+    return () => {
+      task.cancel();
+    };
+  }, [menuItemsList]);
 
   const menuCategoryByItemId = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
@@ -632,20 +502,23 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     }
   }, [order, orderItems, cartItems, menuCategoryByItemId, topLevelBySubCategoryId, topLevelCategoryById]);
 
-  useEffect(() => {
-    if (menuItemsList.length === 0) {
-      setIsMenuGridReady(false);
-      return;
-    }
+  // Convert pending round items to display format
+  const pendingRoundItemsDisplay = useMemo<OrderItemDisplay[]>(() => {
+    return pendingRoundItems.map((item) => {
+      const category = menuCategoryByItemId.get(item.menu_item_id);
+      let groupName = category?.name ?? 'Other';
 
-    const task = InteractionManager.runAfterInteractions(() => {
-      setIsMenuGridReady(true);
+      if (category) {
+        const parentName = topLevelBySubCategoryId.get(category.id)?.name;
+        const isTopLevel = topLevelCategoryById.has(category.id);
+        if (!isTopLevel && parentName) {
+          groupName = parentName;
+        }
+      }
+
+      return cartItemToDisplay(item, groupName);
     });
-
-    return () => {
-      task.cancel();
-    };
-  }, [menuItemsList]);
+  }, [pendingRoundItems, menuCategoryByItemId, topLevelBySubCategoryId, topLevelCategoryById]);
 
   if (isLoading) {
     return (
@@ -693,13 +566,19 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
               items={itemsForPanel}
               guestCount={null}
               onGuestCountChange={() => {}}
-              onUpdateQuantity={handleUpdateQuantity}
+              onUpdateQuantity={updateQuantity}
               onEditModifiers={handleEditModifiers}
               onConfirmOrder={handleConfirmOrder}
-              onRemoveItem={handleRemoveItem}
+              onRemoveItem={removeItem}
               onSendToKitchen={handleSendToKitchen}
               onPayment={handlePayment}
               onHold={handleHold}
+              pendingRoundItems={pendingRoundItemsDisplay}
+              currentRound={currentRound}
+              roundSentAt={roundSentAt}
+              onConfirmRound={handleConfirmRound}
+              onCancelRound={handleCancelRound}
+              onPrintBill={handlePrintBill}
             />
           </PerfProfiler>
         </View>

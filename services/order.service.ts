@@ -141,7 +141,8 @@ export async function addItemToOrder(
   quantity: number,
   modifiers: SelectedModifier[],
   notes: string | null = null,
-  weight: number | null = null
+  weight: number | null = null,
+  roundNumber: number = 1
 ): Promise<void> {
   const now = new Date().toISOString();
 
@@ -163,6 +164,7 @@ export async function addItemToOrder(
 
   // Fast path: merge repeated plain taps into existing row instead of creating duplicates.
   // We only merge when there are no modifiers and no notes to avoid losing customization intent.
+  // Also only merge if same round number
   if (modifiers.length === 0 && normalizedNotes.length === 0) {
     const existingItem = await powersync.getOptional<OrderItem>(
       `SELECT * FROM order_items
@@ -172,9 +174,10 @@ export async function addItemToOrder(
          AND COALESCE(notes, '') = ''
          AND modifier_total = 0
          AND unit_price = ?
+         AND round_number = ?
        ORDER BY created_at DESC
        LIMIT 1`,
-      [orderId, menuItem.id, unitPrice]
+      [orderId, menuItem.id, unitPrice, roundNumber]
     );
 
     if (existingItem) {
@@ -203,8 +206,8 @@ export async function addItemToOrder(
     `INSERT INTO order_items (
       id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure,
       unit_price, modifier_total, subtotal, discount_amount, total, notes,
-      is_voided, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_voided, round_number, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId,
       orderId,
@@ -219,6 +222,7 @@ export async function addItemToOrder(
       subtotal, // total
       notes,
       0, // is_voided
+      roundNumber,
       now,
     ]
   );
@@ -241,7 +245,7 @@ export async function addItemToOrder(
   // Recalculate order totals
   await calculateOrderTotals(orderId);
 
-  console.log('[OrderService] Added item to order:', menuItem.name, 'x', quantity);
+  console.log('[OrderService] Added item to order:', menuItem.name, 'x', quantity, 'round:', roundNumber);
 }
 
 /**
@@ -618,4 +622,76 @@ export async function getActiveOrdersForTable(tableId: number): Promise<Order[]>
     console.error('[OrderService] getActiveOrdersForTable error:', error);
     throw new Error('Failed to fetch active orders for table');
   }
+}
+
+/**
+ * Gets the current round number for an order.
+ * Returns max(round_number) from order_items + 1, or 1 if no items.
+ *
+ * @param orderId - The order ID
+ * @returns The next round number to use
+ */
+export async function getCurrentRound(orderId: number): Promise<number> {
+  const result = await powersync.getOptional<{ max_round: number }>(
+    `SELECT MAX(round_number) as max_round FROM order_items WHERE order_id = ?`,
+    [orderId]
+  );
+
+  return (result?.max_round || 0) + 1;
+}
+
+/**
+ * Gets items grouped by round number.
+ *
+ * @param orderId - The order ID
+ * @returns Map of round number to items
+ */
+export async function getOrderItemsByRound(orderId: number): Promise<Map<number, (OrderItem & { modifiers: OrderItemModifier[] })[]>> {
+  const items = await powersync.getAll<OrderItem>(
+    `SELECT * FROM order_items WHERE order_id = ? AND is_voided = 0 ORDER BY round_number ASC, created_at ASC`,
+    [orderId]
+  );
+
+  const itemsWithModifiers = await Promise.all(
+    items.map(async (item) => {
+      const modifiers = await powersync.getAll<OrderItemModifier>(
+        `SELECT * FROM order_item_modifiers WHERE order_item_id = ?`,
+        [item.id]
+      );
+      return { ...item, modifiers };
+    })
+  );
+
+  const roundMap = new Map<number, (OrderItem & { modifiers: OrderItemModifier[] })[]>();
+  for (const item of itemsWithModifiers) {
+    const round = item.round_number || 1;
+    if (!roundMap.has(round)) {
+      roundMap.set(round, []);
+    }
+    roundMap.get(round)!.push(item);
+  }
+
+  return roundMap;
+}
+
+/**
+ * Gets the sent timestamp for each round from kitchen_order_tickets.
+ *
+ * @param orderId - The order ID
+ * @returns Map of round number to sent timestamp
+ */
+export async function getRoundSentTimestamps(orderId: number): Promise<Map<number, string>> {
+  const tickets = await powersync.getAll<{ round_number: number; printed_at: string }>(
+    `SELECT round_number, MIN(printed_at) AS printed_at FROM kitchen_order_tickets WHERE order_id = ? GROUP BY round_number`,
+    [orderId]
+  );
+
+  const sentMap = new Map<number, string>();
+  for (const ticket of tickets) {
+    if (ticket.round_number && ticket.printed_at) {
+      sentMap.set(ticket.round_number, ticket.printed_at);
+    }
+  }
+
+  return sentMap;
 }

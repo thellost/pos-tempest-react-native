@@ -11,6 +11,7 @@ export interface OrderItemDisplay {
   total: number;
   notes: string | null;
   is_voided: boolean;
+  round_number?: number | null;
   modifiers: OrderItemModifier[];
   category_group?: string;
   weight?: number | null;
@@ -25,6 +26,7 @@ export interface CartItem {
   modifier_total: number;
   total: number;
   notes: string | null;
+  round_number?: number | null;
   modifiers: SelectedModifier[];
   weight: number | null;
 }
@@ -44,6 +46,7 @@ export function cartItemToDisplay(item: CartItem, categoryGroup?: string): Order
     total: item.total,
     notes: item.notes,
     is_voided: false,
+    round_number: item.round_number,
     modifiers: item.modifiers.map(m => ({
       id: 0,
       order_item_id: 0,

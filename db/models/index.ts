@@ -254,6 +254,7 @@ export interface OrderItem {
 	is_voided: boolean;
 	voided_by: EntityId | null;
 	void_reason: string | null;
+	round_number: number | null;
 	created_at: Timestamp;
 }
 
@@ -272,6 +273,7 @@ export interface KitchenOrderTicket {
 	ticket_number: string;
 	status: KotStatus;
 	priority: number;
+	round_number: number | null;
 	printed_at: Timestamp | null;
 	started_at: Timestamp | null;
 	completed_at: Timestamp | null;
