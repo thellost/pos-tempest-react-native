@@ -14,6 +14,19 @@ export interface SelectedModifier {
 }
 
 /**
+ * Breakdown of calculated order totals.
+ * Returned by `getOrderTotals()` and used by the UI for display.
+ */
+export interface OrderTotals {
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  serviceCharge: number;
+  roundingAmount: number;
+  total: number;
+}
+
+/**
  * Order Service
  * Handles all order-related business logic:
  * - Creating orders
@@ -551,4 +564,58 @@ export async function getOrderWithItems(orderId: number): Promise<{
   );
 
   return { order, items: itemsWithModifiers };
+}
+
+/**
+ * Returns the currently stored order totals for a given order.
+ * This is a read-only function — it does NOT recalculate.
+ * Call `calculateOrderTotals(orderId)` first if you need fresh values.
+ *
+ * @param orderId - The order ID
+ * @returns OrderTotals object or null if the order does not exist
+ */
+export async function getOrderTotals(orderId: number): Promise<OrderTotals | null> {
+  const order = await powersync.getOptional<Order>(
+    `SELECT subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total
+     FROM orders WHERE id = ?`,
+    [orderId]
+  );
+
+  if (!order) {
+    console.error('[OrderService] getOrderTotals: order not found:', orderId);
+    return null;
+  }
+
+  return {
+    subtotal: order.subtotal,
+    discountAmount: order.discount_amount,
+    taxAmount: order.tax_amount,
+    serviceCharge: order.service_charge,
+    roundingAmount: order.rounding_amount,
+    total: order.total,
+  };
+}
+
+/**
+ * Returns all active (non-terminal) orders for a given table.
+ * Active means status is NOT completed, cancelled, or served.
+ *
+ * @param tableId - The table ID
+ * @returns Array of active orders (usually 0 or 1)
+ */
+export async function getActiveOrdersForTable(tableId: number): Promise<Order[]> {
+  try {
+    const orders = await powersync.getAll<Order>(
+      `SELECT * FROM orders
+       WHERE table_id = ?
+         AND status NOT IN (?, ?, ?)
+       ORDER BY created_at DESC`,
+      [tableId, ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.SERVED]
+    );
+
+    return orders;
+  } catch (error) {
+    console.error('[OrderService] getActiveOrdersForTable error:', error);
+    throw new Error('Failed to fetch active orders for table');
+  }
 }

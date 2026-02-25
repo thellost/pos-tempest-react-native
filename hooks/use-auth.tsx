@@ -37,6 +37,7 @@ type UserRow = {
 
 type AuthContextValue = {
   loading: boolean;
+  profileLoading: boolean;
   session: Session | null;
   authUser: SupabaseUser | null;
   user: UserRow | null;
@@ -84,8 +85,14 @@ async function fetchUserProfile(supabaseAuthId?: string): Promise<UserRow | null
   );
 }
 
+/** Maximum number of retries when waiting for PowerSync to sync user data on fresh install */
+const PROFILE_FETCH_MAX_RETRIES = 12;
+/** Delay between retries in ms (starts at 500ms, doubles each time up to 4s) */
+const PROFILE_FETCH_INITIAL_DELAY_MS = 500;
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<UserRow | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -109,23 +116,50 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const profile = await fetchUserProfile(authUserId);
-    
-    // Security: Validate user is active
-    if (profile && !profile.is_active) {
-      await signOut();
-      throw new Error('Account is inactive. Please contact administrator.');
+    setProfileLoading(true);
+
+    try {
+      // On fresh install, PowerSync may not have synced the users table yet.
+      // Retry with exponential backoff to wait for the initial sync to complete.
+      let profile: UserRow | null = null;
+      let delay = PROFILE_FETCH_INITIAL_DELAY_MS;
+
+      for (let attempt = 0; attempt <= PROFILE_FETCH_MAX_RETRIES; attempt++) {
+        profile = await fetchUserProfile(authUserId);
+
+        if (profile) {
+          break;
+        }
+
+        if (attempt < PROFILE_FETCH_MAX_RETRIES) {
+          console.log(
+            `[AuthProvider] User profile not found yet (attempt ${attempt + 1}/${PROFILE_FETCH_MAX_RETRIES}). ` +
+            `Waiting ${delay}ms for PowerSync sync...`
+          );
+          await new Promise<void>((resolve) => setTimeout(resolve, delay));
+          // Exponential backoff capped at 4 seconds
+          delay = Math.min(delay * 2, 4000);
+        }
+      }
+
+      // Security: Validate user is active
+      if (profile && !profile.is_active) {
+        await signOut();
+        throw new Error('Account is inactive. Please contact administrator.');
+      }
+
+      // Update last login timestamp
+      if (profile) {
+        await powersync.execute(
+          'UPDATE users SET last_login_at = ? WHERE id = ?',
+          [new Date().toISOString(), profile.id],
+        );
+      }
+
+      setUser(profile);
+    } finally {
+      setProfileLoading(false);
     }
-    
-    // Update last login timestamp
-    if (profile) {
-      await powersync.execute(
-        'UPDATE users SET last_login_at = ? WHERE id = ?',
-        [new Date().toISOString(), profile.id],
-      );
-    }
-    
-    setUser(profile);
   }, [session?.user?.id]);
 
   const lock = useCallback(() => {
@@ -549,6 +583,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const value = useMemo<AuthContextValue>(
     () => ({
       loading,
+      profileLoading,
       session,
       authUser: session?.user ?? null,
       user,
@@ -573,6 +608,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       idleTimeoutMs,
       isLocked,
       loading,
+      profileLoading,
       lock,
       markActivity,
       refreshProfile,
