@@ -3,13 +3,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 
 import { CashPayment } from '@/components/payment/CashPayment';
@@ -24,12 +24,12 @@ import type { Discount, Order, OrderDiscount, OrderItem, OrderItemModifier } fro
 import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
 import {
-  applyOrderDiscount,
-  completeOrder,
-  getActiveDiscounts,
-  getOrderDiscount,
-  processPayment,
-  removeOrderDiscount,
+    applyOrderDiscount,
+    completeOrder,
+    getActiveDiscounts,
+    getOrderDiscount,
+    processPayment,
+    removeOrderDiscount,
 } from '@/services/payment.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
