@@ -1,11 +1,11 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
 import { TableCard } from '@/components/floor/TableCard';
 import { TABLE_STATUS } from '@/constants/enums';
+import { useShift } from '@/hooks/use-shift';
 import { useTables } from '@/hooks/use-tables';
 import { useTakeaway, type TakeawayOrder } from '@/hooks/use-takeaway';
 
@@ -28,6 +28,8 @@ export default function FloorScreen() {
     getOrderElapsedMinutes: getTakeawayElapsedMinutes,
   } = useTakeaway();
 
+  const { isShiftOpen } = useShift();
+
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [isTakeawaySelected, setIsTakeawaySelected] = useState(false);
 
@@ -45,6 +47,19 @@ export default function FloorScreen() {
       return;
     }
 
+    // Block creating a new order when no shift is open
+    if (!activeOrderId && !isShiftOpen) {
+      Alert.alert(
+        'No Active Shift',
+        'You need to open a shift before creating new orders.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Shift', onPress: () => router.push('/(app)/shifts') },
+        ]
+      );
+      return;
+    }
+
     if (activeOrderId) {
       router.push({
         pathname: '/(app)/order/[tableId]',
@@ -59,6 +74,17 @@ export default function FloorScreen() {
   };
 
   const handleTakeawayPress = () => {
+    if (!isShiftOpen) {
+      Alert.alert(
+        'No Active Shift',
+        'You need to open a shift before creating new orders.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Shift', onPress: () => router.push('/(app)/shifts') },
+        ]
+      );
+      return;
+    }
     router.push('/(app)/order/takeaway');
   };
 

@@ -18,7 +18,7 @@ import {
 } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
 
-type UserRow = {
+export type UserRow = {
   id: number;
   role_id: number;
   branch_id: number;

@@ -31,6 +31,8 @@ interface MenuGridProps {
   onItemPress: (item: MenuItemWithInventory) => void;
   onDecrementItem?: (item: MenuItemWithInventory) => void;
   onRefresh?: () => Promise<void>;
+  /** When true, overlays the grid with a "no active shift" lock screen */
+  disabled?: boolean;
 }
 
 interface MenuItemCellProps {
@@ -119,6 +121,7 @@ export function MenuGrid({
   onItemPress,
   onDecrementItem,
   onRefresh,
+  disabled = false,
 }: MenuGridProps) {
   const gridWidth = width * 0.70 - GRID_PADDING * 2;
   const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
@@ -263,6 +266,22 @@ export function MenuGrid({
           </View>
         )}
       </ScrollView>
+
+      {/* No-shift overlay — blocks item interaction when no active shift */}
+      {disabled && (
+        <View
+          className="absolute bottom-0 left-0 right-0 top-0 z-10 items-center justify-center"
+          style={{ backgroundColor: 'rgba(10, 13, 20, 0.82)' }}
+        >
+          <View className="items-center rounded-2xl bg-surface-card px-10 py-8">
+            <Text className="mb-2 text-4xl">🔒</Text>
+            <Text className="text-pos-lg font-bold text-pos-text">No Active Shift</Text>
+            <Text className="mt-1 text-pos-sm text-pos-text-muted text-center">
+              Open a shift to start taking orders
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

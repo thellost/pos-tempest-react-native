@@ -12,6 +12,7 @@ import { cartItemToDisplay } from '@/components/order/types';
 import { PRICING_TYPE } from '@/constants/enums';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
+import { useShift } from '@/hooks/use-shift';
 import type { SelectedModifier } from '@/services/order.service';
 import { confirmOrder as confirmOrderService } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, useMountTimer } from '@/utils/perf-debug';
@@ -30,6 +31,8 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
   const screenBootRef = useRef(nowMs());
 
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
+
+  const { isShiftOpen } = useShift();
 
   const {
     topLevelCategories,
@@ -89,6 +92,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     orderId: orderIdNum,
     orderType: 'takeaway',
     menuItems,
+    isShiftOpen,
   });
 
   const isLoading = orderLoading;
@@ -579,6 +583,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
               onConfirmRound={handleConfirmRound}
               onCancelRound={handleCancelRound}
               onPrintBill={handlePrintBill}
+              isShiftOpen={isShiftOpen}
             />
           </PerfProfiler>
         </View>
@@ -628,6 +633,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
               quantitiesByMenuItemId={quantitiesByMenuItemId}
               onItemPress={handleMenuItemPress}
               onDecrementItem={handleMenuItemDecrement}
+              disabled={!isShiftOpen}
             />
           </PerfProfiler>
         </View>

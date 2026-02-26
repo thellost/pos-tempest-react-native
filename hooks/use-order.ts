@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
 import type { CartItem } from '@/components/order/types';
 import { generateLocalId } from '@/components/order/types';
@@ -26,6 +27,8 @@ interface UseOrderOptions {
   orderId?: number | null;
   orderType?: 'dine-in' | 'takeaway';
   menuItems?: MenuItemWithInventory[];
+  /** When false, adding items and confirming orders is blocked */
+  isShiftOpen?: boolean;
 }
 
 interface OrderItemWithModifiers extends OrderItem {
@@ -79,6 +82,9 @@ interface UseOrderReturn {
   // Set order directly (for loading existing orders)
   setOrder: (order: Order | null) => void;
   setOrderItems: (items: OrderItemWithModifiers[]) => void;
+
+  // Shift state (passed in from screen)
+  isShiftOpen: boolean;
 }
 
 /**
@@ -112,7 +118,7 @@ function toMenuItem(item: MenuItemWithInventory): MenuItem {
  * Handles draft → confirmed → pending round flow.
  */
 export function useOrder(options: UseOrderOptions): UseOrderReturn {
-  const { tableId, orderId, orderType = 'dine-in', menuItems = [] } = options;
+  const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true } = options;
   const router = useRouter();
   const { user } = useAuth();
 
@@ -201,6 +207,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     notes: string
   ) => {
     if (!user) return;
+    if (!isShiftOpen) return; // Blocked by UI overlay; this is a defence layer
 
     const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
     const basePrice = weight ? item.price * weight : item.price;
@@ -270,7 +277,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       };
       setCartItems(prev => [...prev, newCartItem]);
     }
-  }, [order, user, currentRound, reload]);
+  }, [order, user, currentRound, reload, isShiftOpen]);
 
   // Update item quantity
   const updateQuantity = useCallback(async (itemId: number | string, qty: number) => {
@@ -442,6 +449,11 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const confirmOrderCallback = useCallback(async () => {
     if (!user || cartItems.length === 0) return;
 
+    if (!isShiftOpen) {
+      Alert.alert('No Active Shift', 'Please open a shift before confirming orders.');
+      return;
+    }
+
     try {
       const newOrder = await createOrder(
         user.branch_id,
@@ -483,11 +495,16 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       console.error('[useOrder] Error confirming order:', error);
       throw error;
     }
-  }, [user, cartItems, tableId, orderType, guestCount, menuItems]);
+  }, [user, cartItems, tableId, orderType, guestCount, menuItems, isShiftOpen]);
 
   // Confirm round (pending → confirmed)
   const confirmRound = useCallback(async () => {
     if (!order || pendingRoundItems.length === 0) return;
+
+    if (!isShiftOpen) {
+      Alert.alert('No Active Shift', 'Please open a shift before adding new rounds.');
+      return;
+    }
 
     try {
       const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
@@ -516,7 +533,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       console.error('[useOrder] Error confirming round:', error);
       throw error;
     }
-  }, [order, pendingRoundItems, currentRound, menuItems, reload]);
+  }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen]);
 
   // Cancel round (clear pending items)
   const cancelRound = useCallback(() => {
@@ -603,5 +620,6 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     reload,
     setOrder,
     setOrderItems,
+    isShiftOpen,
   };
 }

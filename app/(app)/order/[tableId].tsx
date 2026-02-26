@@ -13,6 +13,7 @@ import { ORDER_STATUS, PRICING_TYPE } from '@/constants/enums';
 import { powersync } from '@/db/provider';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
+import { useShift } from '@/hooks/use-shift';
 import type { SelectedModifier } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
 
@@ -86,6 +87,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const tableIdNum = parseInt(tableId, 10);
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
+  const { isShiftOpen } = useShift();
+
   const {
     topLevelCategories,
     getSubCategories,
@@ -146,6 +149,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     orderId: orderIdNum,
     orderType: 'dine-in',
     menuItems,
+    isShiftOpen,
   });
 
   const isLoading = orderLoading;
@@ -635,6 +639,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
                 onConfirmRound={handleConfirmRound}
                 onCancelRound={handleCancelRound}
                 onPrintBill={handlePrintBill}
+                isShiftOpen={isShiftOpen}
               />
           </PerfProfiler>
         </View>
@@ -684,6 +689,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
               quantitiesByMenuItemId={quantitiesByMenuItemId}
               onItemPress={handleMenuItemPress}
               onDecrementItem={handleMenuItemDecrement}
+              disabled={!isShiftOpen}
             />
           </PerfProfiler>
         </View>

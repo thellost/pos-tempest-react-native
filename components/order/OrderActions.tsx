@@ -15,6 +15,8 @@ interface OrderActionsProps {
   onConfirmRound: () => void;
   onCancelRound: () => void;
   onPrintBill: () => void;
+  /** When false all mutating actions are replaced with a locked shift banner */
+  isShiftOpen?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function OrderActions({
   onConfirmRound,
   onCancelRound,
   onPrintBill,
+  isShiftOpen = true,
 }: OrderActionsProps) {
   const isPending = orderStatus === ORDER_STATUS.PENDING;
   const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
@@ -73,6 +76,26 @@ export function OrderActions({
   const handlePrintBill = useCallback(() => {
     onPrintBill();
   }, [onPrintBill]);
+
+  // When no shift is open, show a locked banner instead of action buttons
+  if (!isShiftOpen) {
+    return (
+      <View className="border-t border-border bg-surface-card p-2">
+        <View
+          className="h-10 items-center justify-center rounded-sm"
+          style={{
+            backgroundColor: 'rgba(245, 158, 11, 0.10)',
+            borderWidth: 1,
+            borderColor: 'rgba(245, 158, 11, 0.30)',
+          }}
+        >
+          <Text className="text-pos-xs font-semibold text-pos-warning">
+            🔒 Open a shift to take order actions
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   // Pending Round State - show Confirm Round / Cancel Round buttons
   if (isConfirmed && hasPendingRound) {

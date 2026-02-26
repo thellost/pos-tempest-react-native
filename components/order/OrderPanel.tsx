@@ -28,6 +28,8 @@ interface OrderPanelProps {
   onConfirmRound: () => void;
   onCancelRound: () => void;
   onPrintBill: () => void;
+  /** When false, shows no-shift warning banner and disables action buttons */
+  isShiftOpen?: boolean;
 }
 
 /**
@@ -52,6 +54,7 @@ export const OrderPanel = memo(function OrderPanel({
   onConfirmRound,
   onCancelRound,
   onPrintBill,
+  isShiftOpen = true,
 }: OrderPanelProps) {
   const activeItems = useMemo(() => items.filter(i => !i.is_voided), [items]);
   const hasItems = activeItems.length > 0;
@@ -60,7 +63,7 @@ export const OrderPanel = memo(function OrderPanel({
   const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
   const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
   const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
-  const showConfirmButton = !isConfirmed && hasItems;
+  const showConfirmButton = !isConfirmed && hasItems && isShiftOpen;
 
   const handleGuestDecrease = useCallback(() => {
     if (guestCount !== null && guestCount > 0) {
@@ -251,6 +254,18 @@ export const OrderPanel = memo(function OrderPanel({
         )}
       </View>
 
+      {/* No-shift warning banner */}
+      {!isShiftOpen && (
+        <View
+          className="flex-row items-center gap-2 border-b border-border px-4 py-2"
+          style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)' }}
+        >
+          <Text className="text-pos-xs font-semibold text-pos-warning">
+            ⚠️ No active shift — open a shift to create or modify orders
+          </Text>
+        </View>
+      )}
+
       <ScrollView
         className="flex-1 px-3"
         contentContainerStyle={{ paddingVertical: 12 }}
@@ -296,6 +311,7 @@ export const OrderPanel = memo(function OrderPanel({
         onConfirmRound={onConfirmRound}
         onCancelRound={onCancelRound}
         onPrintBill={onPrintBill}
+        isShiftOpen={isShiftOpen}
       />
     </View>
   );

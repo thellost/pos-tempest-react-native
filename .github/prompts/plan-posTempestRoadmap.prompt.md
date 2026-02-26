@@ -837,6 +837,59 @@ Notes: No onions please
 
 ---
 
+### Step 15 — Side Navigation Drawer
+
+**Goal:** Replace the bottom "Dashboard / Sign Out" bar with a hamburger-triggered side drawer that provides access to all major POS modules, user info, shift, settings, and authentication actions — fully integrated with the existing dark theme.
+
+**Motivation:**
+- The bottom bar wasted vertical space in landscape orientation
+- Navigation to modules (Kitchen, Inventory, Reports, Settings, Shifts) had no single entry point
+- A slide-in drawer is standard for tablet POS apps and keeps the main order/floor views uncluttered
+
+**Design:**
+- **Trigger:** `☰` hamburger button, top-left, always visible (absolute positioned in `(app)/_layout.tsx`)
+- **Drawer:** slides in from the left, 280px wide, dark overlay behind it
+- **Tap overlay** or press `☰` again → dismisses drawer
+- **Animation:** `Animated.Value` translateX from –280 → 0 (spring, 200ms)
+- **Theme:** `bg-surface-card` drawer surface, `border-border` right edge, `bg-surface-raised` active item, `text-pos-text` labels, `bg-brand` active accent left bar
+
+**Components created:**
+
+```
+components/navigation/
+  HamburgerButton.tsx   ← toggle trigger rendered in layout
+  SideDrawer.tsx        ← full drawer with sections, animation, overlay
+```
+
+**Drawer sections (top → bottom):**
+
+1. **User header** — avatar initial bubble, user name (bold), role badge, branch name, device name
+2. **Main navigation** (role-aware):
+   - 🏠 Floor Plan → `/(app)/floor`
+   - 📋 Menu Management → `/(app)/menu`
+   - 🍳 Kitchen Display → `/(app)/kitchen`
+   - 📦 Inventory → `/(app)/inventory`
+   - 👥 Customers → `/(app)/customers`
+   - 📊 Reports → `/(app)/reports` *(admin / manager only)*
+3. **System**:
+   - 💰 Shift → `/(app)/shifts`
+   - ⚙️ Settings → `/(app)/settings`
+   - 📱 Dashboard → `/(tabs)/explore`
+4. **Footer**:
+   - 🔒 Lock Screen (triggers PIN lock)
+   - 🚪 Sign Out (danger color)
+
+**Changes to existing files:**
+- `app/(app)/_layout.tsx`:
+  - Remove bottom `<View>` bar (Dashboard + Sign Out buttons)
+  - Add `useState<boolean>` for `drawerOpen`
+  - Render `<HamburgerButton>` (absolute, top-left, z-index 50)
+  - Render `<SideDrawer>` (absolute, full-screen, z-index 100 when open)
+
+**Verification:** Tap ☰ → drawer slides in, shows user info + nav links + sign out. Tap a nav item → drawer closes → correct screen opens. Active route highlighted. Tap overlay → drawer closes. Sign Out works. Lock Screen triggers PIN flow. Reports item hidden for cashier role.
+
+---
+
 **Verification (End-to-End)**
 
 Full workflow test:
