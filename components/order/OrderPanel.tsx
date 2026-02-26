@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo } from 'react';
+import { Fragment, memo, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
@@ -18,10 +18,10 @@ interface OrderPanelProps {
   currentRound: number;
   roundSentAt: Map<number, string>;
   onGuestCountChange: (count: number) => void;
-  onUpdateQuantity: (itemId: number, newQuantity: number) => void;
-  onEditModifiers: (itemId: number) => void;
+  onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
+  onEditModifiers: (itemId: number | string) => void;
   onConfirmOrder: () => void;
-  onRemoveItem: (itemId: number) => void;
+  onRemoveItem: (itemId: number | string) => void;
   onSendToKitchen: () => void;
   onPayment: () => void;
   onHold: () => void;
@@ -34,7 +34,7 @@ interface OrderPanelProps {
  * Order panel component with round tracking support.
  * Displays order items grouped by round with visual dividers.
  */
-export function OrderPanel({
+export const OrderPanel = memo(function OrderPanel({
   order,
   items,
   pendingRoundItems,
@@ -53,7 +53,7 @@ export function OrderPanel({
   onCancelRound,
   onPrintBill,
 }: OrderPanelProps) {
-  const activeItems = items.filter(i => !i.is_voided);
+  const activeItems = useMemo(() => items.filter(i => !i.is_voided), [items]);
   const hasItems = activeItems.length > 0;
   const hasPendingRound = pendingRoundItems.length > 0;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
@@ -187,7 +187,10 @@ export function OrderPanel({
   }, [itemsByRound, pendingRoundItems, currentRound, roundSentAt, onEditModifiers, onUpdateQuantity, onRemoveItem]);
 
   // Calculate totals including pending items
-  const allItemsTotal = [...activeItems, ...pendingRoundItems].reduce((sum, item) => sum + item.total, 0);
+  const allItemsTotal = useMemo(
+    () => [...activeItems, ...pendingRoundItems].reduce((sum, item) => sum + item.total, 0),
+    [activeItems, pendingRoundItems]
+  );
 
   return (
     <View className="flex-1 border-r border-border bg-surface-soft">
@@ -296,4 +299,4 @@ export function OrderPanel({
       />
     </View>
   );
-}
+});

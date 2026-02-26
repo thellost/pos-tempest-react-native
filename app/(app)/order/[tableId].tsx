@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, InteractionManager, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
 
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
@@ -102,7 +102,6 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMenuGridReady, setIsMenuGridReady] = useState(false);
 
   // Modifier picker UI state
   const [showModifierPicker, setShowModifierPicker] = useState(false);
@@ -425,6 +424,21 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     return result;
   }, [selectedCategoryId, getMenuItemsByCategory]);
 
+  // All items across every category — passed to MenuGrid to mount once
+  const allItemsForGrid = useMemo(() => {
+    return categories.length > 0 ? menuItems : [];
+  }, [categories, menuItems]);
+
+  // Category colour + name lookup for per-item card display
+  const categoryById = useMemo(() => {
+    const map = new Map<number, { name: string; button_color?: string | null }>();
+    categories.forEach((cat) => {
+      const catId = typeof cat.id === 'string' ? parseInt(cat.id, 10) : cat.id;
+      map.set(catId, { name: cat.name, button_color: cat.button_color });
+    });
+    return map;
+  }, [categories]);
+
   const menuItemsList = useMemo(() => {
     const start = nowMs();
     let result: MenuItemWithInventory[];
@@ -447,21 +461,6 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
     return result;
   }, [searchQuery, menuItems, allMenuItems, selectedSubCategoryId]);
-
-  useEffect(() => {
-    if (menuItemsList.length === 0) {
-      setIsMenuGridReady(false);
-      return;
-    }
-
-    const task = InteractionManager.runAfterInteractions(() => {
-      setIsMenuGridReady(true);
-    });
-
-    return () => {
-      task.cancel();
-    };
-  }, [menuItemsList]);
 
   const menuCategoryByItemId = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
@@ -677,22 +676,16 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
             />
           </PerfProfiler>
 
-          {isMenuGridReady ? (
-            <PerfProfiler id="MenuGrid">
-              <MenuGrid
-                items={menuItemsList}
-                category={currentCategory}
-                subCategoryName={currentSubCategory?.name}
-                quantitiesByMenuItemId={quantitiesByMenuItemId}
-                onItemPress={handleMenuItemPress}
-                onDecrementItem={handleMenuItemDecrement}
-              />
-            </PerfProfiler>
-          ) : (
-            <View className="flex-1 items-center justify-center bg-surface">
-              <ActivityIndicator size="small" color="#6366F1" />
-            </View>
-          )}
+          <PerfProfiler id="MenuGrid">
+            <MenuGrid
+              items={menuItemsList}
+              allItems={allItemsForGrid}
+              categoryById={categoryById}
+              quantitiesByMenuItemId={quantitiesByMenuItemId}
+              onItemPress={handleMenuItemPress}
+              onDecrementItem={handleMenuItemDecrement}
+            />
+          </PerfProfiler>
         </View>
       </View>
 

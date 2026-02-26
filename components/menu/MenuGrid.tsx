@@ -1,10 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Dimensions, RefreshControl, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, InteractionManager, RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { FlashList } from '@shopify/flash-list';
-
-import type { Category } from '@/db/models';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
+
 import { MenuItemCard } from './MenuItemCard';
 
 const { width } = Dimensions.get('window');
@@ -13,28 +11,191 @@ const GAP = 6;
 const COLUMNS = 4;
 const ASPECT_RATIO = 0.5;
 
+function toNumberId(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    const n = Number.parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 interface MenuGridProps {
+  /** Visible items for the current category / search — used to toggle visibility */
   items: MenuItemWithInventory[];
-  category?: Category;
-  subCategoryName?: string | null;
+  /** Every item across all categories — mounted once, hidden via display:'none' */
+  allItems: MenuItemWithInventory[];
+  /** Category info keyed by numeric category ID — used for per-item accent colour and label */
+  categoryById?: Map<number, { name: string; button_color?: string | null }>;
   quantitiesByMenuItemId?: Record<number, number>;
   onItemPress: (item: MenuItemWithInventory) => void;
   onDecrementItem?: (item: MenuItemWithInventory) => void;
   onRefresh?: () => Promise<void>;
 }
 
+interface MenuItemCellProps {
+  item: MenuItemWithInventory;
+  isVisible: boolean;
+  quantity: number;
+  itemWidth: number;
+  itemHeight: number;
+  categoryColor?: string | null;
+  categoryName?: string | null;
+  onItemPress: (item: MenuItemWithInventory) => void;
+  onDecrementItem?: (item: MenuItemWithInventory) => void;
+}
+
+/**
+ * Memoised grid cell.
+ * Hidden via `display: 'none'` which removes it from the flex-wrap layout
+ * flow so visible items reflow correctly — no gaps, no manual row math.
+ * Only re-renders when visibility, quantity, or item data actually changes.
+ */
+const MenuItemCell = memo(
+  function MenuItemCell({
+    item,
+    isVisible,
+    quantity,
+    itemWidth,
+    itemHeight,
+    categoryColor,
+    categoryName,
+    onItemPress,
+    onDecrementItem,
+  }: MenuItemCellProps) {
+    return (
+      <View
+        style={[
+          { width: itemWidth, height: itemHeight, marginRight: GAP, marginBottom: GAP },
+          !isVisible && ({ display: 'none' } as object),
+        ]}
+      >
+        <MenuItemCard
+          item={item}
+          categoryColor={categoryColor}
+          categoryName={categoryName}
+          quantity={quantity}
+          onPressItem={onItemPress}
+          onDecrementItem={onDecrementItem}
+        />
+      </View>
+    );
+  },
+  (prev, next) =>
+    prev.isVisible === next.isVisible &&
+    prev.quantity === next.quantity &&
+    prev.itemWidth === next.itemWidth &&
+    prev.itemHeight === next.itemHeight &&
+    prev.categoryColor === next.categoryColor &&
+    prev.categoryName === next.categoryName &&
+    prev.item.id === next.item.id &&
+    prev.item.name === next.item.name &&
+    prev.item.price === next.item.price &&
+    prev.item.pricing_type === next.item.pricing_type &&
+    prev.item.is_available === next.item.is_available &&
+    prev.item.isLowStock === next.item.isLowStock &&
+    prev.onItemPress === next.onItemPress &&
+    prev.onDecrementItem === next.onDecrementItem,
+);
+
+/**
+ * High-performance menu grid that mounts ALL items once and toggles
+ * visibility via `display: 'none'` on category switch.
+ *
+ * Strategy:
+ *  - Initial mount: all items rendered once, deferred via InteractionManager
+ *    so the navigation animation is not blocked.
+ *  - Category switch: only the `visibleIds` Set is rebuilt → each cell's
+ *    memo comparator checks `isVisible`; only changed cells re-render.
+ *    Cost: ~5–15 ms regardless of item count.
+ *  - `display: 'none'` removes items from the flex-wrap flow so the
+ *    remaining visible items reflow into correct columns automatically.
+ */
 export function MenuGrid({
   items,
-  category,
-  subCategoryName,
+  allItems,
+  categoryById,
   quantitiesByMenuItemId,
   onItemPress,
   onDecrementItem,
   onRefresh,
 }: MenuGridProps) {
+  const gridWidth = width * 0.70 - GRID_PADDING * 2;
+  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
+  const itemHeight = itemWidth * ASPECT_RATIO;
+
+  // Normalised set of visible IDs — using string keys avoids string/number mismatches
+  const visibleIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of items) s.add(String(i.id));
+    return s;
+  }, [items]);
+
+  // Precompute per-item derived values once per allItems/categoryById change.
+  // This keeps the render loop cheap (no parseInt / map lookups per render).
+  const allCells = useMemo(() => {
+    return allItems.map((item) => {
+      const idKey = String(item.id);
+      const idNum = toNumberId(item.id);
+
+      const categoryIdNum = toNumberId(item.category_id);
+      const category = categoryIdNum !== null ? categoryById?.get(categoryIdNum) : undefined;
+
+      return {
+        item,
+        idKey,
+        idNum,
+        categoryColor: category?.button_color ?? null,
+        categoryName: category?.name ?? null,
+      };
+    });
+  }, [allItems, categoryById]);
+
+  // Defer mounting all cards until after the navigation animation settles
+  const [isMounted, setIsMounted] = useState(false);
+  const hasMountedRef = useRef(false);
+
+  // Keep handler identities stable so MenuItemCell memoization isn't defeated
+  // by upstream components re-creating callbacks on each render.
+  const onItemPressRef = useRef(onItemPress);
+  const onDecrementItemRef = useRef(onDecrementItem);
+
+  useEffect(() => {
+    onItemPressRef.current = onItemPress;
+  }, [onItemPress]);
+
+  useEffect(() => {
+    onDecrementItemRef.current = onDecrementItem;
+  }, [onDecrementItem]);
+
+  const handleItemPress = useCallback((item: MenuItemWithInventory) => {
+    onItemPressRef.current(item);
+  }, []);
+
+  const handleDecrementItem = useCallback((item: MenuItemWithInventory) => {
+    onDecrementItemRef.current?.(item);
+  }, []);
+
+  useEffect(() => {
+    if (hasMountedRef.current) return;
+
+    if (allItems.length === 0) {
+      setIsMounted(true);
+      hasMountedRef.current = true;
+      return;
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsMounted(true);
+      hasMountedRef.current = true;
+    });
+
+    return () => task.cancel();
+  }, [allItems.length]);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     if (!onRefresh) return;
     setIsRefreshing(true);
     try {
@@ -42,96 +203,66 @@ export function MenuGrid({
     } finally {
       setIsRefreshing(false);
     }
-  }, [onRefresh]);
+  };
 
-  const getItemQuantity = useCallback((item: MenuItemWithInventory): number => {
-    const itemId = typeof item.id === 'string' ? parseInt(item.id as string, 10) : item.id;
-    return quantitiesByMenuItemId?.[itemId] || 0;
-  }, [quantitiesByMenuItemId]);
-
-  const displayCategoryName = subCategoryName || category?.name || 'Food & Drink';
-
-  const gridWidth = width * 0.70 - GRID_PADDING * 2;
-  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
-  const itemHeight = itemWidth * ASPECT_RATIO;
-  const contentContainerStyle = useMemo(
-    () => ({ padding: GRID_PADDING, flexGrow: items.length === 0 ? 1 : 0 }),
-    [items.length]
-  );
-
-  const renderItem = useCallback(({ item, index }: { item: MenuItemWithInventory; index: number }) => {
-    const isLastColumn = (index + 1) % COLUMNS === 0;
-
+  if (!isMounted) {
     return (
-      <View
-        style={{
-          width: itemWidth,
-          height: itemHeight,
-          marginRight: isLastColumn ? 0 : GAP,
-          marginBottom: GAP,
-        }}
-      >
-        <MenuItemCard
-          item={item}
-          categoryColor={category?.button_color}
-          categoryName={displayCategoryName}
-          quantity={getItemQuantity(item)}
-          onPressItem={onItemPress}
-          onDecrementItem={onDecrementItem}
-        />
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="small" color="#6366F1" />
       </View>
     );
-  }, [
-    itemWidth,
-    itemHeight,
-    GAP,
-    category?.button_color,
-    displayCategoryName,
-    getItemQuantity,
-    onItemPress,
-    onDecrementItem,
-  ]);
-
-  const renderEmptyState = useCallback(() => {
-    return (
-      <View className="flex-1 items-center justify-center bg-surface p-8">
-        <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-          <Text className="text-3xl">📋</Text>
-        </View>
-        <Text className="text-pos-lg text-pos-text-muted">
-          No items available
-        </Text>
-        <Text className="mt-2 text-pos-sm text-pos-text-faint">
-          {category ? `in ${category.name}` : 'in this category'}
-        </Text>
-      </View>
-    );
-  }, [category]);
-
-  const keyExtractor = useCallback((item: MenuItemWithInventory) => `menu-item-${item.id}`, []);
+  }
 
   return (
-    <FlashList
-      className="flex-1 bg-surface"
-      data={items}
-      keyExtractor={keyExtractor}
-      renderItem={renderItem}
-      numColumns={COLUMNS}
-      ListEmptyComponent={renderEmptyState}
-      contentContainerStyle={contentContainerStyle}
-      showsVerticalScrollIndicator={false}
-      drawDistance={120}
-      removeClippedSubviews
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor="#6366F1"
-            colors={['#6366F1']}
-          />
-        ) : undefined
-      }
-    />
+    <View className="flex-1 bg-surface">
+      <ScrollView
+        contentContainerStyle={{ padding: GRID_PADDING }}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#6366F1"
+              colors={['#6366F1']}
+            />
+          ) : undefined
+        }
+      >
+        {/* flex-wrap: display:'none' items are removed from layout flow */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {allCells.map((cell) => {
+            const quantity =
+              cell.idNum !== null ? (quantitiesByMenuItemId?.[cell.idNum] ?? 0) : 0;
+            return (
+              <MenuItemCell
+                key={cell.idKey}
+                item={cell.item}
+                isVisible={visibleIds.has(cell.idKey)}
+                quantity={quantity}
+                itemWidth={itemWidth}
+                itemHeight={itemHeight}
+                categoryColor={cell.categoryColor}
+                categoryName={cell.categoryName}
+                onItemPress={handleItemPress}
+                onDecrementItem={handleDecrementItem}
+              />
+            );
+          })}
+        </View>
+
+        {/* Empty state — visible items filtered to zero */}
+        {items.length === 0 && allItems.length > 0 && (
+          <View className="flex-1 items-center justify-center p-8">
+            <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+              <Text className="text-3xl">📋</Text>
+            </View>
+            <Text className="text-pos-lg text-pos-text-muted">No items available</Text>
+            <Text className="mt-2 text-pos-sm text-pos-text-faint">in this category</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }

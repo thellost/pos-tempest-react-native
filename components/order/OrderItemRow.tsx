@@ -10,9 +10,9 @@ import { formatIDR } from '@/utils/currency';
 
 interface OrderItemRowProps {
   item: OrderItemDisplay;
-  onUpdateQuantity: (itemId: number, newQuantity: number) => void;
-  onRemove: (itemId: number) => void;
-  onEditModifiers: (itemId: number) => void;
+  onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
+  onRemove: (itemId: number | string) => void;
+  onEditModifiers: (itemId: number | string) => void;
 }
 
 export function OrderItemRow({
@@ -21,7 +21,7 @@ export function OrderItemRow({
   onRemove,
   onEditModifiers,
 }: OrderItemRowProps) {
-  const itemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+  const itemId = item.id;
   const swipeableRef = useRef<Swipeable | null>(null);
 
   const displayQuantity = typeof item.quantity === 'string'
