@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 
+import { KOTTicketPreview } from '@/components/kitchen/KOTTicketPreview';
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
@@ -9,6 +10,7 @@ import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
+import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { ORDER_STATUS, PRICING_TYPE } from '@/constants/enums';
 import { powersync } from '@/db/provider';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
@@ -137,7 +139,11 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     confirmRound: handleConfirmRound,
     cancelRound: handleCancelRound,
     sendToKitchen,
+    lastKOT,
+    dismissKOT,
     printBill,
+    lastBill,
+    dismissBill,
     goToPayment,
     setGuestCount,
     updateCartItem,
@@ -325,9 +331,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     setSelectedSubCategoryId(subCategoryId);
   }, []);
 
-  const handleSendToKitchen = useCallback(() => {
-    Alert.alert('Kitchen', 'Send to kitchen is ready. Ticket workflow will be added in the next step.');
-  }, []);
+  const handleSendToKitchen = useCallback(async (round: number) => {
+    await sendToKitchen(round);
+  }, [sendToKitchen]);
 
   const handlePayment = useCallback(() => {
     if (!order) {
@@ -341,13 +347,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
   }, []);
 
-  const handlePrintBill = useCallback(() => {
-    if (!order) {
-      Alert.alert('Print Bill', 'No active order found.');
-      return;
-    }
-    Alert.alert('Print Bill', 'Bill printing will be implemented with Bluetooth printer integration.');
-  }, [order]);
+  const handlePrintBill = useCallback(async () => {
+    await printBill();
+  }, [printBill]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
@@ -645,14 +647,14 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
         </View>
 
         <View className="w-[70%] flex-1">
-          <View className="border-b border-border bg-surface-card px-5 py-4">
+          <View className="border-b border-border bg-surface-card px-4 py-3">
             <View className="flex-row items-center">
               <View className="flex-1">
-                <Text className="text-pos-2xl font-bold text-pos-text">
+                <Text className="text-pos-lg font-bold text-pos-text">
                   {table?.table_number || `Table ${tableId}`}
                 </Text>
                 {order && (
-                  <Text className="mt-1 text-pos-sm text-pos-text-muted">
+                  <Text className="text-pos-xs text-pos-text-muted">
                     {order.order_number}
                   </Text>
                 )}
@@ -694,6 +696,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
           </PerfProfiler>
         </View>
       </View>
+
+      <KOTTicketPreview kot={lastKOT} onDismiss={dismissKOT} />
+      <ReceiptPreview bill={lastBill} onDismiss={dismissBill} />
 
       {selectedMenuItem && (
         <ModifierPicker

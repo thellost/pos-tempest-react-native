@@ -3,32 +3,48 @@ import { Brand } from '@/constants/theme';
 import type { Device } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
+import { type PrinterType, usePrinter } from '@/hooks/use-printer';
+import { sendToPrinter } from '@/lib/printer';
 import {
-  deactivateDevice,
-  getDevicesByBranch,
-  reactivateDevice,
-  updateDeviceName,
+    deactivateDevice,
+    getDevicesByBranch,
+    reactivateDevice,
+    updateDeviceName,
 } from '@/services/device.service';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 
 export default function SettingsScreen() {
   const { user } = useAuth();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
-  
+  const {
+    kitchenPrinter,
+    cashierPrinter,
+    paperWidth,
+    updatePrinter,
+    updatePaperWidth,
+    isLoading: printerLoading,
+  } = usePrinter();
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  // Printer editing state
+  const [editingPrinterType, setEditingPrinterType] = useState<PrinterType | null>(null);
+  const [printerAddress, setPrinterAddress] = useState('');
+  const [printerName, setPrinterName] = useState('');
+  const [testingPrinter, setTestingPrinter] = useState<PrinterType | null>(null);
 
   const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
   const isManager = user?.role_name === ROLE_TYPE.MANAGER;
@@ -123,6 +139,184 @@ export default function SettingsScreen() {
           },
         },
       ]
+    );
+  };
+
+  // ── Printer helpers ──────────────────────────────────────────────────────────
+
+  const handleSavePrinter = async () => {
+    if (!editingPrinterType) return;
+    if (!printerAddress.trim()) {
+      Alert.alert('Error', 'Please enter a Bluetooth MAC address or device name.');
+      return;
+    }
+    try {
+      await updatePrinter(editingPrinterType, {
+        address: printerAddress.trim(),
+        name: printerName.trim() || undefined,
+        type: editingPrinterType,
+      });
+      setEditingPrinterType(null);
+      setPrinterAddress('');
+      setPrinterName('');
+    } catch {
+      Alert.alert('Error', 'Failed to save printer settings.');
+    }
+  };
+
+  const handleClearPrinter = (type: PrinterType) => {
+    Alert.alert(
+      'Remove Printer',
+      'Are you sure you want to remove this printer?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updatePrinter(type, null);
+            } catch {
+              Alert.alert('Error', 'Failed to remove printer.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleTestPrint = async (type: PrinterType) => {
+    setTestingPrinter(type);
+    try {
+      const testData = `\n== TEST PRINT ==\nPrinter: ${type}\nPOS Tempest\n================\n\n`;
+      await sendToPrinter(type, testData);
+      Alert.alert('Test Print', 'Test data sent to printer (simulated).\nCheck console log.');
+    } catch {
+      Alert.alert('Error', 'Test print failed.');
+    } finally {
+      setTestingPrinter(null);
+    }
+  };
+
+  const renderPrinterSection = (
+    type: PrinterType,
+    label: string,
+    icon: string,
+    address: string | null,
+    name: string | null,
+  ) => {
+    const isEditing = editingPrinterType === type;
+    const isTesting = testingPrinter === type;
+
+    return (
+      <View key={type} className="mb-4 rounded-xl bg-surface-card p-4">
+        <View className="mb-3 flex-row items-center gap-2">
+          <Text className="text-pos-base">{icon}</Text>
+          <Text className="text-pos-sm font-semibold text-pos-text">{label}</Text>
+        </View>
+
+        {isEditing ? (
+          <View className="gap-3">
+            <View>
+              <Text className="mb-1 text-pos-xs text-pos-muted">
+                Bluetooth Address / MAC
+              </Text>
+              <TextInput
+                className="rounded-xl border border-border bg-surface px-3 py-2.5 text-pos-sm text-pos-text"
+                placeholder="e.g. 00:11:22:33:44:55"
+                placeholderTextColor="#6B7280"
+                value={printerAddress}
+                onChangeText={setPrinterAddress}
+                autoCapitalize="none"
+                autoFocus
+              />
+            </View>
+            <View>
+              <Text className="mb-1 text-pos-xs text-pos-muted">
+                Display Name (optional)
+              </Text>
+              <TextInput
+                className="rounded-xl border border-border bg-surface px-3 py-2.5 text-pos-sm text-pos-text"
+                placeholder="e.g. Kitchen Epson TM-T20"
+                placeholderTextColor="#6B7280"
+                value={printerName}
+                onChangeText={setPrinterName}
+              />
+            </View>
+            <View className="flex-row gap-2">
+              <Pressable
+                className="flex-1 rounded-xl bg-brand py-2.5"
+                onPress={handleSavePrinter}
+              >
+                <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
+              </Pressable>
+              <Pressable
+                className="flex-1 rounded-xl border border-border bg-surface py-2.5"
+                onPress={() => {
+                  setEditingPrinterType(null);
+                  setPrinterAddress('');
+                  setPrinterName('');
+                }}
+              >
+                <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : address ? (
+          <>
+            <View className="mb-3 rounded-lg bg-surface px-3 py-2.5">
+              <Text className="text-pos-xs text-pos-muted">Address</Text>
+              <Text className="mt-0.5 text-pos-sm text-pos-text">{address}</Text>
+              {name ? (
+                <Text className="mt-0.5 text-pos-xs text-pos-muted">{name}</Text>
+              ) : null}
+            </View>
+            <View className="flex-row gap-2">
+              <Pressable
+                className="flex-1 rounded-xl border border-border bg-surface py-2"
+                onPress={() => {
+                  setEditingPrinterType(type);
+                  setPrinterAddress(address);
+                  setPrinterName(name ?? '');
+                }}
+              >
+                <Text className="text-center text-pos-xs text-pos-text">Edit</Text>
+              </Pressable>
+              <Pressable
+                className="flex-1 rounded-xl border border-border bg-surface py-2"
+                onPress={() => handleTestPrint(type)}
+                disabled={isTesting}
+              >
+                {isTesting ? (
+                  <ActivityIndicator size="small" color={Brand.primary} />
+                ) : (
+                  <Text className="text-center text-pos-xs text-pos-text">Test Print</Text>
+                )}
+              </Pressable>
+              <Pressable
+                className="flex-1 rounded-xl border border-pos-danger/30 bg-pos-danger-muted py-2"
+                onPress={() => handleClearPrinter(type)}
+              >
+                <Text className="text-center text-pos-xs text-pos-danger">Remove</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <View className="flex-row items-center justify-between">
+            <Text className="text-pos-sm text-pos-muted">Not configured</Text>
+            <Pressable
+              className="rounded-xl border border-brand bg-brand-muted px-4 py-2"
+              onPress={() => {
+                setEditingPrinterType(type);
+                setPrinterAddress('');
+                setPrinterName('');
+              }}
+            >
+              <Text className="text-pos-xs font-semibold text-brand">+ Add Printer</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -296,11 +490,60 @@ export default function SettingsScreen() {
         <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
           Printer Settings
         </Text>
-        <View className="rounded-xl bg-surface-card p-4">
-          <Text className="text-pos-sm text-pos-text-muted">
-            Printer configuration will be available in Step 9.
-          </Text>
-        </View>
+
+        {printerLoading ? (
+          <View className="items-center py-6">
+            <ActivityIndicator size="small" color={Brand.primary} />
+          </View>
+        ) : (
+          <>
+            {/* Paper Width */}
+            <View className="mb-4 rounded-xl bg-surface-card p-4">
+              <Text className="mb-3 text-pos-sm font-semibold text-pos-text">
+                Paper Width
+              </Text>
+              <View className="flex-row gap-3">
+                {(['58mm', '80mm'] as const).map((w) => (
+                  <Pressable
+                    key={w}
+                    className={`flex-1 rounded-xl border py-2.5 ${
+                      paperWidth === w
+                        ? 'border-brand bg-brand'
+                        : 'border-border bg-surface'
+                    }`}
+                    onPress={() => updatePaperWidth(w)}
+                  >
+                    <Text
+                      className={`text-center text-pos-sm font-semibold ${
+                        paperWidth === w ? 'text-white' : 'text-pos-text'
+                      }`}
+                    >
+                      {w}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Kitchen Printer */}
+            {renderPrinterSection(
+              'kitchen',
+              'Kitchen Printer',
+              '🍳',
+              kitchenPrinter?.address ?? null,
+              kitchenPrinter?.name ?? null,
+            )}
+
+            {/* Cashier Printer */}
+            {renderPrinterSection(
+              'cashier',
+              'Cashier / Receipt Printer',
+              '🧾',
+              cashierPrinter?.address ?? null,
+              cashierPrinter?.name ?? null,
+            )}
+          </>
+        )}
       </View>
 
       <View className="p-4">

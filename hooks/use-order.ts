@@ -8,6 +8,8 @@ import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
+import type { KOTWithItems } from '@/services/kitchen.service';
+import { createKOT } from '@/services/kitchen.service';
 import type { SelectedModifier } from '@/services/order.service';
 import {
   addItemToOrder,
@@ -21,6 +23,8 @@ import {
   updateItemQuantity,
   updateItemUnitPrice,
 } from '@/services/order.service';
+import type { BillData } from '@/services/receipt.service';
+import { getBillData } from '@/services/receipt.service';
 
 interface UseOrderOptions {
   tableId: number | null;
@@ -60,9 +64,15 @@ interface UseOrderReturn {
   confirmRound: () => Promise<void>;
   cancelRound: () => void;
 
-  // Kitchen & Payment
-  sendToKitchen: () => Promise<void>;
+  // Kitchen
+  sendToKitchen: (roundNumber?: number) => Promise<void>;
+  lastKOT: KOTWithItems | null;
+  dismissKOT: () => void;
+
+  // Bill preview
   printBill: () => Promise<void>;
+  lastBill: BillData | null;
+  dismissBill: () => void;
   goToPayment: () => void;
 
   // Guest count
@@ -129,6 +139,8 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [guestCount, setGuestCount] = useState(0);
   const [roundSentAt, setRoundSentAt] = useState<Map<number, string>>(new Map());
+  const [lastKOT, setLastKOT] = useState<KOTWithItems | null>(null);
+  const [lastBill, setLastBill] = useState<BillData | null>(null);
 
   const lastLoadedOrderIdRef = useRef<number | null | undefined>(undefined);
 
@@ -540,14 +552,67 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     setPendingRoundItems([]);
   }, []);
 
-  // Send to kitchen (placeholder)
-  const sendToKitchen = useCallback(async () => {
-    console.log('[useOrder] Send to kitchen - will be implemented in Step 8');
+  // Send to kitchen — creates KOT for the given round (defaults to current round).
+  // Reprinting the same round is allowed; each call creates a new KOT record.
+  const sendToKitchen = useCallback(async (roundNumber?: number) => {
+    if (!order) {
+      Alert.alert('Error', 'No active order to send to kitchen.');
+      return;
+    }
+
+    const roundToPrint = roundNumber ?? currentRound;
+    const orderIdNum =
+      typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+
+    try {
+      const kot = await createKOT(orderIdNum, roundToPrint);
+
+      setRoundSentAt((prev) => {
+        const next = new Map(prev);
+        next.set(roundToPrint, kot.created_at);
+        return next;
+      });
+
+      setLastKOT(kot);
+
+      await reload();
+    } catch (error) {
+      console.error('[useOrder] Error sending to kitchen:', error);
+      Alert.alert(
+        'Kitchen Error',
+        error instanceof Error ? error.message : 'Failed to send to kitchen.'
+      );
+    }
+  }, [order, currentRound, reload]);
+
+  // Dismiss KOT preview modal
+  const dismissKOT = useCallback(() => {
+    setLastKOT(null);
   }, []);
 
-  // Print bill (placeholder)
+  // Print bill — fetches order data and surfaces a preview via lastBill
   const printBill = useCallback(async () => {
-    console.log('[useOrder] Print bill - will be implemented in Step 9');
+    if (!order) {
+      Alert.alert('Error', 'No active order to print.');
+      return;
+    }
+    try {
+      const orderIdNum =
+        typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+      const bill = await getBillData(orderIdNum, false);
+      setLastBill(bill);
+    } catch (error) {
+      console.error('[useOrder] Error generating bill:', error);
+      Alert.alert(
+        'Print Error',
+        error instanceof Error ? error.message : 'Failed to generate bill.',
+      );
+    }
+  }, [order]);
+
+  // Dismiss bill preview modal
+  const dismissBill = useCallback(() => {
+    setLastBill(null);
   }, []);
 
   // Go to payment
@@ -608,7 +673,11 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     cancelRound,
 
     sendToKitchen,
+    lastKOT,
+    dismissKOT,
     printBill,
+    lastBill,
+    dismissBill,
     goToPayment,
 
     setGuestCount,

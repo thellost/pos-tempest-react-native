@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useMemo } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
@@ -22,7 +22,7 @@ interface OrderPanelProps {
   onEditModifiers: (itemId: number | string) => void;
   onConfirmOrder: () => void;
   onRemoveItem: (itemId: number | string) => void;
-  onSendToKitchen: () => void;
+  onSendToKitchen: (round: number) => void;
   onPayment: () => void;
   onHold: () => void;
   onConfirmRound: () => void;
@@ -65,6 +65,33 @@ export const OrderPanel = memo(function OrderPanel({
   const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
   const showConfirmButton = !isConfirmed && hasItems && isShiftOpen;
 
+  // Which round to print — defaults to latest round, user can select older rounds.
+  const [printRound, setPrintRound] = useState(currentRound);
+  useEffect(() => {
+    setPrintRound(currentRound);
+  }, [currentRound]);
+
+  // Wrap onSendToKitchen so it always uses the currently selected printRound.
+  const handleSendToKitchenForRound = useCallback(() => {
+    onSendToKitchen(printRound);
+  }, [onSendToKitchen, printRound]);
+
+  // Format the sent-at time for the selected print round.
+  const currentRoundSentAt = roundSentAt.get(printRound);
+  const sentAtFormatted: string | null = currentRoundSentAt
+    ? (() => {
+        try {
+          return new Date(currentRoundSentAt).toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Jakarta',
+          });
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
   const handleGuestDecrease = useCallback(() => {
     if (guestCount !== null && guestCount > 0) {
       onGuestCountChange(guestCount - 1);
@@ -91,6 +118,12 @@ export const OrderPanel = memo(function OrderPanel({
     
     return grouped;
   }, [activeItems]);
+
+  // Rounds that have actual items in the DB (for the round selector).
+  const availableRounds = useMemo(
+    () => Array.from(itemsByRound.keys()).sort((a, b) => a - b),
+    [itemsByRound]
+  );
 
   // Render items with round dividers
   const renderedItemsWithRounds = useMemo(() => {
@@ -219,14 +252,6 @@ export const OrderPanel = memo(function OrderPanel({
                 Takeaway
               </Text>
             </Pressable>
-            {!isConfirmed && showConfirmButton && (
-              <Pressable
-                onPress={onConfirmOrder}
-                className="rounded-sm bg-amber-500 px-3 py-1.5 active:opacity-80"
-              >
-                <Text className="text-pos-xs font-semibold text-white">Confirm</Text>
-              </Pressable>
-            )}
           </View>
         </View>
 
@@ -301,11 +326,36 @@ export const OrderPanel = memo(function OrderPanel({
         )}
       </View>
 
+      {/* Round selector — shown when the order has items in 2 or more rounds */}
+      {order && availableRounds.length > 1 && (
+        <View className="flex-row items-center border-t border-border bg-surface-card px-3 py-1.5">
+          <Text className="mr-2 text-pos-xs text-pos-text-muted">Ticket:</Text>
+          {availableRounds.map((r) => (
+            <Pressable
+              key={r}
+              onPress={() => setPrintRound(r)}
+              className="mr-1 rounded px-2.5 py-1"
+              style={{ backgroundColor: printRound === r ? '#6366F1' : '#1A1F2C' }}
+            >
+              <Text
+                className="text-pos-xs font-bold"
+                style={{ color: printRound === r ? '#FFFFFF' : '#9CA3AF' }}
+              >
+                R{r}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <OrderActions
         orderStatus={orderStatus}
         hasItems={hasItems}
         hasPendingRound={hasPendingRound}
-        onSendToKitchen={onSendToKitchen}
+        sentAt={sentAtFormatted}
+        onConfirmOrder={onConfirmOrder}
+        showConfirmButton={showConfirmButton}
+        onSendToKitchen={handleSendToKitchenForRound}
         onHold={onHold}
         onPayment={onPayment}
         onConfirmRound={onConfirmRound}

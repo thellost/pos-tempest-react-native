@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 
+import { KOTTicketPreview } from '@/components/kitchen/KOTTicketPreview';
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
@@ -9,6 +10,7 @@ import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
+import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { PRICING_TYPE } from '@/constants/enums';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
@@ -81,7 +83,11 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     confirmRound: handleConfirmRound,
     cancelRound: handleCancelRound,
     sendToKitchen,
+    lastKOT,
+    dismissKOT,
     printBill,
+    lastBill,
+    dismissBill,
     goToPayment,
     updateCartItem,
     reload,
@@ -247,9 +253,9 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     setSelectedSubCategoryId(subCategoryId);
   }, []);
 
-  const handleSendToKitchen = useCallback(() => {
-    Alert.alert('Kitchen', 'Send to kitchen is ready. Ticket workflow will be added in the next step.');
-  }, []);
+  const handleSendToKitchen = useCallback(async (round: number) => {
+    await sendToKitchen(round);
+  }, [sendToKitchen]);
 
   const handlePayment = useCallback(() => {
     if (!order) {
@@ -263,13 +269,9 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
   }, []);
 
-  const handlePrintBill = useCallback(() => {
-    if (!order) {
-      Alert.alert('Print Bill', 'No active order found.');
-      return;
-    }
-    Alert.alert('Print Bill', 'Bill printing will be implemented with Bluetooth printer integration.');
-  }, [order]);
+  const handlePrintBill = useCallback(async () => {
+    await printBill();
+  }, [printBill]);
 
   // Confirm order — handles both re-confirming an existing draft order (loaded from DB)
   // and creating a new order from local cart items.
@@ -638,6 +640,9 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
           </PerfProfiler>
         </View>
       </View>
+
+      <KOTTicketPreview kot={lastKOT} onDismiss={dismissKOT} />
+      <ReceiptPreview bill={lastBill} onDismiss={dismissBill} />
 
       {selectedMenuItem && (
         <ModifierPicker

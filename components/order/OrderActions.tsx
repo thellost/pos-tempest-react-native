@@ -9,6 +9,7 @@ interface OrderActionsProps {
   hasItems: boolean;
   hasPendingRound: boolean;
   sentAt?: string | null;
+  onConfirmOrder: () => void;
   onSendToKitchen: () => void;
   onHold: () => void;
   onPayment: () => void;
@@ -17,6 +18,7 @@ interface OrderActionsProps {
   onPrintBill: () => void;
   /** When false all mutating actions are replaced with a locked shift banner */
   isShiftOpen?: boolean;
+  showConfirmButton?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function OrderActions({
   hasItems,
   hasPendingRound,
   sentAt,
+  onConfirmOrder,
   onSendToKitchen,
   onHold,
   onPayment,
@@ -37,10 +40,18 @@ export function OrderActions({
   onCancelRound,
   onPrintBill,
   isShiftOpen = true,
+  showConfirmButton = false,
 }: OrderActionsProps) {
-  const isPending = orderStatus === ORDER_STATUS.PENDING;
-  const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
-  const canSend = hasItems && isPending;
+  // An "active" order is any non-draft, non-complete status that should show
+  // the full action bar (Kitchen, Hold, Payment, Confirm/Cancel Round).
+  const isActiveOrder =
+    orderStatus === ORDER_STATUS.CONFIRMED ||
+    orderStatus === ORDER_STATUS.PREPARING ||
+    orderStatus === ORDER_STATUS.READY ||
+    orderStatus === ORDER_STATUS.SERVED;
+
+  // Kitchen button is always enabled when there are items — reprinting is allowed.
+  const canSend = hasItems;
   const canPayment = hasItems && orderStatus !== ORDER_STATUS.CANCELLED;
 
   const handleSendToKitchen = useCallback(() => {
@@ -98,7 +109,7 @@ export function OrderActions({
   }
 
   // Pending Round State - show Confirm Round / Cancel Round buttons
-  if (isConfirmed && hasPendingRound) {
+  if (isActiveOrder && hasPendingRound) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
         <View className="flex-row gap-1.5">
@@ -154,8 +165,8 @@ export function OrderActions({
     );
   }
 
-  // Confirmed State (no pending round) - show standard action buttons
-  if (isConfirmed) {
+  // Confirmed/Active State (no pending round) - show standard action buttons
+  if (isActiveOrder) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
         <View className="flex-row gap-1.5">
@@ -189,8 +200,11 @@ export function OrderActions({
             })}
           >
             <Text className={`text-pos-xs font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
-              {sentAt ? `Sent ${sentAt}` : 'Kitchen'}
+              Print KOT
             </Text>
+            {sentAt ? (
+              <Text className="text-[9px] text-indigo-300 mt-0.5">✓ {sentAt}</Text>
+            ) : null}
           </Pressable>
         </View>
 
@@ -232,7 +246,31 @@ export function OrderActions({
     );
   }
 
-  // Draft state or other states - show minimal actions
+  // Draft state — show Confirm Order as the primary CTA
+  if (showConfirmButton) {
+    return (
+      <View className="border-t border-border bg-surface-card p-2">
+        <Pressable
+          onPress={onConfirmOrder}
+          disabled={!hasItems}
+          className="h-12 items-center justify-center rounded-sm"
+          style={({ pressed }) => ({
+            backgroundColor: hasItems ? '#F59E0B' : '#1A1F2C',
+            borderWidth: 1,
+            borderColor: hasItems ? '#FBBF24' : 'rgba(255,255,255,0.06)',
+            opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
+            transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
+          })}
+        >
+          <Text className={`text-pos-sm font-bold ${hasItems ? 'text-white' : 'text-pos-text-faint'}`}>
+            Confirm Order
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Fallback (cancelled / unknown status)
   return (
     <View className="border-t border-border bg-surface-card p-2">
       <Pressable

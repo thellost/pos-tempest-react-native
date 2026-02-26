@@ -33,7 +33,9 @@ export function useShift(): UseShiftReturn {
   const [error, setError] = useState<string | null>(null);
 
   const requiresShift = user?.role_name === ROLE_TYPE.CASHIER;
-  const isShiftOpen = Boolean(activeShift);
+  // Non-cashier roles (Manager, Admin, Owner) can always operate without an open shift.
+  // Only cashiers are required to have an active shift before taking orders.
+  const isShiftOpen = !requiresShift || Boolean(activeShift);
 
   const refresh = useCallback(async () => {
     if (!user?.id) {

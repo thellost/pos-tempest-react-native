@@ -28,7 +28,7 @@ export default function FloorScreen() {
     getOrderElapsedMinutes: getTakeawayElapsedMinutes,
   } = useTakeaway();
 
-  const { isShiftOpen } = useShift();
+  const { isShiftOpen, loading: shiftLoading } = useShift();
 
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [isTakeawaySelected, setIsTakeawaySelected] = useState(false);
@@ -105,7 +105,7 @@ export default function FloorScreen() {
     }
   };
 
-  const isLoading = tablesLoading || takeawayLoading;
+  const isLoading = tablesLoading || takeawayLoading || shiftLoading;
 
   if (isLoading) {
     return (
