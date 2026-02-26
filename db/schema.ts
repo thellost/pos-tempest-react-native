@@ -205,6 +205,7 @@ export const appSchema = new Schema({
 		is_voided: column.integer,
 		voided_by: column.integer,
 		void_reason: column.text,
+		round_number: column.integer,
 		created_at: column.text,
 	}),
 	order_item_modifiers: new Table({
@@ -219,6 +220,7 @@ export const appSchema = new Schema({
 		ticket_number: column.text,
 		status: column.text,
 		priority: column.integer,
+		round_number: column.integer,
 		printed_at: column.text,
 		started_at: column.text,
 		completed_at: column.text,

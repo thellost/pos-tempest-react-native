@@ -15,7 +15,7 @@ import {
 
 export default function DeviceSetupScreen() {
   const router = useRouter();
-  const { branches, loading, error, registerDevice, deviceInfo } = useDevice();
+  const { branches, loading, error, registerDevice, deviceInfo, refresh } = useDevice();
   
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [deviceName, setDeviceName] = useState('');
@@ -112,9 +112,17 @@ export default function DeviceSetupScreen() {
           </Text>
           {branches.length === 0 ? (
             <View className="rounded-xl bg-pos-warning-muted p-4">
-              <Text className="text-pos-sm text-pos-warning">
-                No branches available. Please sync with the server or contact your administrator.
+              <Text className="mb-3 text-pos-sm text-pos-warning">
+                No branches found. This may happen on first launch while data is syncing. Please wait a moment and tap Refresh.
               </Text>
+              <Pressable
+                className="rounded-lg bg-surface-card px-4 py-2"
+                onPress={() => refresh().catch(() => {})}
+              >
+                <Text className="text-center text-pos-sm font-semibold text-pos-text">
+                  Refresh
+                </Text>
+              </Pressable>
             </View>
           ) : (
             <View className="gap-2">

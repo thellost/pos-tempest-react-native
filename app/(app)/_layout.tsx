@@ -6,7 +6,7 @@ import { Redirect, router, Stack, usePathname } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 export default function AppLayout() {
-  const { loading, isAuthenticated, isLocked, markActivity, user, signOut } = useAuth();
+  const { loading, profileLoading, isAuthenticated, isLocked, markActivity, user, signOut, refreshProfile } = useAuth();
   const { loading: deviceLoading, isRegistered, registration } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
   const pathname = usePathname();
@@ -28,6 +28,17 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/pin" />;
   }
 
+  // Profile is still being fetched (waiting for PowerSync initial sync)
+  if (profileLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
+        <Text className="mt-4 text-pos-sm text-pos-text-muted">Loading profile…</Text>
+        <Text className="mt-2 text-pos-xs text-pos-text-muted">Waiting for data sync…</Text>
+      </View>
+    );
+  }
+
   if (!user) {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-8">
@@ -38,14 +49,21 @@ export default function AppLayout() {
           Profile Loading Error
         </Text>
         <Text className="mb-6 text-center text-pos-sm text-pos-text-muted">
-          Unable to load user profile. Please try logging in again.
+          Unable to load user profile. This may happen if the device has no internet connection on first launch. Please check your connection and try again.
         </Text>
         <Pressable
-          className="rounded-xl bg-accent px-6 py-3"
+          className="mb-3 w-full rounded-xl bg-brand px-6 py-3"
           onPress={() => {
-            window.location.reload?.();
+            refreshProfile().catch(() => {});
           }}>
-          <Text className="text-pos-base font-semibold text-white">Reload</Text>
+          <Text className="text-center text-pos-base font-semibold text-white">Retry</Text>
+        </Pressable>
+        <Pressable
+          className="w-full rounded-xl border border-border bg-surface-card px-6 py-3"
+          onPress={async () => {
+            await signOut();
+          }}>
+          <Text className="text-center text-pos-base font-semibold text-pos-text">Sign Out</Text>
         </Pressable>
       </View>
     );

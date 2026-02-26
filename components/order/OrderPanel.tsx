@@ -8,11 +8,15 @@ import { formatIDR } from '@/utils/currency';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
 import { OrderTotals } from './OrderTotals';
+import { RoundDivider } from './RoundDivider';
 
 interface OrderPanelProps {
   order: Order | null;
   items: OrderItemDisplay[];
+  pendingRoundItems: OrderItemDisplay[];
   guestCount: number | null;
+  currentRound: number;
+  roundSentAt: Map<number, string>;
   onGuestCountChange: (count: number) => void;
   onUpdateQuantity: (itemId: number, newQuantity: number) => void;
   onEditModifiers: (itemId: number) => void;
@@ -21,12 +25,22 @@ interface OrderPanelProps {
   onSendToKitchen: () => void;
   onPayment: () => void;
   onHold: () => void;
+  onConfirmRound: () => void;
+  onCancelRound: () => void;
+  onPrintBill: () => void;
 }
 
+/**
+ * Order panel component with round tracking support.
+ * Displays order items grouped by round with visual dividers.
+ */
 export function OrderPanel({
   order,
   items,
+  pendingRoundItems,
   guestCount,
+  currentRound,
+  roundSentAt,
   onGuestCountChange,
   onUpdateQuantity,
   onEditModifiers,
@@ -35,9 +49,13 @@ export function OrderPanel({
   onSendToKitchen,
   onPayment,
   onHold,
+  onConfirmRound,
+  onCancelRound,
+  onPrintBill,
 }: OrderPanelProps) {
   const activeItems = items.filter(i => !i.is_voided);
   const hasItems = activeItems.length > 0;
+  const hasPendingRound = pendingRoundItems.length > 0;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
   const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
   const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
@@ -56,38 +74,120 @@ export function OrderPanel({
     }
   }, [guestCount, onGuestCountChange]);
 
-  const renderedItems = useMemo(() => {
-    const grouped = items.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
-      const groupName = item.category_group?.trim() || 'Lainnya';
-      if (!accumulator[groupName]) {
-        accumulator[groupName] = [];
+  // Group items by round number
+  const itemsByRound = useMemo(() => {
+    const grouped = new Map<number, OrderItemDisplay[]>();
+    
+    for (const item of activeItems) {
+      const round = item.round_number || 1;
+      if (!grouped.has(round)) {
+        grouped.set(round, []);
       }
-      accumulator[groupName].push(item);
-      return accumulator;
-    }, {});
+      grouped.get(round)!.push(item);
+    }
+    
+    return grouped;
+  }, [activeItems]);
 
-    return Object.entries(grouped).map(([groupName, groupItems]) => (
-      <Fragment key={`group-${groupName}`}>
-        <View className="mb-1 mt-1 rounded-sm bg-surface-raised px-2 py-1">
-          <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-text-muted">
-            {groupName}
-          </Text>
-        </View>
+  // Render items with round dividers
+  const renderedItemsWithRounds = useMemo(() => {
+    const result: React.ReactNode[] = [];
+    const rounds = Array.from(itemsByRound.keys()).sort((a, b) => a - b);
 
-        {groupItems.map((item) => (
-          <OrderItemRow
-            key={`order-item-${item.id}`}
-            item={item}
-            onUpdateQuantity={onUpdateQuantity}
-            onEditModifiers={onEditModifiers}
-            onRemove={onRemoveItem}
+    for (const round of rounds) {
+      const roundItems = itemsByRound.get(round) || [];
+      
+      // Add round divider (except for first round if no sent timestamp)
+      if (round > 1 || roundSentAt.has(round)) {
+        result.push(
+          <RoundDivider
+            key={`round-${round}`}
+            roundNumber={round}
+            sentAt={roundSentAt.get(round)}
           />
-        ))}
-      </Fragment>
-    ));
-  }, [items, onEditModifiers, onUpdateQuantity, onRemoveItem]);
+        );
+      }
 
-  const emptySubtotal = items.reduce((sum, item) => sum + (item.is_voided ? 0 : item.total), 0);
+      // Group items by category within the round
+      const grouped = roundItems.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
+        const groupName = item.category_group?.trim() || 'Lainnya';
+        if (!accumulator[groupName]) {
+          accumulator[groupName] = [];
+        }
+        accumulator[groupName].push(item);
+        return accumulator;
+      }, {});
+
+      for (const [groupName, groupItems] of Object.entries(grouped)) {
+        result.push(
+          <Fragment key={`round-${round}-group-${groupName}`}>
+            <View className="mb-1 mt-1 rounded-sm bg-surface-raised px-2 py-1">
+              <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-text-muted">
+                {groupName}
+              </Text>
+            </View>
+
+            {groupItems.map((item) => (
+              <OrderItemRow
+                key={`order-item-${item.id}`}
+                item={item}
+                onUpdateQuantity={onUpdateQuantity}
+                onEditModifiers={onEditModifiers}
+                onRemove={onRemoveItem}
+              />
+            ))}
+          </Fragment>
+        );
+      }
+    }
+
+    // Render pending round items
+    if (pendingRoundItems.length > 0) {
+      result.push(
+        <RoundDivider
+          key={`round-${currentRound}-pending`}
+          roundNumber={currentRound}
+          sentAt={null}
+        />
+      );
+
+      const grouped = pendingRoundItems.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
+        const groupName = item.category_group?.trim() || 'Lainnya';
+        if (!accumulator[groupName]) {
+          accumulator[groupName] = [];
+        }
+        accumulator[groupName].push(item);
+        return accumulator;
+      }, {});
+
+      for (const [groupName, groupItems] of Object.entries(grouped)) {
+        result.push(
+          <Fragment key={`round-${currentRound}-pending-group-${groupName}`}>
+            <View className="mb-1 mt-1 rounded-sm bg-amber-500/20 px-2 py-1">
+              <Text className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                {groupName} (PENDING)
+              </Text>
+            </View>
+
+            {groupItems.map((item) => (
+              <OrderItemRow
+                key={`pending-item-${item.id}`}
+                item={item}
+                onUpdateQuantity={onUpdateQuantity}
+                onEditModifiers={onEditModifiers}
+                onRemove={onRemoveItem}
+              />
+            ))}
+          </Fragment>
+        );
+      }
+    }
+
+    return result;
+  }, [itemsByRound, pendingRoundItems, currentRound, roundSentAt, onEditModifiers, onUpdateQuantity, onRemoveItem]);
+
+  // Calculate totals including pending items
+  const allItemsTotal = [...activeItems, ...pendingRoundItems].reduce((sum, item) => sum + item.total, 0);
 
   return (
     <View className="flex-1 border-r border-border bg-surface-soft">
@@ -153,7 +253,7 @@ export function OrderPanel({
         contentContainerStyle={{ paddingVertical: 12 }}
         showsVerticalScrollIndicator={false}
       >
-        {items.length === 0 ? (
+        {activeItems.length === 0 && pendingRoundItems.length === 0 ? (
           <View className="items-center justify-center py-12">
             <View className="mb-3 h-12 w-12 items-center justify-center rounded-full bg-surface-card">
               <Text className="text-2xl">🍽️</Text>
@@ -164,7 +264,7 @@ export function OrderPanel({
             </Text>
           </View>
         ) : (
-          renderedItems
+          renderedItemsWithRounds
         )}
       </ScrollView>
 
@@ -176,7 +276,7 @@ export function OrderPanel({
             <View className="flex-row justify-between">
               <Text className="text-pos-xs font-semibold text-pos-text-muted">Total</Text>
               <Text className="text-pos-lg font-bold text-accent">
-                {formatIDR(emptySubtotal)}
+                {formatIDR(allItemsTotal)}
               </Text>
             </View>
           </View>
@@ -186,9 +286,13 @@ export function OrderPanel({
       <OrderActions
         orderStatus={orderStatus}
         hasItems={hasItems}
+        hasPendingRound={hasPendingRound}
         onSendToKitchen={onSendToKitchen}
         onHold={onHold}
         onPayment={onPayment}
+        onConfirmRound={onConfirmRound}
+        onCancelRound={onCancelRound}
+        onPrintBill={onPrintBill}
       />
     </View>
   );

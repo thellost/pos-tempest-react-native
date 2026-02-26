@@ -38,31 +38,33 @@ export function OrderItemRow({
     swipeableRef.current?.close();
   }, []);
 
+  // Auto-execute action when swipe reaches full open (no tap required)
+  const handleSwipeableOpen = useCallback((direction: 'left' | 'right') => {
+    if (item.is_voided) return;
+    if (direction === 'right') {
+      // Swiped left → delete action
+      swipeableRef.current?.close();
+      onRemove(itemId);
+    } else if (direction === 'left') {
+      // Swiped right → edit action
+      swipeableRef.current?.close();
+      onEditModifiers(itemId);
+    }
+  }, [item.is_voided, itemId, onRemove, onEditModifiers]);
+
   const rightActions = useMemo(() => (
-    <Pressable
-      onPress={() => {
-        closeSwipeable();
-        onRemove(itemId);
-      }}
-      className="h-full w-[72px] items-center justify-center bg-pos-danger"
-    >
+    <View className="h-full w-[72px] items-center justify-center bg-pos-danger">
       <MaterialIcons name="delete" size={20} color="#fff" />
       <Text className="mt-1 text-[10px] font-semibold text-white">Delete</Text>
-    </Pressable>
-  ), [itemId, onRemove, closeSwipeable]);
+    </View>
+  ), []);
 
   const leftActions = useMemo(() => (
-    <Pressable
-      onPress={() => {
-        closeSwipeable();
-        onEditModifiers(itemId);
-      }}
-      className="h-full w-[72px] items-center justify-center bg-amber-500"
-    >
+    <View className="h-full w-[72px] items-center justify-center bg-amber-500">
       <MaterialIcons name="edit" size={20} color="#fff" />
       <Text className="mt-1 text-[10px] font-semibold text-white">Edit</Text>
-    </Pressable>
-  ), [closeSwipeable, itemId, onEditModifiers]);
+    </View>
+  ), []);
 
   return (
     <View className={item.is_voided ? 'opacity-50' : ''}>
@@ -72,6 +74,7 @@ export function OrderItemRow({
         }}
         renderLeftActions={() => (item.is_voided ? null : leftActions)}
         renderRightActions={() => (item.is_voided ? null : rightActions)}
+        onSwipeableOpen={handleSwipeableOpen}
         overshootLeft={false}
         overshootRight={false}
         leftThreshold={40}

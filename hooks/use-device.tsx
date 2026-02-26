@@ -8,6 +8,8 @@
  * - deviceId persists across app restarts (stored in AsyncStorage)
  */
 
+import { useQuery } from '@powersync/react';
+
 import type { Branch } from '@/db/models';
 import {
   clearDeviceId,
@@ -17,7 +19,6 @@ import {
   type DeviceInfo,
 } from '@/lib/device';
 import {
-  getActiveBranches,
   getDeviceRegistration,
   registerDevice as registerDeviceService,
   updateDeviceLastSeen,
@@ -55,7 +56,11 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [registration, setRegistration] = useState<DeviceRegistrationResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [branches, setBranches] = useState<Branch[]>([]);
+
+  // Reactive query — automatically updates when PowerSync syncs branch data
+  const { data: branches } = useQuery<Branch>(
+    `SELECT * FROM branches WHERE is_active = 1 ORDER BY name`
+  );
   
   // Use ref to track initialization state
   const initializingRef = useRef(false);
@@ -95,11 +100,6 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       const regResult = await getDeviceRegistration(id);
       if (!mountedRef.current) return;
       setRegistration(regResult);
-
-      // Load available branches
-      const activeBranches = await getActiveBranches();
-      if (!mountedRef.current) return;
-      setBranches(activeBranches);
 
       // Update last seen if registered
       if (regResult.registered) {
