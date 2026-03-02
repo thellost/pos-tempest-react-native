@@ -565,14 +565,20 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
       await voidOrder(orderIdNum, user.id, reason);
 
+      // Clear current order state from UI after cancel
+      setOrder(null);
+      setOrderItems([]);
       setPendingRoundItems([]);
       setCartItems([]);
-      await reload();
+      setRoundSentAt(new Map());
+      setGuestCount(0);
+      setLastKOT(null);
+      setLastBill(null);
     } catch (error) {
       console.error('[useOrder] Error cancelling order:', error);
       throw error;
     }
-  }, [order, user, isShiftOpen, reload]);
+  }, [order, user, isShiftOpen]);
 
   // Cancel round (clear pending items)
   const cancelRound = useCallback(() => {

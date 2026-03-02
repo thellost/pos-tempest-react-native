@@ -39,9 +39,6 @@ export async function registerDevice(
 
   const now = new Date().toISOString();
   
-  // Debugging: Delete all devices before inserting a new one
-  await powersync.execute(`DELETE FROM devices`);
-  
   // Check if device is already registered
   const existing = await getDeviceRegistration(deviceUid);
   
