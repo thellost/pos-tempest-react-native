@@ -24,7 +24,7 @@ interface OrderPanelProps {
   onRemoveItem: (itemId: number | string) => void;
   onSendToKitchen: (round: number) => void;
   onPayment: () => void;
-  onHold: () => void;
+  onCancelOrder: () => void;
   onConfirmRound: () => void;
   onCancelRound: () => void;
   onPrintBill: () => void;
@@ -50,7 +50,7 @@ export const OrderPanel = memo(function OrderPanel({
   onRemoveItem,
   onSendToKitchen,
   onPayment,
-  onHold,
+  onCancelOrder,
   onConfirmRound,
   onCancelRound,
   onPrintBill,
@@ -356,7 +356,7 @@ export const OrderPanel = memo(function OrderPanel({
         onConfirmOrder={onConfirmOrder}
         showConfirmButton={showConfirmButton}
         onSendToKitchen={handleSendToKitchenForRound}
-        onHold={onHold}
+        onCancelOrder={onCancelOrder}
         onPayment={onPayment}
         onConfirmRound={onConfirmRound}
         onCancelRound={onCancelRound}

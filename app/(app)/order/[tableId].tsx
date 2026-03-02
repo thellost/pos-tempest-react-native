@@ -136,6 +136,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     updateNotes,
     editModifiers,
     confirmOrder: handleConfirmOrder,
+    cancelOrder,
     confirmRound: handleConfirmRound,
     cancelRound: handleCancelRound,
     sendToKitchen,
@@ -343,9 +344,35 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     goToPayment();
   }, [order, goToPayment]);
 
-  const handleHold = useCallback(() => {
-    Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
-  }, []);
+  const handleCancelOrder = useCallback(() => {
+    if (!order) {
+      Alert.alert('Cancel Order', 'No active order found.');
+      return;
+    }
+
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order? This will mark the order as cancelled and keep it in history.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await cancelOrder('Cancelled from dine-in order panel');
+                Alert.alert('Order Cancelled', 'Order has been marked as cancelled.');
+              } catch (error) {
+                console.error('[OrderScreen] Error cancelling order:', error);
+                Alert.alert('Error', 'Failed to cancel order.');
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [order, cancelOrder]);
 
   const handlePrintBill = useCallback(async () => {
     await printBill();
@@ -634,7 +661,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
                 onRemoveItem={removeItem}
                 onSendToKitchen={handleSendToKitchen}
                 onPayment={handlePayment}
-                onHold={handleHold}
+                onCancelOrder={handleCancelOrder}
                 pendingRoundItems={pendingRoundItemsDisplay}
                 currentRound={currentRound}
                 roundSentAt={roundSentAt}

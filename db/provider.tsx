@@ -8,12 +8,12 @@ import { powerSyncConnector } from '@/db/connector';
 import { appSchema } from '@/db/schema';
 
 export const powersync = new PowerSyncDatabase({
-	database: new OPSqliteOpenFactory({ dbFilename: 'postempest.db' }),
+	database: new OPSqliteOpenFactory({
+		dbFilename: 'postempest.db',
+	}),
 	schema: appSchema,
 });
 
-let initialized = false;
-let connected = false;
 let initPromise: Promise<void> | null = null;
 
 export async function initializePowerSync() {
@@ -22,14 +22,16 @@ export async function initializePowerSync() {
 	}
 
 	initPromise = (async () => {
-		if (!initialized) {
+		try {
 			await powersync.init();
-			initialized = true;
-		}
 
-		if (!connected && process.env.EXPO_PUBLIC_POWERSYNC_URL) {
-			await powersync.connect(powerSyncConnector);
-			connected = true;
+			if (process.env.EXPO_PUBLIC_POWERSYNC_URL) {
+				await powersync.connect(powerSyncConnector);
+			}
+		} catch (error) {
+			// Reset so callers can retry
+			initPromise = null;
+			throw error;
 		}
 	})();
 
@@ -43,7 +45,6 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 		initializePowerSync()
 			.then(() => setReady(true))
 			.catch((e: unknown) => {
-				connected = false;
 				setError(e instanceof Error ? e.message : 'PowerSync initialization failed');
 			});
 	}, []);

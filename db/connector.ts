@@ -102,7 +102,7 @@ export const powerSyncConnector: PowerSyncBackendConnector = {
 		if (!endpoint) {
 			throw new Error('PowerSync endpoint not configured');
 		}
-
+		
 		if (!token) {
 			// Per PowerSync connector contract, return null when user is not signed in.
 			return null;

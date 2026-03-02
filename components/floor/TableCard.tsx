@@ -90,7 +90,9 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
                     : 'text-pos-text'
                 }`}
               >
-                {`${elapsedMinutes} min`}
+                {elapsedMinutes >= 60
+                  ? `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`
+                  : `${elapsedMinutes}m`}
               </Text>
             )}
           </View>

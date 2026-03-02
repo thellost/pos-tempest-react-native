@@ -1,4 +1,4 @@
-import { ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
+import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { generateOrderNumber } from '@/utils/order-number';
@@ -491,6 +491,15 @@ export async function calculateOrderTotals(orderId: number): Promise<void> {
 export async function voidOrder(orderId: number, voidedBy: number, reason: string): Promise<void> {
   const now = new Date().toISOString();
 
+  const existingOrder = await powersync.getOptional<Order>(
+    `SELECT * FROM orders WHERE id = ?`,
+    [orderId]
+  );
+
+  if (!existingOrder) {
+    throw new Error('Order not found');
+  }
+
   await powersync.execute(
     `UPDATE orders 
      SET status = ?, voided_by = ?, voided_at = ?, void_reason = ?, updated_at = ?
@@ -498,16 +507,59 @@ export async function voidOrder(orderId: number, voidedBy: number, reason: strin
     [ORDER_STATUS.CANCELLED, voidedBy, now, reason, now, orderId]
   );
 
-  // Get the table ID to update its status
-  const order = await powersync.getOptional<Order>(
+  const updatedOrder = await powersync.getOptional<Order>(
     `SELECT * FROM orders WHERE id = ?`,
     [orderId]
   );
 
-  if (order && order.table_id) {
+  const orderBranchId =
+    typeof existingOrder.branch_id === 'string'
+      ? parseInt(existingOrder.branch_id, 10)
+      : existingOrder.branch_id;
+  const normalizedBranchId = Number.isNaN(orderBranchId) ? null : orderBranchId;
+
+  const normalizedOrderId =
+    typeof existingOrder.id === 'string' ? parseInt(existingOrder.id, 10) : existingOrder.id;
+
+  const maxAuditIdRow = await powersync.getOptional<{ max_id: number }>(
+    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM audit_logs`
+  );
+  const newAuditLogId = ((maxAuditIdRow?.max_id || 0) + 1).toString();
+
+  await powersync.execute(
+    `INSERT INTO audit_logs (
+      id,
+      user_id, branch_id, action, table_name, record_id,
+      old_values, new_values, description, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      newAuditLogId,
+      voidedBy,
+      normalizedBranchId,
+      AUDIT_ACTION.STATUS_CHANGE,
+      'orders',
+      Number.isNaN(normalizedOrderId) ? null : normalizedOrderId,
+      JSON.stringify({
+        status: existingOrder.status,
+        voided_by: existingOrder.voided_by,
+        voided_at: existingOrder.voided_at,
+        void_reason: existingOrder.void_reason,
+      }),
+      JSON.stringify({
+        status: updatedOrder?.status ?? ORDER_STATUS.CANCELLED,
+        voided_by: updatedOrder?.voided_by ?? voidedBy,
+        voided_at: updatedOrder?.voided_at ?? now,
+        void_reason: updatedOrder?.void_reason ?? reason,
+      }),
+      `Order cancelled: ${existingOrder.order_number || orderId}`,
+      now,
+    ]
+  );
+
+  if (existingOrder.table_id) {
     await powersync.execute(
       `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
-      [TABLE_STATUS.AVAILABLE, now, order.table_id]
+      [TABLE_STATUS.AVAILABLE, now, existingOrder.table_id]
     );
   }
 

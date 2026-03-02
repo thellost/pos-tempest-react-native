@@ -12,16 +12,17 @@ import type { KOTWithItems } from '@/services/kitchen.service';
 import { createKOT } from '@/services/kitchen.service';
 import type { SelectedModifier } from '@/services/order.service';
 import {
-  addItemToOrder,
-  confirmOrder as confirmOrderService,
-  createOrder,
-  getOrderWithItems,
-  getRoundSentTimestamps,
-  removeItemFromOrder,
-  updateItemModifiers,
-  updateItemNotes,
-  updateItemQuantity,
-  updateItemUnitPrice,
+    addItemToOrder,
+    confirmOrder as confirmOrderService,
+    createOrder,
+    getOrderWithItems,
+    getRoundSentTimestamps,
+    removeItemFromOrder,
+    updateItemModifiers,
+    updateItemNotes,
+    updateItemQuantity,
+    updateItemUnitPrice,
+    voidOrder,
 } from '@/services/order.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
@@ -61,6 +62,7 @@ interface UseOrderReturn {
 
   // Order lifecycle
   confirmOrder: () => Promise<void>;
+  cancelOrder: (reason?: string) => Promise<void>;
   confirmRound: () => Promise<void>;
   cancelRound: () => void;
 
@@ -547,6 +549,31 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
   }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen]);
 
+  // Cancel order (soft cancel only, never deletes)
+  const cancelOrder = useCallback(async (reason = 'Cancelled from POS') => {
+    if (!order || !user) {
+      Alert.alert('Cancel Order', 'No active order to cancel.');
+      return;
+    }
+
+    if (!isShiftOpen) {
+      Alert.alert('No Active Shift', 'Please open a shift before cancelling orders.');
+      return;
+    }
+
+    try {
+      const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+      await voidOrder(orderIdNum, user.id, reason);
+
+      setPendingRoundItems([]);
+      setCartItems([]);
+      await reload();
+    } catch (error) {
+      console.error('[useOrder] Error cancelling order:', error);
+      throw error;
+    }
+  }, [order, user, isShiftOpen, reload]);
+
   // Cancel round (clear pending items)
   const cancelRound = useCallback(() => {
     setPendingRoundItems([]);
@@ -669,6 +696,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     editModifiers,
 
     confirmOrder: confirmOrderCallback,
+    cancelOrder,
     confirmRound,
     cancelRound,
 

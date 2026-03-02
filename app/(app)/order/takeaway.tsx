@@ -80,6 +80,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     updateNotes,
     editModifiers,
     confirmOrder: confirmOrderHook,
+    cancelOrder,
     confirmRound: handleConfirmRound,
     cancelRound: handleCancelRound,
     sendToKitchen,
@@ -265,9 +266,35 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     goToPayment();
   }, [order, goToPayment]);
 
-  const handleHold = useCallback(() => {
-    Alert.alert('Hold', 'Order hold action is clickable. Hold persistence will be added in the next step.');
-  }, []);
+  const handleCancelOrder = useCallback(() => {
+    if (!order) {
+      Alert.alert('Cancel Order', 'No active order found.');
+      return;
+    }
+
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order? This will mark the order as cancelled and keep it in history.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await cancelOrder('Cancelled from takeaway order panel');
+                Alert.alert('Order Cancelled', 'Order has been marked as cancelled.');
+              } catch (error) {
+                console.error('[TakeawayOrder] Error cancelling order:', error);
+                Alert.alert('Error', 'Failed to cancel order.');
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [order, cancelOrder]);
 
   const handlePrintBill = useCallback(async () => {
     await printBill();
@@ -578,7 +605,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
               onRemoveItem={removeItem}
               onSendToKitchen={handleSendToKitchen}
               onPayment={handlePayment}
-              onHold={handleHold}
+              onCancelOrder={handleCancelOrder}
               pendingRoundItems={pendingRoundItemsDisplay}
               currentRound={currentRound}
               roundSentAt={roundSentAt}

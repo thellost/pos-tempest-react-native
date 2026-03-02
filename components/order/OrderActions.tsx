@@ -11,7 +11,7 @@ interface OrderActionsProps {
   sentAt?: string | null;
   onConfirmOrder: () => void;
   onSendToKitchen: () => void;
-  onHold: () => void;
+  onCancelOrder: () => void;
   onPayment: () => void;
   onConfirmRound: () => void;
   onCancelRound: () => void;
@@ -24,7 +24,7 @@ interface OrderActionsProps {
 /**
  * Order action buttons with three-state system:
  * - Draft: Confirm Order button (in OrderPanel header)
- * - Confirmed (no pending): Send to Kitchen, Print Bill, Hold, Payment
+ * - Confirmed (no pending): Cancel Order, Print KOT, Print Bill, Payment
  * - Pending Round: Confirm Round, Cancel Round, Print Bill
  */
 export function OrderActions({
@@ -34,7 +34,7 @@ export function OrderActions({
   sentAt,
   onConfirmOrder,
   onSendToKitchen,
-  onHold,
+  onCancelOrder,
   onPayment,
   onConfirmRound,
   onCancelRound,
@@ -43,7 +43,7 @@ export function OrderActions({
   showConfirmButton = false,
 }: OrderActionsProps) {
   // An "active" order is any non-draft, non-complete status that should show
-  // the full action bar (Kitchen, Hold, Payment, Confirm/Cancel Round).
+  // the full action bar (Cancel, Kitchen, Payment, Confirm/Cancel Round).
   const isActiveOrder =
     orderStatus === ORDER_STATUS.CONFIRMED ||
     orderStatus === ORDER_STATUS.PREPARING ||
@@ -60,11 +60,11 @@ export function OrderActions({
     }
   }, [canSend, onSendToKitchen]);
 
-  const handleHold = useCallback(() => {
+  const handleCancelOrder = useCallback(() => {
     if (hasItems) {
-      onHold();
+      onCancelOrder();
     }
-  }, [hasItems, onHold]);
+  }, [hasItems, onCancelOrder]);
 
   const handlePayment = useCallback(() => {
     if (canPayment) {
@@ -171,19 +171,19 @@ export function OrderActions({
       <View className="border-t border-border bg-surface-card p-2">
         <View className="flex-row gap-1.5">
           <Pressable
-            onPress={handleHold}
+            onPress={handleCancelOrder}
             disabled={!hasItems}
             className="h-10 flex-1 items-center justify-center rounded-sm"
             style={({ pressed }) => ({
-              backgroundColor: hasItems ? 'rgba(245, 158, 11, 0.15)' : '#1A1F2C',
+              backgroundColor: hasItems ? 'rgba(239, 68, 68, 0.15)' : '#1A1F2C',
               borderWidth: 1,
-              borderColor: hasItems ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.06)',
+              borderColor: hasItems ? 'rgba(239, 68, 68, 0.35)' : 'rgba(255, 255, 255, 0.06)',
               opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
               transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
             })}
           >
-            <Text className={`text-pos-xs font-semibold ${hasItems ? 'text-pos-warning' : 'text-pos-text-faint'}`}>
-              Hold
+            <Text className={`text-pos-xs font-semibold ${hasItems ? 'text-pos-danger' : 'text-pos-text-faint'}`}>
+              Cancel Order
             </Text>
           </Pressable>
 

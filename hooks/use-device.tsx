@@ -11,19 +11,20 @@
 import { useQuery } from '@powersync/react';
 
 import type { Branch } from '@/db/models';
+import { initializePowerSync } from '@/db/provider';
 import {
-  clearDeviceId,
-  getDeviceInfo,
-  getOrCreateDeviceId,
-  setDeviceName as setStoredDeviceName,
-  type DeviceInfo,
+    clearDeviceId,
+    getDeviceInfo,
+    getOrCreateDeviceId,
+    setDeviceName as setStoredDeviceName,
+    type DeviceInfo,
 } from '@/lib/device';
 import {
-  getDeviceRegistration,
-  registerDevice as registerDeviceService,
-  updateDeviceLastSeen,
-  updateDeviceName as updateDeviceNameService,
-  type DeviceRegistrationResult,
+    getDeviceRegistration,
+    registerDevice as registerDeviceService,
+    updateDeviceLastSeen,
+    updateDeviceName as updateDeviceNameService,
+    type DeviceRegistrationResult,
 } from '@/services/device.service';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -77,6 +78,9 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       setError(null);
+
+      // Ensure PowerSync is ready before any DB operations
+      await initializePowerSync();
 
       // Get or create device ID
       const id = await getOrCreateDeviceId();
