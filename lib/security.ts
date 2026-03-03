@@ -5,49 +5,32 @@
 
 import { Config } from '@/constants/config';
 import type { PowerSyncDatabase } from '@powersync/react-native';
-import * as Crypto from 'expo-crypto';
+import bcrypt from 'bcryptjs';
 
 // ============================================================================
 // PIN SECURITY
 // ============================================================================
 
+const BCRYPT_ROUNDS = 12;
+
 /**
- * Hash a PIN using SHA256 for secure storage
- * Note: For production, consider using bcrypt or Argon2 via Supabase Edge Functions
- * This provides basic protection against plain-text storage
+ * Hash a PIN using bcrypt with 12 rounds for secure storage
  */
 export async function hashPin(pin: string): Promise<string> {
   if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
     throw new Error('Invalid PIN format. Must be 6 digits.');
   }
 
-  // Use SHA256 as it's available in Expo Crypto
-  const hash = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    pin,
-  );
-
-  return hash;
+  const salt = await bcrypt.genSalt(BCRYPT_ROUNDS);
+  return bcrypt.hash(pin, salt);
 }
 
 /**
- * Verify a PIN against a hashed value with constant-time comparison
+ * Verify a PIN against a bcrypt hash (constant-time comparison is built into bcrypt)
  */
 export async function verifyPin(pin: string, hashedPin: string): Promise<boolean> {
   try {
-    const inputHash = await hashPin(pin);
-    
-    // Constant-time comparison to prevent timing attacks
-    if (inputHash.length !== hashedPin.length) {
-      return false;
-    }
-
-    let result = 0;
-    for (let i = 0; i < inputHash.length; i++) {
-      result |= inputHash.charCodeAt(i) ^ hashedPin.charCodeAt(i);
-    }
-
-    return result === 0;
+    return await bcrypt.compare(pin, hashedPin);
   } catch {
     return false;
   }

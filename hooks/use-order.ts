@@ -12,17 +12,17 @@ import type { KOTWithItems } from '@/services/kitchen.service';
 import { createKOT } from '@/services/kitchen.service';
 import type { SelectedModifier } from '@/services/order.service';
 import {
-    addItemToOrder,
-    confirmOrder as confirmOrderService,
-    createOrder,
-    getOrderWithItems,
-    getRoundSentTimestamps,
-    removeItemFromOrder,
-    updateItemModifiers,
-    updateItemNotes,
-    updateItemQuantity,
-    updateItemUnitPrice,
-    voidOrder,
+  addItemToOrder,
+  confirmOrder as confirmOrderService,
+  createOrder,
+  getOrderWithItems,
+  getRoundSentTimestamps,
+  removeItemFromOrder,
+  updateItemModifiers,
+  updateItemNotes,
+  updateItemQuantity,
+  updateItemUnitPrice,
+  voidOrder,
 } from '@/services/order.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
