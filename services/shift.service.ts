@@ -1,5 +1,6 @@
-import { SHIFT_STATUS } from '@/constants/enums';
+import { AUDIT_ACTION, SHIFT_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { insertAuditLog } from '@/services/audit.service';
 
 export type ShiftRecord = {
   id: number;
@@ -194,6 +195,15 @@ export async function openShift(userId: number, branchId: number, openingCash: n
     [localShiftIdText, userId, branchId, SHIFT_STATUS.OPEN, openingCash, openedAt],
   );
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'shifts',
+    userId: userId,
+    branchId: branchId,
+    newValues: { opening_cash: openingCash, opened_at: openedAt },
+    description: `Shift opened by user ${userId}`,
+  });
+
   const inserted = await getShiftById(localShiftIdText);
   if (inserted) {
     return inserted;
@@ -237,6 +247,20 @@ export async function closeShift(shiftId: number, closingCash: number): Promise<
     `,
     [SHIFT_STATUS.CLOSED, closingCash, expectedCash, cashDifference, closedAt, shiftId, SHIFT_STATUS.OPEN],
   );
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.STATUS_CHANGE,
+    tableName: 'shifts',
+    recordId: shiftId,
+    userId: shift.user_id,
+    newValues: {
+      status: SHIFT_STATUS.CLOSED,
+      closing_cash: closingCash,
+      expected_cash: expectedCash,
+      cash_difference: cashDifference,
+    },
+    description: `Shift closed: ${shiftId}`,
+  });
 
   const closedShift = await getShiftById(shiftId);
 

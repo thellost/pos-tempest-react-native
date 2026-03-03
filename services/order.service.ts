@@ -1,6 +1,7 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { insertAuditLog } from '@/services/audit.service';
 import { generateOrderNumber } from '@/utils/order-number';
 
 /**
@@ -114,6 +115,16 @@ export async function createOrder(
     throw new Error('Failed to create order');
   }
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'orders',
+    recordId: typeof order.id === 'string' ? parseInt(order.id, 10) : order.id,
+    userId: cashierId,
+    branchId: branchId,
+    newValues: { order_number: orderNumber, order_type: orderType, table_id: tableId, shift_id: shiftId },
+    description: `Order created: ${orderNumber}`,
+  });
+
   console.log('[OrderService] Created order:', orderNumber);
   return order;
 }
@@ -128,6 +139,14 @@ export async function confirmOrder(orderId: number): Promise<void> {
     `UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`,
     [ORDER_STATUS.CONFIRMED, now, orderId]
   );
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.STATUS_CHANGE,
+    tableName: 'orders',
+    recordId: orderId,
+    newValues: { status: ORDER_STATUS.CONFIRMED },
+    description: `Order confirmed: ${orderId}`,
+  });
 
   console.log('[OrderService] Confirmed order:', orderId);
 }
@@ -245,6 +264,20 @@ export async function addItemToOrder(
   // Recalculate order totals
   await calculateOrderTotals(orderId);
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'order_items',
+    recordId: parseInt(newId, 10),
+    newValues: {
+      order_id: orderId,
+      menu_item_name: menuItem.name,
+      quantity,
+      unit_price: unitPrice,
+      round_number: roundNumber,
+    },
+    description: `Item added: ${menuItem.name} x${quantity} to order ${orderId}`,
+  });
+
   console.log('[OrderService] Added item to order:', menuItem.name, 'x', quantity, 'round:', roundNumber);
 }
 
@@ -275,6 +308,18 @@ export async function removeItemFromOrder(orderItemId: number): Promise<void> {
 
   // Recalculate order totals
   await calculateOrderTotals(orderItem.order_id);
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.DELETE,
+    tableName: 'order_items',
+    recordId: orderItemId,
+    oldValues: {
+      order_id: orderItem.order_id,
+      menu_item_name: orderItem.menu_item_name,
+      quantity: orderItem.quantity,
+    },
+    description: `Item removed: ${orderItem.menu_item_name} from order ${orderItem.order_id}`,
+  });
 
   console.log('[OrderService] Removed item from order:', orderItemId);
 }
@@ -344,6 +389,15 @@ export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: num
   );
 
   await calculateOrderTotals(orderItem.order_id);
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.UPDATE,
+    tableName: 'order_items',
+    recordId: orderItemId,
+    oldValues: { unit_price: orderItem.unit_price },
+    newValues: { unit_price: newUnitPrice },
+    description: `Item price updated: ${orderItem.menu_item_name} → ${newUnitPrice}`,
+  });
 
   console.log('[OrderService] Updated item unit price:', orderItemId, '->', newUnitPrice);
 }
@@ -512,49 +566,28 @@ export async function voidOrder(orderId: number, voidedBy: number, reason: strin
     [orderId]
   );
 
-  const orderBranchId =
-    typeof existingOrder.branch_id === 'string'
-      ? parseInt(existingOrder.branch_id, 10)
-      : existingOrder.branch_id;
-  const normalizedBranchId = Number.isNaN(orderBranchId) ? null : orderBranchId;
-
   const normalizedOrderId =
     typeof existingOrder.id === 'string' ? parseInt(existingOrder.id, 10) : existingOrder.id;
 
-  const maxAuditIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM audit_logs`
-  );
-  const newAuditLogId = ((maxAuditIdRow?.max_id || 0) + 1).toString();
-
-  await powersync.execute(
-    `INSERT INTO audit_logs (
-      id,
-      user_id, branch_id, action, table_name, record_id,
-      old_values, new_values, description, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      newAuditLogId,
-      voidedBy,
-      normalizedBranchId,
-      AUDIT_ACTION.STATUS_CHANGE,
-      'orders',
-      Number.isNaN(normalizedOrderId) ? null : normalizedOrderId,
-      JSON.stringify({
-        status: existingOrder.status,
-        voided_by: existingOrder.voided_by,
-        voided_at: existingOrder.voided_at,
-        void_reason: existingOrder.void_reason,
-      }),
-      JSON.stringify({
-        status: updatedOrder?.status ?? ORDER_STATUS.CANCELLED,
-        voided_by: updatedOrder?.voided_by ?? voidedBy,
-        voided_at: updatedOrder?.voided_at ?? now,
-        void_reason: updatedOrder?.void_reason ?? reason,
-      }),
-      `Order cancelled: ${existingOrder.order_number || orderId}`,
-      now,
-    ]
-  );
+  void insertAuditLog({
+    action: AUDIT_ACTION.VOID,
+    tableName: 'orders',
+    recordId: Number.isNaN(normalizedOrderId) ? null : normalizedOrderId,
+    userId: voidedBy,
+    oldValues: {
+      status: existingOrder.status,
+      voided_by: existingOrder.voided_by,
+      voided_at: existingOrder.voided_at,
+      void_reason: existingOrder.void_reason,
+    },
+    newValues: {
+      status: updatedOrder?.status ?? ORDER_STATUS.CANCELLED,
+      voided_by: voidedBy,
+      voided_at: now,
+      void_reason: reason,
+    },
+    description: `Order voided: ${existingOrder.order_number || orderId}`,
+  });
 
   if (existingOrder.table_id) {
     await powersync.execute(
@@ -586,6 +619,15 @@ export async function voidItem(orderItemId: number, voidedBy: number, reason: st
   if (orderItem) {
     await calculateOrderTotals(orderItem.order_id);
   }
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.VOID,
+    tableName: 'order_items',
+    recordId: orderItemId,
+    userId: voidedBy,
+    newValues: { reason, voided_by: voidedBy },
+    description: `Order item voided: ${orderItemId}`,
+  });
 
   console.log('[OrderService] Voided order item:', orderItemId);
 }

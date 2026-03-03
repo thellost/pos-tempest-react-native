@@ -116,17 +116,22 @@ export default function AppLayout() {
 
   const onShiftScreen = pathname.startsWith('/shifts');
 
-  if (requiresShift && shiftLoading && !onShiftScreen) {
-    return (
-      <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color={Brand.primary} />
-        <Text className="mt-4 text-pos-sm text-pos-text-muted">Checking shift status...</Text>
-      </View>
-    );
-  }
+  // Shift guards only apply once the device is registered.
+  // Without this gate, an unregistered device would loop between
+  // /device-setup ↔ /shifts because each redirects to the other.
+  if (isRegistered) {
+    if (requiresShift && shiftLoading && !onShiftScreen) {
+      return (
+        <View className="flex-1 items-center justify-center bg-surface">
+          <ActivityIndicator size="large" color={Brand.primary} />
+          <Text className="mt-4 text-pos-sm text-pos-text-muted">Checking shift status...</Text>
+        </View>
+      );
+    }
 
-  if (requiresShift && !isShiftOpen && !onShiftScreen) {
-    return <Redirect href="/(app)/shifts" />;
+    if (requiresShift && !isShiftOpen && !onShiftScreen) {
+      return <Redirect href="/(app)/shifts" />;
+    }
   }
 
   return (

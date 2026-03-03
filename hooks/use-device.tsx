@@ -13,18 +13,19 @@ import { useQuery } from '@powersync/react';
 import type { Branch } from '@/db/models';
 import { initializePowerSync } from '@/db/provider';
 import {
-    clearDeviceId,
-    getDeviceInfo,
-    getOrCreateDeviceId,
-    setDeviceName as setStoredDeviceName,
-    type DeviceInfo,
+  clearDeviceId,
+  getDeviceInfo,
+  getOrCreateDeviceId,
+  setDeviceName as setStoredDeviceName,
+  type DeviceInfo,
 } from '@/lib/device';
+import { setAuditDeviceContext } from '@/services/audit.service';
 import {
-    getDeviceRegistration,
-    registerDevice as registerDeviceService,
-    updateDeviceLastSeen,
-    updateDeviceName as updateDeviceNameService,
-    type DeviceRegistrationResult,
+  getDeviceRegistration,
+  registerDevice as registerDeviceService,
+  updateDeviceLastSeen,
+  updateDeviceName as updateDeviceNameService,
+  type DeviceRegistrationResult,
 } from '@/services/device.service';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -104,6 +105,13 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       const regResult = await getDeviceRegistration(id);
       if (!mountedRef.current) return;
       setRegistration(regResult);
+
+      // Publish device identity to the audit service so every log entry
+      // is automatically tagged with this device's ID and name.
+      setAuditDeviceContext(
+        regResult.device?.id ?? null,
+        regResult.device ? `${regResult.device.device_name} (${id})` : null,
+      );
 
       // Update last seen if registered
       if (regResult.registered) {

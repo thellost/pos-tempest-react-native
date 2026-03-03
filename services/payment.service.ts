@@ -1,6 +1,7 @@
-import { ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
+import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { insertAuditLog } from '@/services/audit.service';
 import { applyDiscount as calcDiscountAmount } from '@/services/calculator.service';
 import { calculateOrderTotals } from '@/services/order.service';
 
@@ -98,6 +99,19 @@ export async function applyOrderDiscount(
 
   await calculateOrderTotals(orderId);
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'order_discounts',
+    recordId: orderId,
+    userId: appliedBy,
+    newValues: {
+      discount_name: discount.name,
+      discount_type: discount.discount_type,
+      applied_amount: discountAmount,
+    },
+    description: `Discount applied: ${discount.name} (${discountAmount}) to order ${orderId}`,
+  });
+
   console.log('[PaymentService] Applied discount:', discount.name, 'amount:', discountAmount);
 }
 
@@ -116,6 +130,13 @@ export async function removeOrderDiscount(orderId: number): Promise<void> {
   );
 
   await calculateOrderTotals(orderId);
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.DELETE,
+    tableName: 'order_discounts',
+    recordId: orderId,
+    description: `Discount removed from order ${orderId}`,
+  });
 
   console.log('[PaymentService] Removed discount from order:', orderId);
 }
@@ -235,6 +256,21 @@ export async function processPayment(
     throw new Error('Failed to create payment record');
   }
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'payments',
+    recordId: parseInt(newId, 10),
+    newValues: {
+      order_id: orderId,
+      shift_id: shiftId,
+      method,
+      amount,
+      change_amount: changeAmount,
+      reference_number: referenceNumber,
+    },
+    description: `Payment: ${method} ${amount} for order ${orderId}`,
+  });
+
   console.log('[PaymentService] Processed payment:', method, amount);
   return payment;
 }
@@ -289,6 +325,14 @@ export async function completeOrder(orderId: number): Promise<void> {
       [points, order.total, now, order.customer_id],
     );
   }
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.STATUS_CHANGE,
+    tableName: 'orders',
+    recordId: orderId,
+    newValues: { status: ORDER_STATUS.COMPLETED, payment_status: PAYMENT_STATUS.PAID },
+    description: `Order completed: ${orderId}`,
+  });
 
   console.log('[PaymentService] Completed order:', orderId);
 }

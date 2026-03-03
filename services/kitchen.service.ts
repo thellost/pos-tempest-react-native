@@ -1,6 +1,7 @@
 import type { KotStatus } from '@/constants/enums';
-import { KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
+import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { insertAuditLog } from '@/services/audit.service';
 import { generateTicketNumber } from '@/utils/order-number';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -178,6 +179,14 @@ export async function createKOT(
     ')'
   );
 
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'kitchen_order_tickets',
+    recordId: kotId,
+    newValues: { ticket_number: ticketNumber, order_id: orderId, round_number: roundNumber },
+    description: `KOT created: ${ticketNumber} for order ${orderId} round ${roundNumber}`,
+  });
+
   return {
     id: kotId,
     order_id: orderId,
@@ -232,6 +241,16 @@ export async function updateKOTStatus(
   }
 
   console.log('[KitchenService] KOT', kotId, '->', status);
+
+  if (status === KOT_STATUS.READY || status === KOT_STATUS.SERVED) {
+    void insertAuditLog({
+      action: AUDIT_ACTION.STATUS_CHANGE,
+      tableName: 'kitchen_order_tickets',
+      recordId: kotId,
+      newValues: { status },
+      description: `KOT ${kotId} → ${status}`,
+    });
+  }
 }
 
 // ─── updateKOTItemStatus ─────────────────────────────────────────────────────

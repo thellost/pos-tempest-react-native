@@ -1,16 +1,17 @@
 import { Brand } from '@/constants/theme';
 import { useDevice } from '@/hooks/use-device';
+import { DeviceInactiveError } from '@/services/device.service';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 
 export default function DeviceSetupScreen() {
@@ -21,6 +22,7 @@ export default function DeviceSetupScreen() {
   const [deviceName, setDeviceName] = useState('');
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [inactiveDeviceName, setInactiveDeviceName] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!selectedBranchId) {
@@ -46,6 +48,10 @@ export default function DeviceSetupScreen() {
       
       router.replace('/(app)/floor');
     } catch (err) {
+      if (err instanceof DeviceInactiveError) {
+        setInactiveDeviceName(err.device.device_name);
+        return;
+      }
       setRegisterError(err instanceof Error ? err.message : 'Failed to register device');
     } finally {
       setRegistering(false);
@@ -57,6 +63,32 @@ export default function DeviceSetupScreen() {
       <View className="flex-1 items-center justify-center bg-surface">
         <ActivityIndicator size="large" color={Brand.primary} />
         <Text className="mt-4 text-pos-sm text-pos-text-muted">Loading...</Text>
+      </View>
+    );
+  }
+
+  // Blocked state: device exists in DB but an admin has deactivated it
+  if (inactiveDeviceName) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface p-8">
+        <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+          <Text className="text-3xl">🚫</Text>
+        </View>
+        <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text">
+          Device Deactivated
+        </Text>
+        <Text className="mb-1 text-center text-pos-base font-semibold text-pos-text">
+          {inactiveDeviceName}
+        </Text>
+        <Text className="mb-8 text-center text-pos-sm text-pos-text-muted">
+          This terminal has been deactivated. Please ask your administrator to reactivate it before use.
+        </Text>
+        <Pressable
+          className="rounded-xl bg-surface-card px-8 py-3"
+          onPress={() => setInactiveDeviceName(null)}
+        >
+          <Text className="text-center text-pos-base font-semibold text-pos-text">Go Back</Text>
+        </Pressable>
       </View>
     );
   }

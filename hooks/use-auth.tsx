@@ -17,6 +17,7 @@ import {
   verifyPin,
 } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
+import { setAuditUserContext } from '@/services/audit.service';
 
 export type UserRow = {
   id: number;
@@ -156,6 +157,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         );
       }
 
+      setAuditUserContext(profile?.id ?? null, profile?.branch_id ?? null);
       setUser(profile);
     } finally {
       setProfileLoading(false);
@@ -276,6 +278,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       userId,
       timestamp: Date.now(),
     });
+
+    setAuditUserContext(null, null);
 
     if (error) {
       throw error;
@@ -482,8 +486,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) {
+        return;
+      }
+
+      if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes('refresh token not found') || msg.includes('invalid refresh token')) {
+          console.warn('[AuthProvider] Stale refresh token — clearing session');
+          supabase.auth.signOut();
+        } else {
+          console.error('[AuthProvider] getSession error:', error.message);
+        }
+        setSession(null);
+        setLoading(false);
         return;
       }
 
@@ -492,7 +509,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setLoading(false);
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'TOKEN_REFRESHED' && !nextSession) {
+        console.warn('[AuthProvider] Token refresh failed — signing out');
+        supabase.auth.signOut();
+        return;
+      }
+
       setSession(nextSession);
       setIsLocked(false);
       lastActivityRef.current = Date.now();

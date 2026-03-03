@@ -4,8 +4,12 @@
  */
 
 import { Config } from '@/constants/config';
+import type { AuditAction } from '@/constants/enums';
+import { AUDIT_ACTION } from '@/constants/enums';
 import type { PowerSyncDatabase } from '@powersync/react-native';
 import bcrypt from 'bcryptjs';
+
+import { insertAuditLog } from '@/services/audit.service';
 
 // ============================================================================
 // PIN SECURITY
@@ -376,7 +380,7 @@ export function validatePasswordStrength(password: string): PasswordStrength {
 }
 
 // ============================================================================
-// AUDIT LOGGING (for future implementation)
+// AUDIT LOGGING
 // ============================================================================
 
 export enum AuditEventType {
@@ -397,15 +401,38 @@ export interface AuditEvent {
   metadata?: Record<string, unknown>;
 }
 
+/** Maps security event types to the DB-accepted audit_action enum values. */
+const EVENT_TO_ACTION: Record<AuditEventType, AuditAction> = {
+  [AuditEventType.LOGIN_SUCCESS]:     AUDIT_ACTION.LOGIN,
+  [AuditEventType.LOGIN_FAILED]:      AUDIT_ACTION.OVERRIDE,
+  [AuditEventType.LOGOUT]:            AUDIT_ACTION.LOGOUT,
+  [AuditEventType.PIN_UNLOCK_SUCCESS]:AUDIT_ACTION.LOGIN,
+  [AuditEventType.PIN_UNLOCK_FAILED]: AUDIT_ACTION.OVERRIDE,
+  [AuditEventType.SESSION_EXPIRED]:   AUDIT_ACTION.LOGOUT,
+  [AuditEventType.ACCOUNT_LOCKED]:    AUDIT_ACTION.OVERRIDE,
+  [AuditEventType.PASSWORD_RESET]:    AUDIT_ACTION.OVERRIDE,
+};
+
 /**
- * Log security-related events for audit trail
- * In production, this should write to a secure audit log table
+ * Log a security-related event to the `audit_logs` table.
+ * Device and user context are automatically injected from the module registry
+ * in audit.service.ts — no extra arguments required.
+ * Fire-and-forget; never blocks or throws.
  */
 export function logAuditEvent(event: AuditEvent): void {
-  // TODO: Implement proper audit logging to database
   if (__DEV__) {
     console.log('[AUDIT]', event);
   }
+
+  void insertAuditLog({
+    action: EVENT_TO_ACTION[event.type] ?? AUDIT_ACTION.OVERRIDE,
+    tableName: 'users',
+    description: event.type,
+    newValues: {
+      ...(event.userId ? { supabase_uid: event.userId } : {}),
+      ...(event.metadata ?? {}),
+    },
+  });
 }
 
 // ============================================================================

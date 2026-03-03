@@ -6,9 +6,10 @@
  * Shifts and cash drawers are scoped to devices, not users.
  */
 
-import { DEVICE_STATUS } from '@/constants/enums';
+import { AUDIT_ACTION, DEVICE_STATUS } from '@/constants/enums';
 import type { Branch, Device } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { insertAuditLog } from '@/services/audit.service';
 
 /**
  * Result of device registration check
@@ -17,6 +18,17 @@ export interface DeviceRegistrationResult {
   registered: boolean;
   device: Device | null;
   branch: Branch | null;
+}
+
+/**
+ * Thrown when attempting to register a device that exists but is inactive.
+ * The admin must reactivate it instead.
+ */
+export class DeviceInactiveError extends Error {
+  constructor(public readonly device: Device) {
+    super('DEVICE_INACTIVE');
+    this.name = 'DeviceInactiveError';
+  }
 }
 
 /**
@@ -39,18 +51,32 @@ export async function registerDevice(
 
   const now = new Date().toISOString();
   
-  // Check if device is already registered
+  // Check if device already exists (active OR inactive)
   const existing = await getDeviceRegistration(deviceUid);
   
-  if (existing.registered && existing.device) {
-    // Update existing device instead of creating new
+  if (existing.device) {
+    // If the device exists but is inactive, block registration and tell the
+    // user to ask an admin to reactivate it.
+    if (existing.device.status === DEVICE_STATUS.INACTIVE) {
+      throw new DeviceInactiveError(existing.device);
+    }
+
+    // Device is active — just update its details.
     await powersync.execute(
       `UPDATE devices 
        SET branch_id = ?, device_name = ?, status = ?, last_seen_at = ?
        WHERE device_uid = ?`,
       [branchId, deviceName, DEVICE_STATUS.ACTIVE, now, deviceUid]
     );
-    
+
+    void insertAuditLog({
+      action: AUDIT_ACTION.UPDATE,
+      tableName: 'devices',
+      recordId: existing.device.id,
+      newValues: { branch_id: branchId, device_name: deviceName, status: DEVICE_STATUS.ACTIVE },
+      description: `Device re-registered: ${deviceName} (${deviceUid})`,
+    });
+
     return {
       ...existing.device,
       branch_id: branchId,
@@ -80,16 +106,24 @@ export async function registerDevice(
     [newId, branchId, deviceUid, deviceName, DEVICE_STATUS.ACTIVE, now, now]
   );
   
-  // Fetch the created device
+  // Fetch by id to avoid stale results if duplicate device_uid rows exist
   const device = await powersync.getOptional<Device>(
-    `SELECT * FROM devices WHERE device_uid = ?`,
-    [deviceUid]
+    `SELECT * FROM devices WHERE id = ?`,
+    [newId]
   );
   
   if (!device) {
     throw new Error('Failed to create device record');
   }
-  
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.INSERT,
+    tableName: 'devices',
+    recordId: device.id,
+    newValues: { branch_id: branchId, device_name: deviceName, device_uid: deviceUid },
+    description: `Device registered: ${deviceName} (${deviceUid})`,
+  });
+
   console.log('[DeviceService] Registered device:', deviceUid, 'as', deviceName, 'for branch', branchId);
   return device;
 }
@@ -104,8 +138,10 @@ export async function getDeviceRegistration(
   deviceUid: string
 ): Promise<DeviceRegistrationResult> {
   try {
+    // ORDER BY ensures we prefer the active record, then most recently inserted,
+    // in case duplicate device_uid rows exist from a previous bug.
     const device = await powersync.getOptional<Device>(
-      `SELECT * FROM devices WHERE device_uid = ?`,
+      `SELECT * FROM devices WHERE device_uid = ? ORDER BY status ASC, id DESC`,
       [deviceUid]
     );
     
@@ -169,11 +205,24 @@ export async function updateDeviceLastSeen(
 export async function deactivateDevice(
   deviceUid: string
 ): Promise<void> {
+  const device = await powersync.getOptional<Device>(
+    `SELECT * FROM devices WHERE device_uid = ?`, [deviceUid]
+  );
+
   await powersync.execute(
     `UPDATE devices SET status = ? WHERE device_uid = ?`,
     [DEVICE_STATUS.INACTIVE, deviceUid]
   );
-  
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.UPDATE,
+    tableName: 'devices',
+    recordId: device?.id ?? null,
+    oldValues: { status: DEVICE_STATUS.ACTIVE },
+    newValues: { status: DEVICE_STATUS.INACTIVE },
+    description: `Device deactivated: ${deviceUid}`,
+  });
+
   console.log('[DeviceService] Deactivated device:', deviceUid);
 }
 
@@ -185,11 +234,24 @@ export async function deactivateDevice(
 export async function reactivateDevice(
   deviceUid: string
 ): Promise<void> {
+  const device = await powersync.getOptional<Device>(
+    `SELECT * FROM devices WHERE device_uid = ?`, [deviceUid]
+  );
+
   await powersync.execute(
     `UPDATE devices SET status = ?, last_seen_at = ? WHERE device_uid = ?`,
     [DEVICE_STATUS.ACTIVE, new Date().toISOString(), deviceUid]
   );
-  
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.UPDATE,
+    tableName: 'devices',
+    recordId: device?.id ?? null,
+    oldValues: { status: DEVICE_STATUS.INACTIVE },
+    newValues: { status: DEVICE_STATUS.ACTIVE },
+    description: `Device reactivated: ${deviceUid}`,
+  });
+
   console.log('[DeviceService] Reactivated device:', deviceUid);
 }
 
@@ -203,11 +265,24 @@ export async function updateDeviceName(
   deviceUid: string,
   newName: string
 ): Promise<void> {
+  const device = await powersync.getOptional<Device>(
+    `SELECT * FROM devices WHERE device_uid = ?`, [deviceUid]
+  );
+
   await powersync.execute(
     `UPDATE devices SET device_name = ? WHERE device_uid = ?`,
     [newName, deviceUid]
   );
-  
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.UPDATE,
+    tableName: 'devices',
+    recordId: device?.id ?? null,
+    oldValues: { device_name: device?.device_name ?? null },
+    newValues: { device_name: newName },
+    description: `Device renamed: ${deviceUid} → ${newName}`,
+  });
+
   console.log('[DeviceService] Updated device name:', deviceUid, '->', newName);
 }
 
@@ -283,10 +358,22 @@ export async function getActiveBranches(): Promise<Branch[]> {
 export async function deleteDevice(
   deviceUid: string
 ): Promise<void> {
+  const device = await powersync.getOptional<Device>(
+    `SELECT * FROM devices WHERE device_uid = ?`, [deviceUid]
+  );
+
   await powersync.execute(
     `DELETE FROM devices WHERE device_uid = ?`,
     [deviceUid]
   );
-  
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.DELETE,
+    tableName: 'devices',
+    recordId: device?.id ?? null,
+    oldValues: { device_name: device?.device_name ?? null, device_uid: deviceUid },
+    description: `Device deleted: ${deviceUid}`,
+  });
+
   console.log('[DeviceService] Deleted device:', deviceUid);
 }
