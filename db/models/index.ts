@@ -1,19 +1,21 @@
 import type {
-	AuditAction,
-	DeviceStatus,
-	DiscountType,
-	KotStatus,
-	OrderStatus,
-	OrderType,
-	PaymentMethodType,
-	PaymentStatus,
-	PricingType,
-	PurchaseStatus,
-	ReservationStatus,
-	RoleType,
-	ShiftStatus,
-	TableStatus,
-	UnitOfMeasure
+    AuditAction,
+    CashTransactionReason,
+    CashTransactionType,
+    DeviceStatus,
+    DiscountType,
+    KotStatus,
+    OrderStatus,
+    OrderType,
+    PaymentMethodType,
+    PaymentStatus,
+    PricingType,
+    PurchaseStatus,
+    ReservationStatus,
+    RoleType,
+    ShiftStatus,
+    TableStatus,
+    UnitOfMeasure
 } from '@/constants/enums';
 
 export type EntityId = number;
@@ -402,5 +404,16 @@ export interface Device {
 	status: DeviceStatus;
 	registered_at: Timestamp;
 	last_seen_at: Timestamp | null;
+}
+
+export interface ShiftCashTransaction {
+	id: EntityId;
+	shift_id: EntityId;
+	user_id: EntityId;
+	type: CashTransactionType;
+	reason: CashTransactionReason;
+	amount: number;
+	note: string | null;
+	created_at: Timestamp;
 }
 

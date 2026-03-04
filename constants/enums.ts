@@ -139,3 +139,23 @@ export const DEVICE_STATUS = {
 } as const;
 
 export type DeviceStatus = (typeof DEVICE_STATUS)[keyof typeof DEVICE_STATUS];
+
+export const CASH_TRANSACTION_TYPE = {
+	CASH_IN: 'cash_in',
+	CASH_OUT: 'cash_out',
+} as const;
+
+export type CashTransactionType = (typeof CASH_TRANSACTION_TYPE)[keyof typeof CASH_TRANSACTION_TYPE];
+
+export const CASH_TRANSACTION_REASON = {
+	OWNER_WITHDRAWAL: 'owner_withdrawal',
+	SUPPLY_PURCHASE: 'supply_purchase',
+	STAFF_ADVANCE: 'staff_advance',
+	PETTY_CASH: 'petty_cash',
+	TIP_OUT: 'tip_out',
+	CASH_DEPOSIT: 'cash_deposit',
+	CHANGE_REFILL: 'change_refill',
+	OTHER: 'other',
+} as const;
+
+export type CashTransactionReason = (typeof CASH_TRANSACTION_REASON)[keyof typeof CASH_TRANSACTION_REASON];

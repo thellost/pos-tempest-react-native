@@ -1,18 +1,24 @@
+import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { ROLE_TYPE } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
+import { useDevice } from '@/hooks/use-device';
 import {
-    closeShift as closeShiftService,
-    getActiveShift,
-    getShiftCashSummary,
-    openShift as openShiftService,
-    ShiftCashSummary,
-    ShiftRecord,
+  addCashTransaction as addCashTxService,
+  closeShift as closeShiftService,
+  getActiveShift,
+  getShiftCashSummary,
+  getShiftCashTransactions,
+  openShift as openShiftService,
+  ShiftCashSummary,
+  ShiftCashTransactionRecord,
+  ShiftRecord,
 } from '@/services/shift.service';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type UseShiftReturn = {
   activeShift: ShiftRecord | null;
   summary: ShiftCashSummary | null;
+  cashTransactions: ShiftCashTransactionRecord[];
   lastClosedShift: ShiftRecord | null;
   loading: boolean;
   error: string | null;
@@ -21,13 +27,21 @@ type UseShiftReturn = {
   refresh: () => Promise<void>;
   openShift: (openingCash: number) => Promise<ShiftRecord>;
   closeShift: (closingCash: number) => Promise<ShiftRecord>;
+  addCashTransaction: (
+    type: CashTransactionType,
+    reason: CashTransactionReason,
+    amount: number,
+    note?: string | null,
+  ) => Promise<ShiftCashTransactionRecord>;
 };
 
 export function useShift(): UseShiftReturn {
   const { user } = useAuth();
+  const { registration } = useDevice();
 
   const [activeShift, setActiveShift] = useState<ShiftRecord | null>(null);
   const [summary, setSummary] = useState<ShiftCashSummary | null>(null);
+  const [cashTransactions, setCashTransactions] = useState<ShiftCashTransactionRecord[]>([]);
   const [lastClosedShift, setLastClosedShift] = useState<ShiftRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +69,12 @@ export function useShift(): UseShiftReturn {
       if (shift) {
         const nextSummary = await getShiftCashSummary(shift.id, shift.opening_cash);
         setSummary(nextSummary);
+
+        const txs = await getShiftCashTransactions(shift.id);
+        setCashTransactions(txs);
       } else {
         setSummary(null);
+        setCashTransactions([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load shift data');
@@ -73,7 +91,8 @@ export function useShift(): UseShiftReturn {
 
       try {
         setError(null);
-        const shift = await openShiftService(user.id, user.branch_id, openingCash);
+        const deviceId = registration?.device?.id ?? null;
+        const shift = await openShiftService(user.id, user.branch_id, openingCash, deviceId);
         setActiveShift(shift);
 
         const nextSummary = await getShiftCashSummary(shift.id, shift.opening_cash);
@@ -86,7 +105,7 @@ export function useShift(): UseShiftReturn {
         throw new Error(message);
       }
     },
-    [user?.branch_id, user?.id],
+    [user?.branch_id, user?.id, registration],
   );
 
   const closeShift = useCallback(
@@ -101,6 +120,7 @@ export function useShift(): UseShiftReturn {
         setLastClosedShift(closed);
         setActiveShift(null);
         setSummary(null);
+        setCashTransactions([]);
         return closed;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to close shift';
@@ -111,6 +131,41 @@ export function useShift(): UseShiftReturn {
     [activeShift],
   );
 
+  const addCashTransaction = useCallback(
+    async (
+      type: CashTransactionType,
+      reason: CashTransactionReason,
+      amount: number,
+      note?: string | null,
+    ) => {
+      if (!activeShift) {
+        throw new Error('No active shift for cash transaction');
+      }
+      if (!user?.id) {
+        throw new Error('No user for cash transaction');
+      }
+
+      try {
+        setError(null);
+        const tx = await addCashTxService(activeShift.id, user.id, type, reason, amount, note);
+
+        // Refresh summary and transactions list
+        const nextSummary = await getShiftCashSummary(activeShift.id, activeShift.opening_cash);
+        setSummary(nextSummary);
+
+        const txs = await getShiftCashTransactions(activeShift.id);
+        setCashTransactions(txs);
+
+        return tx;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add cash transaction';
+        setError(message);
+        throw new Error(message);
+      }
+    },
+    [activeShift, user?.id],
+  );
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -119,6 +174,7 @@ export function useShift(): UseShiftReturn {
     () => ({
       activeShift,
       summary,
+      cashTransactions,
       lastClosedShift,
       loading,
       error,
@@ -127,7 +183,8 @@ export function useShift(): UseShiftReturn {
       refresh,
       openShift,
       closeShift,
+      addCashTransaction,
     }),
-    [activeShift, closeShift, error, isShiftOpen, lastClosedShift, loading, openShift, refresh, requiresShift, summary],
+    [activeShift, addCashTransaction, cashTransactions, closeShift, error, isShiftOpen, lastClosedShift, loading, openShift, refresh, requiresShift, summary],
   );
 }

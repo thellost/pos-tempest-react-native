@@ -33,6 +33,7 @@ export const appSchema = new Schema({
 		opened_at: column.text,
 		closed_at: column.text,
 		notes: column.text,
+		device_id: column.text
 	}),
 	branches: new Table({
 		name: column.text,
@@ -329,6 +330,15 @@ export const appSchema = new Schema({
 		status: column.text,
 		registered_at: column.text,
 		last_seen_at: column.text,
+	}),
+	shift_cash_transactions: new Table({
+		shift_id: column.integer,
+		user_id: column.integer,
+		type: column.text,
+		reason: column.text,
+		amount: column.real,
+		note: column.text,
+		created_at: column.text,
 	}),
 });
 

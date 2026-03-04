@@ -1,3 +1,6 @@
+import { CashTransactionList } from '@/components/shift/CashTransactionList';
+import { CashTransactionModal } from '@/components/shift/CashTransactionModal';
+import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
 import { formatIDR } from '@/utils/currency';
@@ -19,11 +22,12 @@ const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
 export default function ShiftsScreen() {
   const { user } = useAuth();
-  const { activeShift, summary, lastClosedShift, loading, error, openShift, closeShift } = useShift();
+  const { activeShift, summary, cashTransactions, lastClosedShift, loading, error, openShift, closeShift, addCashTransaction } = useShift();
 
   const [openingInput, setOpeningInput] = useState('500000');
   const [closingInput, setClosingInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showCashTxModal, setShowCashTxModal] = useState(false);
 
   const openingAmount = useMemo(() => Number(openingInput || '0'), [openingInput]);
   const closingAmount = useMemo(() => Number(closingInput || '0'), [closingInput]);
@@ -92,6 +96,15 @@ export default function ShiftsScreen() {
     }
   }
 
+  async function handleCashTransaction(
+    type: CashTransactionType,
+    reason: CashTransactionReason,
+    amount: number,
+    note?: string,
+  ) {
+    await addCashTransaction(type, reason, amount, note);
+  }
+
   return (
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       <View className="rounded-2xl border border-border bg-surface-card p-5">
@@ -127,10 +140,37 @@ export default function ShiftsScreen() {
               <Text className="mt-1 text-pos-sm text-pos-text-muted">
                 Change given: {formatIDR(summary.changeGiven)}
               </Text>
-              <Text className="mt-1 text-pos-base font-semibold text-pos-text">
+              <Text className="mt-1 text-pos-sm text-pos-text-muted">
+                Net sales: {formatIDR(summary.netCashSales)}
+              </Text>
+              {(summary.totalCashIn > 0 || summary.totalCashOut > 0) && (
+                <View className="mt-2 border-t border-border pt-2">
+                  {summary.totalCashIn > 0 && (
+                    <Text className="text-pos-sm text-pos-success">
+                      + Cash In: {formatIDR(summary.totalCashIn)}
+                    </Text>
+                  )}
+                  {summary.totalCashOut > 0 && (
+                    <Text className="text-pos-sm text-pos-danger">
+                      - Cash Out: {formatIDR(summary.totalCashOut)}
+                    </Text>
+                  )}
+                </View>
+              )}
+              <Text className="mt-2 text-pos-base font-bold text-pos-text">
                 Expected cash now: {formatIDR(summary.expectedCash)}
               </Text>
             </View>
+          )}
+
+          <Pressable
+            className="mt-4 rounded-xl border border-accent bg-accent-muted p-4"
+            onPress={() => setShowCashTxModal(true)}>
+            <Text className="text-center text-pos-base font-semibold text-accent">💵 Cash In / Out</Text>
+          </Pressable>
+
+          {activeShift && (
+            <CashTransactionList transactions={cashTransactions} openingCash={activeShift.opening_cash} />
           )}
 
           <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Closing Cash Input</Text>
@@ -225,6 +265,14 @@ export default function ShiftsScreen() {
           </Text>
         </View>
       )}
+
+      {/* Cash Transaction Modal */}
+      <CashTransactionModal
+        visible={showCashTxModal}
+        availableCash={summary?.expectedCash ?? 0}
+        onClose={() => setShowCashTxModal(false)}
+        onSubmit={handleCashTransaction}
+      />
     </ScrollView>
   );
 }
