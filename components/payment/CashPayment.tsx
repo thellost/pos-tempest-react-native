@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { formatIDR } from '@/utils/currency';
 
@@ -52,9 +52,9 @@ export const CashPayment = memo(function CashPayment({
 
   const handleQuickAmount = useCallback(
     (amount: number) => {
-      onChange(amount.toString());
+      onChange((numericValue + amount).toString());
     },
-    [onChange],
+    [numericValue, onChange],
   );
 
   return (
@@ -74,13 +74,31 @@ export const CashPayment = memo(function CashPayment({
           justifyContent: 'center',
         }}
       >
-        <Text
-          style={{ fontSize: 28, fontWeight: '800', color: '#F8FAFC', letterSpacing: -0.5 }}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {numericValue > 0 ? formatIDR(numericValue) : 'Rp0'}
-        </Text>
+        <TextInput
+          value={value}
+          onChangeText={(text) => {
+            // Allow only digits
+            const cleaned = text.replace(/[^0-9]/g, '');
+            onChange(cleaned);
+          }}
+          keyboardType="numeric"
+          placeholder="0"
+          placeholderTextColor="rgba(248,250,252,0.3)"
+          style={{
+            fontSize: 28,
+            fontWeight: '800',
+            color: '#F8FAFC',
+            letterSpacing: -0.5,
+            textAlign: 'right',
+            width: '100%',
+            padding: 0,
+          }}
+        />
+        {numericValue > 0 && (
+          <Text style={{ fontSize: 12, fontWeight: '500', color: 'rgba(248,250,252,0.5)', marginTop: 1 }}>
+            {formatIDR(numericValue)}
+          </Text>
+        )}
         {change > 0 && (
           <Text style={{ fontSize: 12, fontWeight: '600', color: '#10B981', marginTop: 2 }}>
             Change: {formatIDR(change)}

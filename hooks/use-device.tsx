@@ -187,6 +187,10 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const clearDevice = useCallback(async () => {
     try {
       await clearDeviceId();
+      // Set loading=true first so the layout shows the loading screen instead of
+      // redirecting to device-setup during the async gap before initializeDevice
+      // can set loading=true itself.
+      setLoading(true);
       setDeviceId(null);
       setDeviceInfo(null);
       setRegistration(null);

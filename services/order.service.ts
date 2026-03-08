@@ -769,6 +769,23 @@ export async function getOrderItemsByRound(orderId: number): Promise<Map<number,
 }
 
 /**
+ * Assigns (or clears) a customer on an existing order.
+ *
+ * @param orderId - The order ID
+ * @param customerId - Customer ID to assign, or null to clear
+ */
+export async function assignCustomerToOrder(
+  orderId: number,
+  customerId: number | null
+): Promise<void> {
+  const now = new Date().toISOString();
+  await powersync.execute(
+    `UPDATE orders SET customer_id = ?, updated_at = ? WHERE id = ?`,
+    [customerId, now, orderId]
+  );
+}
+
+/**
  * Gets the sent timestamp for each round from kitchen_order_tickets.
  *
  * @param orderId - The order ID

@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
+import { ReservationModal } from '@/components/floor/ReservationModal';
 import { TableCard } from '@/components/floor/TableCard';
 import { TABLE_STATUS } from '@/constants/enums';
+import { useReservations } from '@/hooks/use-reservations';
 import { useShift } from '@/hooks/use-shift';
-import { useTables } from '@/hooks/use-tables';
+import { useTables, type TableWithOrder } from '@/hooks/use-tables';
 import { useTakeaway, type TakeawayOrder } from '@/hooks/use-takeaway';
 
 export default function FloorScreen() {
@@ -30,8 +32,11 @@ export default function FloorScreen() {
 
   const { isShiftOpen, loading: shiftLoading } = useShift();
 
+  const { getReservationsForTable, formatReservationTime } = useReservations();
+
   const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
   const [isTakeawaySelected, setIsTakeawaySelected] = useState(false);
+  const [reservationTable, setReservationTable] = useState<TableWithOrder | null>(null);
 
   useEffect(() => {
     if (floorAreas.length > 0 && selectedAreaId === null && !isTakeawaySelected) {
@@ -103,6 +108,10 @@ export default function FloorScreen() {
       setIsTakeawaySelected(false);
       setSelectedAreaId(areaId);
     }
+  };
+
+  const handleTableLongPress = (table: TableWithOrder) => {
+    setReservationTable(table);
   };
 
   const isLoading = tablesLoading || takeawayLoading || shiftLoading;
@@ -240,12 +249,30 @@ export default function FloorScreen() {
                   table={table}
                   elapsedMinutes={getOrderElapsedMinutes(table.order_created_at)}
                   onPress={() => handleTablePress(table.id, table.active_order_id, table.status)}
+                  onLongPress={() => handleTableLongPress(table)}
+                  reservationName={(() => {
+                    const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+                    const res = getReservationsForTable(tableId)[0];
+                    return res?.resolved_customer_name ?? null;
+                  })()}
+                  reservationTime={(() => {
+                    const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+                    const res = getReservationsForTable(tableId)[0];
+                    return res ? formatReservationTime(res.reservation_datetime) : null;
+                  })()}
                 />
               </View>
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* Reservation Modal */}
+      <ReservationModal
+        visible={reservationTable !== null}
+        table={reservationTable}
+        onClose={() => setReservationTable(null)}
+      />
     </View>
   );
 }

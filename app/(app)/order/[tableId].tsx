@@ -8,6 +8,7 @@ import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
 import { OrderPanel } from '@/components/order/OrderPanel';
+import { type AssignedCustomer } from '@/components/order/CustomerPickerRow';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
@@ -16,6 +17,7 @@ import { powersync } from '@/db/provider';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
 import { useShift } from '@/hooks/use-shift';
+import { assignCustomerToOrder } from '@/services/order.service';
 import type { SelectedModifier } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
 
@@ -107,6 +109,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [assignedCustomer, setAssignedCustomer] = useState<AssignedCustomer | null>(null);
 
   // Modifier picker UI state
   const [showModifierPicker, setShowModifierPicker] = useState(false);
@@ -160,6 +163,57 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   });
 
   const isLoading = orderLoading;
+
+  // Load assigned customer when order changes
+  useEffect(() => {
+    let cancelled = false;
+    const customerId = order?.customer_id;
+    if (!customerId) {
+      setAssignedCustomer(null);
+      return;
+    }
+    powersync
+      .getOptional<{ id: number; name: string; phone: string | null; loyalty_points: number }>(
+        `SELECT id, name, phone, loyalty_points FROM customers WHERE id = ? LIMIT 1`,
+        [customerId]
+      )
+      .then((c) => {
+        if (!cancelled && c) {
+          setAssignedCustomer({
+            id: typeof c.id === 'string' ? parseInt(c.id as string, 10) : c.id,
+            name: c.name,
+            phone: c.phone,
+            loyalty_points: c.loyalty_points,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [order?.customer_id]);
+
+  const handleAssignCustomer = useCallback(async (customer: AssignedCustomer) => {
+    const orderId = order ? (typeof order.id === 'string' ? parseInt(order.id as string, 10) : order.id) : null;
+    if (orderId) {
+      try {
+        await assignCustomerToOrder(orderId, customer.id);
+      } catch (err) {
+        console.error('[OrderScreen] assignCustomerToOrder error:', err);
+      }
+    }
+    setAssignedCustomer(customer);
+  }, [order]);
+
+  const handleClearCustomer = useCallback(async () => {
+    const orderId = order ? (typeof order.id === 'string' ? parseInt(order.id as string, 10) : order.id) : null;
+    if (orderId) {
+      try {
+        await assignCustomerToOrder(orderId, null);
+      } catch (err) {
+        console.error('[OrderScreen] clearCustomer error:', err);
+      }
+    }
+    setAssignedCustomer(null);
+  }, [order]);
 
   const subCategories = selectedCategoryId ? getSubCategories(selectedCategoryId) : [];
 
@@ -669,6 +723,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
                 onCancelRound={handleCancelRound}
                 onPrintBill={handlePrintBill}
                 isShiftOpen={isShiftOpen}
+                assignedCustomer={assignedCustomer}
+                onAssignCustomer={handleAssignCustomer}
+                onClearCustomer={handleClearCustomer}
               />
           </PerfProfiler>
         </View>

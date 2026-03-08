@@ -20,6 +20,8 @@
  *   - `setAuditUserContext()`   — called by `hooks/use-auth.tsx`
  */
 
+import * as Crypto from 'expo-crypto';
+
 import type { AuditAction } from '@/constants/enums';
 import { powersync } from '@/db/provider';
 
@@ -117,10 +119,7 @@ export async function insertAuditLog(params: AuditLogParams): Promise<void> {
     const userId = params.userId !== undefined ? params.userId : _userId;
     const branchId = params.branchId !== undefined ? params.branchId : _branchId;
 
-    const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM audit_logs`,
-    );
-    const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+    const newId = Crypto.randomUUID();
 
     await powersync.execute(
       `INSERT INTO audit_logs (

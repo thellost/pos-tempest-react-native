@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
+import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
 import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
 import { OrderActions } from './OrderActions';
@@ -30,6 +31,10 @@ interface OrderPanelProps {
   onPrintBill: () => void;
   /** When false, shows no-shift warning banner and disables action buttons */
   isShiftOpen?: boolean;
+  /** Optionally assigned customer for this order */
+  assignedCustomer?: AssignedCustomer | null;
+  onAssignCustomer?: (customer: AssignedCustomer) => void;
+  onClearCustomer?: () => void;
 }
 
 /**
@@ -55,6 +60,9 @@ export const OrderPanel = memo(function OrderPanel({
   onCancelRound,
   onPrintBill,
   isShiftOpen = true,
+  assignedCustomer = null,
+  onAssignCustomer,
+  onClearCustomer,
 }: OrderPanelProps) {
   const activeItems = useMemo(() => items.filter(i => !i.is_voided), [items]);
   const hasItems = activeItems.length > 0;
@@ -254,6 +262,16 @@ export const OrderPanel = memo(function OrderPanel({
             </Pressable>
           </View>
         </View>
+
+        {/* Customer picker */}
+        {onAssignCustomer && onClearCustomer && (
+          <CustomerPickerRow
+            assignedCustomer={assignedCustomer}
+            onAssign={onAssignCustomer}
+            onClear={onClearCustomer}
+            disabled={!isShiftOpen}
+          />
+        )}
 
         {guestCount !== null && (
           <View className="mt-3 flex-row items-center justify-between">

@@ -3,15 +3,15 @@ import { ROLE_TYPE } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import {
-  addCashTransaction as addCashTxService,
-  closeShift as closeShiftService,
-  getActiveShift,
-  getShiftCashSummary,
-  getShiftCashTransactions,
-  openShift as openShiftService,
-  ShiftCashSummary,
-  ShiftCashTransactionRecord,
-  ShiftRecord,
+    addCashTransaction as addCashTxService,
+    closeShift as closeShiftService,
+    getActiveShift,
+    getShiftCashSummary,
+    getShiftCashTransactions,
+    openShift as openShiftService,
+    ShiftCashSummary,
+    ShiftCashTransactionRecord,
+    ShiftRecord,
 } from '@/services/shift.service';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -46,9 +46,9 @@ export function useShift(): UseShiftReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const requiresShift = user?.role_name === ROLE_TYPE.CASHIER;
-  // Non-cashier roles (Manager, Admin, Owner) can always operate without an open shift.
-  // Only cashiers are required to have an active shift before taking orders.
+  // All roles that create/manage orders (cashier, manager, admin) require an open shift.
+  // Chefs only work in the kitchen display and do not create orders, so they are exempt.
+  const requiresShift = user?.role_name !== ROLE_TYPE.CHEF;
   const isShiftOpen = !requiresShift || Boolean(activeShift);
 
   const refresh = useCallback(async () => {

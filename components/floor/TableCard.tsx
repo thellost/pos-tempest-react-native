@@ -8,9 +8,12 @@ interface TableCardProps {
   table: TableWithOrder;
   elapsedMinutes: number;
   onPress: () => void;
+  onLongPress?: () => void;
+  reservationName?: string | null;
+  reservationTime?: string | null;
 }
 
-export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
+export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reservationName, reservationTime }: TableCardProps) {
   const isOccupied = table.status === TABLE_STATUS.OCCUPIED;
   const isAvailable = table.status === TABLE_STATUS.AVAILABLE;
   const isReserved = table.status === TABLE_STATUS.RESERVED;
@@ -43,6 +46,8 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       disabled={isMaintenance}
       className={`min-h-[130px] overflow-hidden rounded-2xl border-2 p-5 ${statusBgColor} ${
         isMaintenance ? 'opacity-50' : ''
@@ -97,9 +102,19 @@ export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
             )}
           </View>
         ) : isReserved ? (
-          <Text className="text-pos-xs text-pos-warning">
-            Reserved - Tap for details
-          </Text>
+          <View>
+            {reservationName ? (
+              <Text className="text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
+                {reservationName}
+              </Text>
+            ) : null}
+            {reservationTime ? (
+              <Text className="text-pos-xs text-pos-text-muted">{reservationTime}</Text>
+            ) : null}
+            {!reservationName && (
+              <Text className="text-pos-xs text-pos-warning">Hold to manage</Text>
+            )}
+          </View>
         ) : isMaintenance ? (
           <Text className="text-pos-xs text-pos-text-faint">
             Under maintenance
