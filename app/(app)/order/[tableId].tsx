@@ -7,8 +7,8 @@ import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
-import { OrderPanel } from '@/components/order/OrderPanel';
 import { type AssignedCustomer } from '@/components/order/CustomerPickerRow';
+import { OrderPanel } from '@/components/order/OrderPanel';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
@@ -17,8 +17,8 @@ import { powersync } from '@/db/provider';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
 import { useShift } from '@/hooks/use-shift';
-import { assignCustomerToOrder } from '@/services/order.service';
 import type { SelectedModifier } from '@/services/order.service';
+import { assignCustomerToOrder } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
 
 export default function OrderScreen() {

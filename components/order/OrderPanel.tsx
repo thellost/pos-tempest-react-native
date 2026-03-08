@@ -3,9 +3,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
-import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
 import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
+import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
 import { OrderTotals } from './OrderTotals';
