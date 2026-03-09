@@ -72,7 +72,7 @@ export async function applyOrderDiscount(
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_discounts`,
   );
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
 
   await powersync.execute(
     `INSERT INTO order_discounts (
@@ -217,7 +217,7 @@ export async function processPayment(
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM payments`,
   );
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
 
   await powersync.execute(
     `INSERT INTO payments (

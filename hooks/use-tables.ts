@@ -1,10 +1,11 @@
 import { useQuery } from '@powersync/react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { ORDER_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { DiningTable, FloorArea } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 
 /**
  * Extended table info with active order details
@@ -27,7 +28,9 @@ export interface TableWithOrder extends DiningTable {
 export function useTables() {
   const { user } = useAuth();
   const branchId = user?.branch_id;
-
+  const { deviceId, registration } = useDevice();
+  // DEBUG show all tables statuses
+  
   // Query floor areas for the current branch
   const { data: floorAreas = [], isLoading: areasLoading } = useQuery<FloorArea>(
     `SELECT * FROM floor_areas 
@@ -61,17 +64,45 @@ export function useTables() {
     ]
   );
 
-  // Deduplicate tables - keep only the first occurrence (most recent order due to ORDER BY)
+  useEffect(() => {
+    console.log('[DEBUG] device_id:', deviceId, '| db_id:', registration?.device?.id, '| device_name:', registration?.device?.device_name);
+    const occupiedTables = rawTablesData.filter(t => t.status === TABLE_STATUS.OCCUPIED);
+    console.log('[DEBUG] occupied tables:', JSON.stringify(occupiedTables, null, 2));
+    const orders = rawTablesData
+      .filter(t => t.active_order_id !== null)
+      .map(t => ({
+        order_id: t.active_order_id,
+        order_number: t.active_order_number,
+        table_id: t.id,
+        table_number: t.table_number,
+        status: t.order_status,
+        total: t.order_total,
+        guest_count: t.guest_count,
+        created_at: t.order_created_at,
+      }));
+    console.log('[DEBUG] active orders:', JSON.stringify(orders, null, 2));
+  }, [rawTablesData, deviceId, registration]);
+
+  // Deduplicate tables - keep only the first occurrence (most recent order due to ORDER BY).
+  // Also derive effective status: if there's no active order but t.status is still OCCUPIED
+  // (e.g. the void synced the order before the table status update), show AVAILABLE instead.
+  // This prevents Device B from showing a table as occupied after a void on Device A.
   const tablesData = useMemo(() => {
     const seen = new Set<number>();
-    return rawTablesData.filter(table => {
-      const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
-      if (seen.has(tableId)) {
-        return false;
-      }
-      seen.add(tableId);
-      return true;
-    });
+    return rawTablesData
+      .filter(table => {
+        const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+        if (seen.has(tableId)) return false;
+        seen.add(tableId);
+        return true;
+      })
+      .map(table => ({
+        ...table,
+        status:
+          !table.active_order_id && table.status === TABLE_STATUS.OCCUPIED
+            ? TABLE_STATUS.AVAILABLE
+            : table.status,
+      }));
   }, [rawTablesData]);
 
   // Group tables by floor area

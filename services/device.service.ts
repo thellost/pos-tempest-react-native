@@ -97,7 +97,7 @@ export async function registerDevice(
     `SELECT MAX(id) as max_id FROM devices`
   );
   // Convert newId to a string
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
 
   // Insert new device record
   await powersync.execute(
