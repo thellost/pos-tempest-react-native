@@ -18,8 +18,7 @@ interface NavItem {
 }
 
 const MAIN_NAV: NavItem[] = [
-  { label: 'Floor Plan', icon: '🏠', href: '/(app)/floor' },
-  { label: 'Menu Management', icon: '📋', href: '/(app)/menu' },
+  { label: 'Tables & Orders', icon: '🏠', href: '/(app)/floor' },
   { label: 'Kitchen Display', icon: '🍳', href: '/(app)/kitchen' },
   { label: 'Inventory', icon: '📦', href: '/(app)/inventory' },
   { label: 'Customers', icon: '👥', href: '/(app)/customers' },

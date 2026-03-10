@@ -234,7 +234,7 @@ export function ModifierPicker({
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-pos-xs text-pos-text-muted">Total</Text>
-              <Text className="text-pos-2xl font-bold text-amber-400">
+              <Text className="text-pos-2xl font-bold text-pos-price">
                 {formatIDR(calculateTotal())}
               </Text>
             </View>

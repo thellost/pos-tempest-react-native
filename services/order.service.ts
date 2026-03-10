@@ -68,7 +68,7 @@ export async function createOrder(
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM orders`
   );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
 
   await powersync.execute(
     `INSERT INTO orders (
@@ -218,7 +218,7 @@ export async function addItemToOrder(
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_items`
   );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
 
   // Insert order item
   await powersync.execute(
@@ -251,7 +251,7 @@ export async function addItemToOrder(
     const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
       `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
     );
-    const modId = (parseInt(String(modMaxIdRow?.max_id || '0'), 10) + 1).toString();
+    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (
@@ -439,7 +439,7 @@ export async function updateItemModifiers(
     const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
       `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
     );
-    const modId = (parseInt(String(modMaxIdRow?.max_id || '0'), 10) + 1).toString();
+    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (

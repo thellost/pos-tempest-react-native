@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_TYPE } from '@/constants/enums';
-import { PaymentColors, ThemeColors } from '@/constants/theme';
+import { PaymentColors } from '@/constants/theme';
 
 interface PaymentMethodConfig {
   method: PaymentMethodType;
@@ -26,47 +26,33 @@ interface PaymentMethodSelectorProps {
   onSelect: (method: PaymentMethodType) => void;
 }
 
-/**
- * Grid of payment method buttons (6 methods, 3 per row).
- * Selected method is highlighted in its accent color.
- */
 export const PaymentMethodSelector = memo(function PaymentMethodSelector({
   selected,
   onSelect,
 }: PaymentMethodSelectorProps) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+    <View className="flex-row flex-wrap gap-2">
       {PAYMENT_METHODS.map(({ method, label, emoji, activeColor }) => {
         const isSelected = selected === method;
-
         return (
           <Pressable
             key={method}
             onPress={() => onSelect(method)}
+            className="flex-row items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5"
             style={({ pressed }) => ({
               flexBasis: '31%',
               flexGrow: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingVertical: 10,
-              paddingHorizontal: 4,
-              borderRadius: 8,
-              backgroundColor: isSelected
-                ? `${activeColor}22`
-                : ThemeColors.borders.subtle,
-              borderWidth: 1.5,
-              borderColor: isSelected ? activeColor : ThemeColors.borders.medium,
+              backgroundColor: isSelected ? `${activeColor}22` : undefined,
+              borderColor: isSelected ? activeColor : undefined,
+              borderWidth: isSelected ? 1.5 : 1,
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <Text style={{ fontSize: 20, marginBottom: 3 }}>{emoji}</Text>
+            <Text style={{ fontSize: 16 }}>{emoji}</Text>
             <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: isSelected ? activeColor : ThemeColors.text.muted,
-              }}
+              className={`text-[11px] font-bold ${isSelected ? '' : 'text-pos-text-muted'}`}
+              style={isSelected ? { color: activeColor } : undefined}
             >
               {label}
             </Text>

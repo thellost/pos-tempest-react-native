@@ -1,6 +1,7 @@
 import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
 import { Brand } from '@/constants/theme';
 import type { Device } from '@/db/models';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { type PrinterType, usePrinter } from '@/hooks/use-printer';
@@ -24,6 +25,7 @@ import {
 } from 'react-native';
 
 export default function SettingsScreen() {
+  const { colorScheme, setColorScheme } = useAppTheme();
   const { user } = useAuth();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
   const {
@@ -425,6 +427,42 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-surface p-6">
+
+      {/* ── Appearance ───────────────────────────────────────────────────── */}
+      <View className="mb-6">
+        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
+          Appearance
+        </Text>
+        <View className="rounded-xl bg-surface-card p-4">
+          <Text className="mb-3 text-pos-sm text-pos-text-muted">Color Theme</Text>
+          <View className="flex-row gap-3">
+            {(['dark', 'light'] as const).map((scheme) => {
+              const active = colorScheme === scheme;
+              return (
+                <Pressable
+                  key={scheme}
+                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3 ${
+                    active ? 'border-brand bg-brand' : 'border-border bg-surface'
+                  }`}
+                  onPress={() => setColorScheme(scheme)}
+                >
+                  <Text className="text-pos-base">
+                    {scheme === 'dark' ? '🌙' : '☀️'}
+                  </Text>
+                  <Text
+                    className={`text-pos-sm font-semibold capitalize ${
+                      active ? 'text-white' : 'text-pos-text'
+                    }`}
+                  >
+                    {scheme}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       <View className="mb-6">
         <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
           Current Device

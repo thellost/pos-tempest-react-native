@@ -36,12 +36,11 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
             <Pressable
               key={modifier.id}
               onPress={() => onToggle(modifierId)}
-              className="rounded-xl px-4 py-3"
-              style={{
-                backgroundColor: isSelected ? 'rgba(245, 158, 11, 0.2)' : '#1A1F2C',
-                borderWidth: 1,
-                borderColor: isSelected ? '#F59E0B' : 'rgba(255, 255, 255, 0.08)',
-              }}
+              className={`rounded-xl border px-4 py-3 ${
+                isSelected
+                  ? 'border-amber-500 bg-amber-500/20'
+                  : 'border-border bg-surface-card'
+              }`}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center">
@@ -57,7 +56,7 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
                   </Text>
                 </View>
                 {modifier.extra_price > 0 && (
-                  <Text className="text-pos-xs font-semibold text-amber-400">
+                  <Text className="text-pos-xs font-semibold text-pos-price">
                     +{formatIDR(modifier.extra_price)}
                   </Text>
                 )}

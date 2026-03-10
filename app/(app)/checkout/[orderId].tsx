@@ -33,7 +33,7 @@ import {
 } from '@/services/payment.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
-import { ThemeColors } from '@/constants/theme';
+
 import { formatIDR } from '@/utils/currency';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -329,7 +329,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
   if (!order) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator color={ThemeColors.accent.primary} />
+        <ActivityIndicator color="#6366F1" />
         <Text className="mt-3 text-pos-sm text-pos-text-muted">Loading order…</Text>
       </View>
     );
@@ -354,25 +354,21 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
         <View className="flex-row items-center gap-3 border-b border-border bg-surface-card px-4 py-3">
           <Pressable
             onPress={() => router.back()}
-            style={({ pressed }) => ({
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 6,
-              backgroundColor: pressed ? ThemeColors.borders.strong : ThemeColors.borders.default,
-            })}
+            className="rounded border border-border bg-surface-raised px-2.5 py-1.5"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
-            <Text style={{ fontSize: 13, color: ThemeColors.text.muted }}>← Back</Text>
+            <Text className="text-pos-sm text-pos-text-muted">← Back</Text>
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: ThemeColors.text.primary }}>
+            <Text className="text-pos-base font-extrabold text-pos-text">
               {tableLabel}
             </Text>
-            <Text style={{ fontSize: 11, color: ThemeColors.text.faint }}>{order.order_number}</Text>
+            <Text className="text-pos-xs text-pos-text-faint">{order.order_number}</Text>
           </View>
 
-          <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: ThemeColors.accent.primaryMuted }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: ThemeColors.accent.primaryHover, letterSpacing: 0.8 }}>
+          <View className="rounded-full bg-accent-muted px-2.5 py-1">
+            <Text className="text-[10px] font-extrabold tracking-widest text-accent">
               CHECKOUT
             </Text>
           </View>
@@ -385,7 +381,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
           showsVerticalScrollIndicator={false}
         >
           {itemsWithModifiers.length === 0 ? (
-            <Text style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: ThemeColors.text.faint }}>
+            <Text className="mt-8 text-center text-pos-sm text-pos-text-faint">
               No items
             </Text>
           ) : (
@@ -397,55 +393,37 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
               return (
                 <View
                   key={item.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'flex-start',
-                    paddingVertical: 9,
-                    borderTopWidth: index > 0 ? 1 : 0,
-                    borderTopColor: ThemeColors.borders.subtle,
-                  }}
+                  className={`flex-row items-start py-2 ${index > 0 ? 'border-t border-border' : ''}`}
                 >
                   {/* Qty badge */}
-                  <View
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 13,
-                      backgroundColor: ThemeColors.accent.primaryBadge,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 10,
-                      flexShrink: 0,
-                      marginTop: 1,
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: ThemeColors.accent.primaryHover }}>
+                  <View className="mr-2.5 mt-0.5 h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent-muted">
+                    <Text className="text-[11px] font-black text-accent-hover">
                       {qty % 1 === 0 ? qty : qty.toFixed(2)}
                     </Text>
                   </View>
 
                   {/* Name + modifiers */}
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: ThemeColors.text.primary }} numberOfLines={1}>
+                  <View className="mr-2 flex-1">
+                    <Text className="text-pos-sm font-semibold text-pos-text" numberOfLines={1}>
                       {item.menu_item_name}
                     </Text>
                     {item.modifiers.length > 0 && (
-                      <Text style={{ fontSize: 11, color: ThemeColors.text.faint, marginTop: 2 }}>
+                      <Text className="mt-0.5 text-pos-xs text-pos-text-faint">
                         {item.modifiers.map((m) => m.modifier_name).join(', ')}
                       </Text>
                     )}
                     {item.notes ? (
-                      <Text style={{ fontSize: 11, color: ThemeColors.text.faint, fontStyle: 'italic', marginTop: 1 }}>
+                      <Text className="mt-0.5 text-pos-xs italic text-pos-text-faint">
                         {item.notes}
                       </Text>
                     ) : null}
-                    <Text style={{ fontSize: 11, color: ThemeColors.category.default, marginTop: 2 }}>
+                    <Text className="mt-0.5 text-pos-xs text-pos-text-muted">
                       {formatIDR(price)} each
                     </Text>
                   </View>
 
                   {/* Row total */}
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: ThemeColors.text.primary, flexShrink: 0 }}>
+                  <Text className="shrink-0 text-pos-sm font-bold text-pos-text">
                     {formatIDR(total)}
                   </Text>
                 </View>
@@ -464,7 +442,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
             <TotalsRow
               label={appliedDiscount ? `Discount (${appliedDiscount.discount_name})` : 'Discount'}
               value={`−${formatIDR(discountAmount)}`}
-              valueColor="#10B981"
+              valueClassName="text-pos-success"
             />
           )}
           {taxAmount > 0 && (
@@ -484,21 +462,11 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
           )}
 
           {/* Grand total */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 6,
-              paddingTop: 8,
-              borderTopWidth: 1,
-              borderTopColor: ThemeColors.borders.default,
-            }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: '800', color: ThemeColors.text.muted, letterSpacing: 0.5 }}>
+          <View className="mt-1.5 flex-row items-center justify-between border-t border-border pt-2">
+            <Text className="text-pos-sm font-extrabold tracking-widest text-pos-text-muted">
               TOTAL DUE
             </Text>
-            <Text style={{ fontSize: 24, fontWeight: '900', color: ThemeColors.accent.primary }}>
+            <Text className="text-pos-3xl font-black text-accent">
               {formatIDR(orderTotal)}
             </Text>
           </View>
@@ -515,46 +483,27 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
         >
           {/* Discount */}
           <SectionCard>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: ThemeColors.text.faint, letterSpacing: 0.9 }}>
-                DISCOUNT
-              </Text>
+            <View className="mb-2.5 flex-row items-center justify-between">
+              <Text className="text-[11px] font-bold tracking-widest text-pos-text-faint">DISCOUNT</Text>
               <Pressable
                 onPress={handleOpenDiscountPicker}
-                style={({ pressed }) => ({
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  backgroundColor: pressed ? ThemeColors.accent.primaryGlow : ThemeColors.accent.primaryLight,
-                  borderWidth: 1,
-                  borderColor: ThemeColors.accent.primaryBorder,
-                })}
+                className="rounded border border-accent/30 bg-accent/10 px-2.5 py-1"
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: ThemeColors.accent.primaryHover }}>
+                <Text className="text-[11px] font-bold text-accent-hover">
                   {appliedDiscount ? 'Change' : '+ Apply'}
                 </Text>
               </Pressable>
             </View>
 
             {appliedDiscount ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: 10,
-                  borderRadius: 8,
-                  backgroundColor: ThemeColors.success.light,
-                  borderWidth: 1,
-                  borderColor: ThemeColors.success.glow,
-                  gap: 8,
-                }}
-              >
+              <View className="flex-row items-center gap-2 rounded-lg border border-pos-success/30 bg-pos-success/10 p-2.5">
                 <Text style={{ fontSize: 16 }}>🏷️</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: ThemeColors.success.DEFAULT }}>
+                <View className="flex-1">
+                  <Text className="text-pos-xs font-bold text-pos-success">
                     {appliedDiscount.discount_name}
                   </Text>
-                  <Text style={{ fontSize: 11, color: ThemeColors.text.faint }}>
+                  <Text className="text-pos-xs text-pos-text-faint">
                     −{formatIDR(appliedDiscount.applied_amount)}
                   </Text>
                 </View>
@@ -563,19 +512,17 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
                   hitSlop={8}
                   style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
                 >
-                  <Text style={{ fontSize: 14, color: ThemeColors.danger.DEFAULT, fontWeight: '700' }}>✕</Text>
+                  <Text className="text-pos-sm font-bold text-pos-danger">✕</Text>
                 </Pressable>
               </View>
             ) : (
-              <Text style={{ fontSize: 12, color: ThemeColors.category.default, fontStyle: 'italic' }}>
-                No discount applied
-              </Text>
+              <Text className="text-pos-xs italic text-pos-text-muted">No discount applied</Text>
             )}
           </SectionCard>
 
           {/* Payment method */}
           <SectionCard>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: ThemeColors.text.faint, letterSpacing: 0.9, marginBottom: 10 }}>
+            <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
               PAYMENT METHOD
             </Text>
             <PaymentMethodSelector selected={selectedMethod} onSelect={handleMethodChange} />
@@ -583,7 +530,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
           {/* Amount entry */}
           <SectionCard>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: ThemeColors.text.faint, letterSpacing: 0.9, marginBottom: 10 }}>
+            <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
               {isCash ? 'CASH AMOUNT' : 'PAYMENT DETAILS'}
             </Text>
 
@@ -604,17 +551,12 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
             <Pressable
               onPress={handleAddPayment}
+              className="mt-3 h-11 items-center justify-center rounded-lg bg-accent"
               style={({ pressed }) => ({
-                marginTop: 12,
-                height: 44,
-                borderRadius: 8,
-                backgroundColor: pressed ? ThemeColors.accent.primaryPress : ThemeColors.accent.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: isCash && !cashInput ? 0.5 : 1,
+                opacity: (isCash && !cashInput) ? 0.5 : pressed ? 0.8 : 1,
               })}
             >
-              <Text style={{ fontSize: 14, fontWeight: '800', color: ThemeColors.text.strong }}>
+              <Text className="text-pos-sm font-extrabold text-white">
                 + Add Payment
               </Text>
             </Pressable>
@@ -623,7 +565,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
           {/* Pending payments list */}
           {pendingPayments.length > 0 && (
             <SectionCard>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: ThemeColors.text.faint, letterSpacing: 0.9, marginBottom: 10 }}>
+              <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
                 PAYMENTS ADDED
               </Text>
               <SplitPayment
@@ -639,18 +581,18 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
         <View className="border-t border-border bg-surface-card px-4 py-3" style={{ gap: 8 }}>
           {/* Balance / change summary line */}
           {pendingPayments.length > 0 && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View className="flex-row items-center justify-between">
               {remainingBalance > 0 ? (
                 <>
-                  <Text style={{ fontSize: 13, color: ThemeColors.text.muted }}>Remaining</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: ThemeColors.warning.DEFAULT }}>
+                  <Text className="text-pos-sm text-pos-text-muted">Remaining</Text>
+                  <Text className="text-pos-base font-extrabold text-pos-warning">
                     {formatIDR(remainingBalance)}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ fontSize: 13, color: ThemeColors.text.muted }}>Change to give</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: ThemeColors.success.DEFAULT }}>
+                  <Text className="text-pos-sm text-pos-text-muted">Change to give</Text>
+                  <Text className="text-pos-base font-extrabold text-pos-success">
                     {formatIDR(changeAmount)}
                   </Text>
                 </>
@@ -661,31 +603,18 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
           <Pressable
             onPress={handleComplete}
             disabled={!canComplete}
-            style={({ pressed }) => ({
-              height: 52,
-              borderRadius: 10,
-              backgroundColor: canComplete
-                ? pressed
-                  ? ThemeColors.accent.primaryPress
-                  : ThemeColors.accent.primary
-                : ThemeColors.accent.primaryDisabled,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'row',
-              gap: 8,
-            })}
+            className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
+              canComplete ? 'bg-accent' : 'bg-accent/40'
+            }`}
+            style={({ pressed }) => ({ opacity: pressed && canComplete ? 0.8 : 1 })}
           >
             {isProcessing ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
                 <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '900',
-                    color: canComplete ? ThemeColors.text.strong : 'rgba(255,255,255,0.35)',
-                    letterSpacing: 0.3,
-                  }}
+                  className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
+                  style={{ fontSize: 15, letterSpacing: 0.3 }}
                 >
                   Complete &amp; Print Receipt
                 </Text>
@@ -718,15 +647,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <View
-      style={{
-        backgroundColor: ThemeColors.surfaces.card,
-        borderRadius: 10,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: ThemeColors.borders.default,
-      }}
-    >
+    <View className="rounded-xl border border-border bg-surface-card p-3">
       {children}
     </View>
   );
@@ -735,16 +656,16 @@ function SectionCard({ children }: { children: React.ReactNode }) {
 function TotalsRow({
   label,
   value,
-  valueColor = ThemeColors.text.primary,
+  valueClassName = 'text-pos-text',
 }: {
   label: string;
   value: string;
-  valueColor?: string;
+  valueClassName?: string;
 }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={{ fontSize: 12, color: ThemeColors.text.faint }}>{label}</Text>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: valueColor }}>{value}</Text>
+    <View className="flex-row items-center justify-between">
+      <Text className="text-pos-xs text-pos-text-faint">{label}</Text>
+      <Text className={`text-pos-xs font-semibold ${valueClassName}`}>{value}</Text>
     </View>
   );
 }
@@ -757,46 +678,26 @@ interface NonCashInputProps {
 
 function NonCashInput({ remainingBalance, referenceInput, onReferenceChange }: NonCashInputProps) {
   return (
-    <View style={{ gap: 10 }}>
+    <View className="gap-2.5">
       {/* Auto-set amount indicator */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: 12,
-          borderRadius: 8,
-          backgroundColor: ThemeColors.accent.primarySubtle,
-          borderWidth: 1,
-          borderColor: ThemeColors.accent.primaryGlow,
-        }}
-      >
-        <Text style={{ fontSize: 12, color: ThemeColors.text.muted }}>Amount (auto-filled)</Text>
-        <Text style={{ fontSize: 18, fontWeight: '800', color: ThemeColors.accent.primaryHover }}>
+      <View className="flex-row items-center justify-between rounded-lg border border-accent/25 bg-accent/10 p-3">
+        <Text className="text-pos-xs text-pos-text-muted">Amount (auto-filled)</Text>
+        <Text className="text-pos-lg font-extrabold text-accent-hover">
           {formatIDR(remainingBalance)}
         </Text>
       </View>
 
       {/* Optional reference number */}
       <View>
-        <Text style={{ fontSize: 11, color: ThemeColors.text.faint, marginBottom: 5 }}>
+        <Text className="mb-1 text-pos-xs text-pos-text-faint">
           Reference No. (optional)
         </Text>
         <TextInput
           value={referenceInput}
           onChangeText={onReferenceChange}
           placeholder="e.g. QRIS txn ID, slip number…"
-          placeholderTextColor={ThemeColors.category.default}
-          style={{
-            height: 42,
-            borderRadius: 8,
-            paddingHorizontal: 12,
-            fontSize: 13,
-            color: ThemeColors.text.primary,
-            backgroundColor: ThemeColors.borders.subtle,
-            borderWidth: 1,
-            borderColor: ThemeColors.borders.default,
-          }}
+          placeholderTextColor="#94A3B8"
+          className="h-[42px] rounded-lg border border-border bg-surface-raised px-3 text-pos-sm text-pos-text"
         />
       </View>
     </View>

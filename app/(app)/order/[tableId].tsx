@@ -13,7 +13,6 @@ import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { ORDER_STATUS, PRICING_TYPE } from '@/constants/enums';
-import { ThemeColors } from '@/constants/theme';
 import { powersync } from '@/db/provider';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
@@ -667,7 +666,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color={ThemeColors.accent.primary} />
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text className="mt-4 text-pos-base text-pos-text-muted">Loading order...</Text>
       </View>
     );
@@ -676,7 +675,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   if (menuLoading || menuHydrating) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color={ThemeColors.accent.primary} />
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text className="mt-4 text-pos-base text-pos-text-muted">Loading menu...</Text>
       </View>
     );

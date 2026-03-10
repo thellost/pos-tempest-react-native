@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { TABLE_STATUS } from '@/constants/enums';
 import { Shadows } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import type { TableWithOrder } from '@/hooks/use-tables';
 
 interface TableCardProps {
@@ -15,6 +16,7 @@ interface TableCardProps {
 }
 
 export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reservationName, reservationTime }: TableCardProps) {
+  const { isDark } = useAppTheme();
   const isOccupied = table.status === TABLE_STATUS.OCCUPIED;
   const isAvailable = table.status === TABLE_STATUS.AVAILABLE;
   const isReserved = table.status === TABLE_STATUS.RESERVED;
@@ -53,7 +55,7 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
       className={`min-h-[130px] overflow-hidden rounded-2xl border-2 p-5 ${statusBgColor} ${
         isMaintenance ? 'opacity-50' : ''
       }`}
-      style={{ ...Shadows.md, elevation: 3 }}
+      style={isDark ? { ...Shadows.md, elevation: 3 } : undefined}
     >
       <View className="mb-4 flex-row items-center justify-between">
         <Text className="text-pos-2xl font-bold text-pos-text">

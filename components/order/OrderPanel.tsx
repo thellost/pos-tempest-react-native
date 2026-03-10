@@ -3,7 +3,6 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
-import { ThemeColors } from '@/constants/theme';
 import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
 import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
@@ -209,7 +208,7 @@ export const OrderPanel = memo(function OrderPanel({
         result.push(
           <Fragment key={`round-${currentRound}-pending-group-${groupName}`}>
             <View className="mb-1 mt-1 rounded-sm bg-amber-500/20 px-2 py-1">
-              <Text className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+              <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-price">
                 {groupName} (PENDING)
               </Text>
             </View>
@@ -302,7 +301,7 @@ export const OrderPanel = memo(function OrderPanel({
       {!isShiftOpen && (
         <View
           className="flex-row items-center gap-2 border-b border-border px-4 py-2"
-          style={{ backgroundColor: ThemeColors.warning.banner }}
+          style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)' }}
         >
           <Text className="text-pos-xs font-semibold text-pos-warning">
             ⚠️ No active shift — open a shift to create or modify orders
@@ -353,12 +352,10 @@ export const OrderPanel = memo(function OrderPanel({
             <Pressable
               key={r}
               onPress={() => setPrintRound(r)}
-              className="mr-1 rounded px-2.5 py-1"
-              style={{ backgroundColor: printRound === r ? ThemeColors.accent.primary : ThemeColors.surfaces.card }}
+              className={`mr-1 rounded px-2.5 py-1 ${printRound === r ? 'bg-accent' : 'bg-surface-raised'}`}
             >
               <Text
-                className="text-pos-xs font-bold"
-                style={{ color: printRound === r ? ThemeColors.text.strong : ThemeColors.text.inactive }}
+                className={`text-pos-xs font-bold ${printRound === r ? 'text-white' : 'text-pos-text-muted'}`}
               >
                 R{r}
               </Text>

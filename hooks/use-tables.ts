@@ -1,5 +1,5 @@
 import { useQuery } from '@powersync/react';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { ORDER_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { DiningTable, FloorArea } from '@/db/models';
@@ -64,24 +64,6 @@ export function useTables() {
     ]
   );
 
-  useEffect(() => {
-    console.log('[DEBUG] device_id:', deviceId, '| db_id:', registration?.device?.id, '| device_name:', registration?.device?.device_name);
-    const occupiedTables = rawTablesData.filter(t => t.status === TABLE_STATUS.OCCUPIED);
-    console.log('[DEBUG] occupied tables:', JSON.stringify(occupiedTables, null, 2));
-    const orders = rawTablesData
-      .filter(t => t.active_order_id !== null)
-      .map(t => ({
-        order_id: t.active_order_id,
-        order_number: t.active_order_number,
-        table_id: t.id,
-        table_number: t.table_number,
-        status: t.order_status,
-        total: t.order_total,
-        guest_count: t.guest_count,
-        created_at: t.order_created_at,
-      }));
-    console.log('[DEBUG] active orders:', JSON.stringify(orders, null, 2));
-  }, [rawTablesData, deviceId, registration]);
 
   // Deduplicate tables - keep only the first occurrence (most recent order due to ORDER BY).
   // Also derive effective status: if there's no active order but t.status is still OCCUPIED

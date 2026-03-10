@@ -42,64 +42,40 @@ export function OrderActions({
   isShiftOpen = true,
   showConfirmButton = false,
 }: OrderActionsProps) {
-  // An "active" order is any non-draft, non-complete status that should show
-  // the full action bar (Cancel, Kitchen, Payment, Confirm/Cancel Round).
   const isActiveOrder =
     orderStatus === ORDER_STATUS.CONFIRMED ||
     orderStatus === ORDER_STATUS.PREPARING ||
     orderStatus === ORDER_STATUS.READY ||
     orderStatus === ORDER_STATUS.SERVED;
 
-  // Kitchen button is always enabled when there are items — reprinting is allowed.
   const canSend = hasItems;
   const canPayment = hasItems && orderStatus !== ORDER_STATUS.CANCELLED;
 
   const handleSendToKitchen = useCallback(() => {
-    if (canSend) {
-      onSendToKitchen();
-    }
+    if (canSend) onSendToKitchen();
   }, [canSend, onSendToKitchen]);
 
   const handleCancelOrder = useCallback(() => {
-    if (hasItems) {
-      onCancelOrder();
-    }
+    if (hasItems) onCancelOrder();
   }, [hasItems, onCancelOrder]);
 
   const handlePayment = useCallback(() => {
-    if (canPayment) {
-      onPayment();
-    }
+    if (canPayment) onPayment();
   }, [canPayment, onPayment]);
 
   const handleConfirmRound = useCallback(() => {
-    if (hasPendingRound) {
-      onConfirmRound();
-    }
+    if (hasPendingRound) onConfirmRound();
   }, [hasPendingRound, onConfirmRound]);
 
   const handleCancelRound = useCallback(() => {
-    if (hasPendingRound) {
-      onCancelRound();
-    }
+    if (hasPendingRound) onCancelRound();
   }, [hasPendingRound, onCancelRound]);
 
-  const handlePrintBill = useCallback(() => {
-    onPrintBill();
-  }, [onPrintBill]);
-
-  // When no shift is open, show a locked banner instead of action buttons
+  // When no shift is open, show a locked banner
   if (!isShiftOpen) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
-        <View
-          className="h-10 items-center justify-center rounded-sm"
-          style={{
-            backgroundColor: 'rgba(245, 158, 11, 0.10)',
-            borderWidth: 1,
-            borderColor: 'rgba(245, 158, 11, 0.30)',
-          }}
-        >
+        <View className="h-10 items-center justify-center rounded-sm border border-pos-warning bg-pos-warning-muted">
           <Text className="text-pos-xs font-semibold text-pos-warning">
             🔒 Open a shift to take order actions
           </Text>
@@ -108,18 +84,15 @@ export function OrderActions({
     );
   }
 
-  // Pending Round State - show Confirm Round / Cancel Round buttons
+  // Pending Round State
   if (isActiveOrder && hasPendingRound) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
         <View className="flex-row gap-1.5">
           <Pressable
             onPress={handleCancelRound}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            className="h-10 flex-1 items-center justify-center rounded-sm border border-pos-danger bg-pos-danger-muted"
             style={({ pressed }) => ({
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              borderWidth: 1,
-              borderColor: 'rgba(239, 68, 68, 0.35)',
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
@@ -130,12 +103,9 @@ export function OrderActions({
           </Pressable>
 
           <Pressable
-            onPress={handlePrintBill}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            onPress={onPrintBill}
+            className="h-10 flex-1 items-center justify-center rounded-sm border border-border bg-surface-raised"
             style={({ pressed }) => ({
-              backgroundColor: '#1A1F2C',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
@@ -148,11 +118,8 @@ export function OrderActions({
 
         <Pressable
           onPress={handleConfirmRound}
-          className="mt-1.5 h-10 items-center justify-center rounded-sm"
+          className="mt-1.5 h-10 items-center justify-center rounded-sm border border-accent bg-accent"
           style={({ pressed }) => ({
-            backgroundColor: '#F59E0B',
-            borderWidth: 1,
-            borderColor: '#FBBF24',
             opacity: pressed ? 0.7 : 1,
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
@@ -165,7 +132,7 @@ export function OrderActions({
     );
   }
 
-  // Confirmed/Active State (no pending round) - show standard action buttons
+  // Confirmed/Active State
   if (isActiveOrder) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
@@ -173,11 +140,12 @@ export function OrderActions({
           <Pressable
             onPress={handleCancelOrder}
             disabled={!hasItems}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            className={`h-10 flex-1 items-center justify-center rounded-sm border ${
+              hasItems
+                ? 'border-pos-danger bg-pos-danger-muted'
+                : 'border-border bg-surface-raised'
+            }`}
             style={({ pressed }) => ({
-              backgroundColor: hasItems ? 'rgba(239, 68, 68, 0.15)' : '#1A1F2C',
-              borderWidth: 1,
-              borderColor: hasItems ? 'rgba(239, 68, 68, 0.35)' : 'rgba(255, 255, 255, 0.06)',
               opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
               transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
             })}
@@ -190,32 +158,28 @@ export function OrderActions({
           <Pressable
             onPress={handleSendToKitchen}
             disabled={!canSend}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            className={`h-10 flex-1 items-center justify-center rounded-sm border ${
+              canSend ? 'border-accent bg-accent' : 'border-border bg-surface-raised'
+            }`}
             style={({ pressed }) => ({
-              backgroundColor: canSend ? '#6366F1' : '#1A1F2C',
-              borderWidth: 1,
-              borderColor: canSend ? '#818CF8' : 'rgba(255, 255, 255, 0.06)',
               opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
               transform: [{ scale: pressed && canSend ? 0.98 : 1 }],
             })}
           >
-            <Text className={`text-pos-xs font-semibold ${canSend ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
+            <Text className={`text-pos-xs font-semibold ${canSend ? 'text-white' : 'text-pos-text-faint'}`}>
               Print KOT
             </Text>
             {sentAt ? (
-              <Text className="text-[9px] text-indigo-300 mt-0.5">✓ {sentAt}</Text>
+              <Text className="mt-0.5 text-[9px] text-white/70">✓ {sentAt}</Text>
             ) : null}
           </Pressable>
         </View>
 
         <View className="mt-1.5 flex-row gap-1.5">
           <Pressable
-            onPress={handlePrintBill}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            onPress={onPrintBill}
+            className="h-10 flex-1 items-center justify-center rounded-sm border border-border bg-surface-raised"
             style={({ pressed }) => ({
-              backgroundColor: '#1A1F2C',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
@@ -228,16 +192,17 @@ export function OrderActions({
           <Pressable
             onPress={handlePayment}
             disabled={!canPayment}
-            className="h-10 flex-1 items-center justify-center rounded-sm"
+            className={`h-10 flex-1 items-center justify-center rounded-sm border ${
+              canPayment
+                ? 'border-pos-success bg-pos-success'
+                : 'border-border bg-surface-raised'
+            }`}
             style={({ pressed }) => ({
-              backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
-              borderWidth: 1,
-              borderColor: canPayment ? '#34D399' : 'rgba(255, 255, 255, 0.06)',
               opacity: !canPayment ? 0.4 : pressed ? 0.7 : 1,
               transform: [{ scale: pressed && canPayment ? 0.98 : 1 }],
             })}
           >
-            <Text className={`text-pos-sm font-bold ${canPayment ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
+            <Text className={`text-pos-sm font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
               Payment
             </Text>
           </Pressable>
@@ -246,18 +211,17 @@ export function OrderActions({
     );
   }
 
-  // Draft state — show Confirm Order as the primary CTA
+  // Draft state — Confirm Order CTA
   if (showConfirmButton) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
         <Pressable
           onPress={onConfirmOrder}
           disabled={!hasItems}
-          className="h-12 items-center justify-center rounded-sm"
+          className={`h-12 items-center justify-center rounded-sm border ${
+            hasItems ? 'border-accent bg-accent' : 'border-border bg-surface-raised'
+          }`}
           style={({ pressed }) => ({
-            backgroundColor: hasItems ? '#F59E0B' : '#1A1F2C',
-            borderWidth: 1,
-            borderColor: hasItems ? '#FBBF24' : 'rgba(255,255,255,0.06)',
             opacity: !hasItems ? 0.4 : pressed ? 0.7 : 1,
             transform: [{ scale: pressed && hasItems ? 0.98 : 1 }],
           })}
@@ -270,22 +234,23 @@ export function OrderActions({
     );
   }
 
-  // Fallback (cancelled / unknown status)
+  // Fallback
   return (
     <View className="border-t border-border bg-surface-card p-2">
       <Pressable
         onPress={handlePayment}
         disabled={!canPayment}
-        className="h-10 items-center justify-center rounded-sm"
+        className={`h-10 items-center justify-center rounded-sm border ${
+          canPayment
+            ? 'border-pos-success bg-pos-success'
+            : 'border-border bg-surface-raised'
+        }`}
         style={({ pressed }) => ({
-          backgroundColor: canPayment ? '#10B981' : '#1A1F2C',
-          borderWidth: 1,
-          borderColor: canPayment ? '#34D399' : 'rgba(255, 255, 255, 0.06)',
           opacity: !canPayment ? 0.4 : pressed ? 0.7 : 1,
           transform: [{ scale: pressed && canPayment ? 0.98 : 1 }],
         })}
       >
-        <Text className={`text-pos-sm font-bold ${canPayment ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}>
+        <Text className={`text-pos-sm font-bold ${canPayment ? 'text-white' : 'text-pos-text-faint'}`}>
           Payment
         </Text>
       </Pressable>
