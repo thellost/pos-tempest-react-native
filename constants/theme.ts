@@ -58,10 +58,12 @@ export const ThemeColors = {
     raised: '#222838',
     elevated: '#2A3142',
     overlay: 'rgba(0, 0, 0, 0.75)',
+    disabled: '#374151',
   },
   borders: {
     default: 'rgba(255, 255, 255, 0.06)',
     subtle: 'rgba(255, 255, 255, 0.04)',
+    medium: 'rgba(255, 255, 255, 0.08)',
     strong: 'rgba(255, 255, 255, 0.12)',
     focus: '#6366F1',
   },
@@ -71,6 +73,8 @@ export const ThemeColors = {
     muted: '#94A3B8',
     faint: '#64748B',
     inverse: '#0F172A',
+    strong: '#FFFFFF',
+    inactive: '#9CA3AF',
   },
   accent: {
     primary: '#6366F1',
@@ -78,6 +82,11 @@ export const ThemeColors = {
     primaryPress: '#4F46E5',
     primaryMuted: 'rgba(99, 102, 241, 0.15)',
     primaryGlow: 'rgba(99, 102, 241, 0.25)',
+    primarySubtle: 'rgba(99, 102, 241, 0.10)',
+    primaryLight: 'rgba(99, 102, 241, 0.12)',
+    primaryBadge: 'rgba(99, 102, 241, 0.22)',
+    primaryDisabled: 'rgba(99, 102, 241, 0.20)',
+    primaryBorder: 'rgba(99, 102, 241, 0.30)',
   },
   success: {
     DEFAULT: '#10B981',
@@ -85,6 +94,9 @@ export const ThemeColors = {
     press: '#059669',
     muted: 'rgba(16, 185, 129, 0.15)',
     glow: 'rgba(16, 185, 129, 0.25)',
+    light: 'rgba(16, 185, 129, 0.10)',
+    dim: 'rgba(16, 185, 129, 0.06)',
+    border: 'rgba(16, 185, 129, 0.35)',
   },
   warning: {
     DEFAULT: '#F59E0B',
@@ -92,6 +104,10 @@ export const ThemeColors = {
     press: '#D97706',
     muted: 'rgba(245, 158, 11, 0.15)',
     glow: 'rgba(245, 158, 11, 0.25)',
+    dim: 'rgba(245, 158, 11, 0.06)',
+    banner: 'rgba(245, 158, 11, 0.08)',
+    badge: 'rgba(245, 158, 11, 0.20)',
+    border: 'rgba(245, 158, 11, 0.35)',
   },
   danger: {
     DEFAULT: '#EF4444',
@@ -99,6 +115,12 @@ export const ThemeColors = {
     press: '#DC2626',
     muted: 'rgba(239, 68, 68, 0.15)',
     glow: 'rgba(239, 68, 68, 0.25)',
+    badge: 'rgba(239, 68, 68, 0.20)',
+  },
+  info: {
+    DEFAULT: '#3B82F6',
+    border: 'rgba(59, 130, 246, 0.35)',
+    bg: 'rgba(59, 130, 246, 0.06)',
   },
   category: {
     food: '#F97316',
@@ -123,6 +145,16 @@ export const ThemeColors = {
     large: 'rgba(0, 0, 0, 0.3)',
     glow: 'rgba(99, 102, 241, 0.15)',
   },
+} as const;
+
+/** Payment method accent colors */
+export const PaymentColors = {
+  cash:         ThemeColors.success.DEFAULT,
+  qris:         ThemeColors.accent.primary,
+  debit:        ThemeColors.info.DEFAULT,
+  credit:       ThemeColors.warning.DEFAULT,
+  eWallet:      ThemeColors.category.desserts,
+  bankTransfer: ThemeColors.category.specials,
 } as const;
 
 /** Brand colors (theme-independent) */

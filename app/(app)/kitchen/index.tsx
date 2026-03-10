@@ -2,6 +2,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 import { KOTCard } from '@/components/kitchen/KOTCard';
 import type { KotStatus } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { KOTRow } from '@/hooks/use-kitchen';
 import { useKitchen } from '@/hooks/use-kitchen';
 
@@ -96,7 +97,7 @@ export default function KitchenScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={ThemeColors.accent.primary} />
         <Text className="mt-4 text-pos-base text-pos-text-muted">
           Loading kitchen display…
         </Text>
@@ -127,9 +128,9 @@ export default function KitchenScreen() {
         {/* Legend */}
         <View className="flex-row items-center gap-4">
           {[
-            { dot: '#F59E0B', label: 'Pending' },
-            { dot: '#3B82F6', label: 'In Progress' },
-            { dot: '#10B981', label: 'Ready' },
+            { dot: ThemeColors.warning.DEFAULT, label: 'Pending' },
+            { dot: ThemeColors.info.DEFAULT, label: 'In Progress' },
+            { dot: ThemeColors.success.DEFAULT, label: 'Ready' },
           ].map(({ dot, label }) => (
             <View key={label} className="flex-row items-center gap-1.5">
               <View
@@ -146,21 +147,21 @@ export default function KitchenScreen() {
       <View className="flex-1 flex-row">
         <KDSColumn
           label="Pending"
-          accentColor="#F59E0B"
+          accentColor={ThemeColors.warning.DEFAULT}
           kots={pendingKOTs}
           onAdvance={advanceKOT}
           emptyMessage="No tickets waiting"
         />
         <KDSColumn
           label="In Progress"
-          accentColor="#3B82F6"
+          accentColor={ThemeColors.info.DEFAULT}
           kots={inProgressKOTs}
           onAdvance={advanceKOT}
           emptyMessage="Nothing cooking right now"
         />
         <KDSColumn
           label="Ready"
-          accentColor="#10B981"
+          accentColor={ThemeColors.success.DEFAULT}
           kots={readyKOTs}
           onAdvance={advanceKOT}
           emptyMessage="Nothing ready to serve"

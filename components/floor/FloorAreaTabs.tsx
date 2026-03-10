@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { FloorArea } from '@/db/models';
+import { ThemeColors } from '@/constants/theme';
 
 interface FloorAreaTabsProps {
   floorAreas: FloorArea[];
@@ -43,9 +44,9 @@ export function FloorAreaTabs({
               onPress={() => onSelectArea(areaId, false)}
               className="mr-2 rounded-xl px-5 py-3"
               style={{
-                backgroundColor: isSelected ? '#6366F1' : 'transparent',
+                backgroundColor: isSelected ? ThemeColors.accent.primary : 'transparent',
                 borderWidth: isSelected ? 0 : 1,
-                borderColor: 'rgba(255,255,255,0.08)',
+                borderColor: ThemeColors.borders.medium,
               }}
             >
               <Text 
@@ -66,9 +67,9 @@ export function FloorAreaTabs({
             onPress={() => onSelectArea(null, true)}
             className="mr-2 flex-row items-center rounded-xl px-5 py-3"
             style={{
-              backgroundColor: isTakeawaySelected ? '#F59E0B' : 'transparent',
+              backgroundColor: isTakeawaySelected ? ThemeColors.warning.DEFAULT : 'transparent',
               borderWidth: isTakeawaySelected ? 0 : 1,
-              borderColor: 'rgba(255,255,255,0.08)',
+              borderColor: ThemeColors.borders.medium,
             }}
           >
             <Text className="mr-2 text-base">🛍</Text>
@@ -84,7 +85,7 @@ export function FloorAreaTabs({
             {activeTakeawayCount > 0 && (
               <View 
                 className="ml-2 rounded-full px-2 py-0.5"
-                style={{ backgroundColor: isTakeawaySelected ? 'rgba(255,255,255,0.3)' : '#F59E0B' }}
+                style={{ backgroundColor: isTakeawaySelected ? 'rgba(255,255,255,0.3)' : ThemeColors.warning.DEFAULT }}
               >
                 <Text className="text-xs font-bold text-white">
                   {activeTakeawayCount}

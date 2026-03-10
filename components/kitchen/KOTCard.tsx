@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { KotStatus } from '@/constants/enums';
 import { KOT_STATUS, ORDER_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { KOTRow } from '@/hooks/use-kitchen';
 
 interface KOTCardProps {
@@ -44,26 +45,26 @@ const STATUS_CONFIG: Record<
 > = {
   [KOT_STATUS.PENDING]: {
     label: 'PENDING',
-    borderColor: 'rgba(245,158,11,0.35)',
-    bgColor: 'rgba(245,158,11,0.06)',
-    textColor: '#F59E0B',
-    btnColor: '#F59E0B',
+    borderColor: ThemeColors.warning.border,
+    bgColor: ThemeColors.warning.dim,
+    textColor: ThemeColors.warning.DEFAULT,
+    btnColor: ThemeColors.warning.DEFAULT,
     btnLabel: 'Start',
   },
   [KOT_STATUS.IN_PROGRESS]: {
     label: 'IN PROGRESS',
-    borderColor: 'rgba(59,130,246,0.35)',
-    bgColor: 'rgba(59,130,246,0.06)',
-    textColor: '#3B82F6',
-    btnColor: '#3B82F6',
+    borderColor: ThemeColors.info.border,
+    bgColor: ThemeColors.info.bg,
+    textColor: ThemeColors.info.DEFAULT,
+    btnColor: ThemeColors.info.DEFAULT,
     btnLabel: 'Mark Ready',
   },
   [KOT_STATUS.READY]: {
     label: 'READY',
-    borderColor: 'rgba(16,185,129,0.35)',
-    bgColor: 'rgba(16,185,129,0.06)',
-    textColor: '#10B981',
-    btnColor: '#10B981',
+    borderColor: ThemeColors.success.border,
+    bgColor: ThemeColors.success.dim,
+    textColor: ThemeColors.success.DEFAULT,
+    btnColor: ThemeColors.success.DEFAULT,
     btnLabel: 'Served',
   },
 };
@@ -127,7 +128,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
         className="flex-row items-center justify-between px-3 py-2"
         style={{
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.06)',
+          borderBottomColor: ThemeColors.borders.default,
         }}
       >
         <View className="flex-row items-center gap-2">
@@ -139,7 +140,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
           {/* Round badge */}
           <View
             className="rounded px-1.5 py-0.5"
-            style={{ backgroundColor: '#6366F1' }}
+            style={{ backgroundColor: ThemeColors.accent.primary }}
           >
             <Text
               className="font-bold text-white"
@@ -152,10 +153,10 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
           {isTakeaway && (
             <View
               className="rounded px-1.5 py-0.5"
-              style={{ backgroundColor: 'rgba(245,158,11,0.2)' }}
+              style={{ backgroundColor: ThemeColors.warning.badge }}
             >
               <Text
-                style={{ fontSize: 9, fontWeight: '700', color: '#F59E0B' }}
+                style={{ fontSize: 9, fontWeight: '700', color: ThemeColors.warning.DEFAULT }}
               >
                 TAKEAWAY
               </Text>
@@ -168,13 +169,13 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
           className="rounded px-1.5 py-0.5"
           style={{
             backgroundColor: isUrgent
-              ? 'rgba(239,68,68,0.2)'
-              : 'rgba(255,255,255,0.06)',
+              ? ThemeColors.danger.badge
+              : ThemeColors.borders.default,
           }}
         >
           <Text
             className="text-[10px] font-semibold"
-            style={{ color: isUrgent ? '#EF4444' : '#94A3B8' }}
+            style={{ color: isUrgent ? ThemeColors.danger.DEFAULT : ThemeColors.text.muted }}
           >
             {elapsed}
           </Text>
@@ -207,7 +208,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
                 paddingTop: index > 0 ? 6 : 0,
                 marginTop: index > 0 ? 6 : 0,
                 borderTopWidth: index > 0 ? 1 : 0,
-                borderTopColor: 'rgba(255,255,255,0.06)',
+                borderTopColor: ThemeColors.borders.default,
               }}
             >
               <View className="flex-row items-start gap-1">
@@ -230,7 +231,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
               {item.notes ? (
                 <Text
                   className="text-pos-xs"
-                  style={{ color: '#F59E0B', marginLeft: 18, fontStyle: 'italic' }}
+                  style={{ color: ThemeColors.warning.DEFAULT, marginLeft: 18, fontStyle: 'italic' }}
                 >
                   ※ {item.notes}
                 </Text>
@@ -251,7 +252,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
           disabled={isAdvancing}
           className="mx-3 mb-3 items-center justify-center rounded-lg py-2"
           style={{
-            backgroundColor: isAdvancing ? '#374151' : config.btnColor,
+            backgroundColor: isAdvancing ? ThemeColors.surfaces.disabled : config.btnColor,
             opacity: isAdvancing ? 0.6 : 1,
           }}
         >

@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { Category } from '@/db/models';
+import { ThemeColors } from '@/constants/theme';
 
 interface CategoryTabsProps {
   categories: Category[];
@@ -12,7 +13,7 @@ interface CategoryTabsProps {
   onSelectSubCategory: (subCategoryId: number | null) => void;
 }
 
-const DEFAULT_BUTTON_COLOR = '#475569';
+const DEFAULT_BUTTON_COLOR = ThemeColors.category.default;
 
 export function CategoryTabs({
   categories,

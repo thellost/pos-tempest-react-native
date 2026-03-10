@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_TYPE } from '@/constants/enums';
+import { PaymentColors, ThemeColors } from '@/constants/theme';
 
 interface PaymentMethodConfig {
   method: PaymentMethodType;
@@ -12,12 +13,12 @@ interface PaymentMethodConfig {
 }
 
 const PAYMENT_METHODS: PaymentMethodConfig[] = [
-  { method: PAYMENT_METHOD_TYPE.CASH,          label: 'Cash',     emoji: '💵', activeColor: '#10B981' },
-  { method: PAYMENT_METHOD_TYPE.QRIS,          label: 'QRIS',     emoji: '📱', activeColor: '#6366F1' },
-  { method: PAYMENT_METHOD_TYPE.DEBIT_CARD,    label: 'Debit',    emoji: '💳', activeColor: '#3B82F6' },
-  { method: PAYMENT_METHOD_TYPE.CREDIT_CARD,   label: 'Credit',   emoji: '💳', activeColor: '#F59E0B' },
-  { method: PAYMENT_METHOD_TYPE.EWALLET,       label: 'E-Wallet', emoji: '👛', activeColor: '#EC4899' },
-  { method: PAYMENT_METHOD_TYPE.BANK_TRANSFER, label: 'Transfer', emoji: '🏦', activeColor: '#8B5CF6' },
+  { method: PAYMENT_METHOD_TYPE.CASH,          label: 'Cash',     emoji: '💵', activeColor: PaymentColors.cash },
+  { method: PAYMENT_METHOD_TYPE.QRIS,          label: 'QRIS',     emoji: '📱', activeColor: PaymentColors.qris },
+  { method: PAYMENT_METHOD_TYPE.DEBIT_CARD,    label: 'Debit',    emoji: '💳', activeColor: PaymentColors.debit },
+  { method: PAYMENT_METHOD_TYPE.CREDIT_CARD,   label: 'Credit',   emoji: '💳', activeColor: PaymentColors.credit },
+  { method: PAYMENT_METHOD_TYPE.EWALLET,       label: 'E-Wallet', emoji: '👛', activeColor: PaymentColors.eWallet },
+  { method: PAYMENT_METHOD_TYPE.BANK_TRANSFER, label: 'Transfer', emoji: '🏦', activeColor: PaymentColors.bankTransfer },
 ];
 
 interface PaymentMethodSelectorProps {
@@ -52,9 +53,9 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
               borderRadius: 8,
               backgroundColor: isSelected
                 ? `${activeColor}22`
-                : 'rgba(255,255,255,0.04)',
+                : ThemeColors.borders.subtle,
               borderWidth: 1.5,
-              borderColor: isSelected ? activeColor : 'rgba(255,255,255,0.08)',
+              borderColor: isSelected ? activeColor : ThemeColors.borders.medium,
               opacity: pressed ? 0.7 : 1,
               transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
@@ -64,7 +65,7 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
               style={{
                 fontSize: 11,
                 fontWeight: '700',
-                color: isSelected ? activeColor : '#94A3B8',
+                color: isSelected ? activeColor : ThemeColors.text.muted,
               }}
             >
               {label}

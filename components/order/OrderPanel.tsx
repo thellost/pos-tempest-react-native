@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
 import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
@@ -301,7 +302,7 @@ export const OrderPanel = memo(function OrderPanel({
       {!isShiftOpen && (
         <View
           className="flex-row items-center gap-2 border-b border-border px-4 py-2"
-          style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)' }}
+          style={{ backgroundColor: ThemeColors.warning.banner }}
         >
           <Text className="text-pos-xs font-semibold text-pos-warning">
             ⚠️ No active shift — open a shift to create or modify orders
@@ -353,11 +354,11 @@ export const OrderPanel = memo(function OrderPanel({
               key={r}
               onPress={() => setPrintRound(r)}
               className="mr-1 rounded px-2.5 py-1"
-              style={{ backgroundColor: printRound === r ? '#6366F1' : '#1A1F2C' }}
+              style={{ backgroundColor: printRound === r ? ThemeColors.accent.primary : ThemeColors.surfaces.card }}
             >
               <Text
                 className="text-pos-xs font-bold"
-                style={{ color: printRound === r ? '#FFFFFF' : '#9CA3AF' }}
+                style={{ color: printRound === r ? ThemeColors.text.strong : ThemeColors.text.inactive }}
               >
                 R{r}
               </Text>

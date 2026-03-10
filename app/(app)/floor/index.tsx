@@ -6,6 +6,7 @@ import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
 import { ReservationModal } from '@/components/floor/ReservationModal';
 import { TableCard } from '@/components/floor/TableCard';
 import { TABLE_STATUS } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import { useReservations } from '@/hooks/use-reservations';
 import { useShift } from '@/hooks/use-shift';
 import { useTables, type TableWithOrder } from '@/hooks/use-tables';
@@ -119,7 +120,7 @@ export default function FloorScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={ThemeColors.accent.primary} />
         <Text className="mt-4 text-pos-base text-pos-text-muted">Loading floor plan...</Text>
       </View>
     );
@@ -142,8 +143,8 @@ export default function FloorScreen() {
   return (
     <View className="flex-1 bg-surface">
       <View className="border-b border-border bg-surface-card px-5 py-5">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-pos-3xl font-bold text-pos-text">Floor Plan</Text>
+        <View className="flex-row items-center justify-between pl-14">
+          <Text className="text-pos-2xl font-bold text-pos-text">Tables & Orders</Text>
           <Pressable
             onPress={handleTakeawayPress}
             className="flex-row items-center rounded-xl bg-amber-500 px-5 py-3 active:bg-amber-600"
@@ -154,15 +155,15 @@ export default function FloorScreen() {
         </View>
         <View className="mt-4 flex-row items-center gap-6">
           <View className="rounded-xl bg-status-available-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">Available</Text>
+            <Text className="text-pos-xs text-pos-text-muted">🟢 Available</Text>
             <Text className="text-pos-xl font-bold text-status-available">{availableTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-status-occupied-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">Occupied</Text>
+            <Text className="text-pos-xs text-pos-text-muted">🔴 Occupied</Text>
             <Text className="text-pos-xl font-bold text-status-occupied">{occupiedTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-status-reserved-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">Reserved</Text>
+            <Text className="text-pos-xs text-pos-text-muted">🟡 Reserved</Text>
             <Text className="text-pos-xl font-bold text-status-reserved">{reservedTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-surface-raised px-4 py-2">

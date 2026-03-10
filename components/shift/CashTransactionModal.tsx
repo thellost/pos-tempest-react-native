@@ -1,5 +1,6 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import { formatIDR } from '@/utils/currency';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -185,7 +186,7 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
             <TextInput
               className="mt-2 min-h-[80px] rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
               placeholder="e.g., Bought ice from nearby store"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={ThemeColors.text.faint}
               value={note}
               onChangeText={setNote}
               multiline

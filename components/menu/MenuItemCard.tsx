@@ -2,10 +2,11 @@ import { memo, useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
 import { formatIDR } from '@/utils/currency';
 
-const DEFAULT_BUTTON_COLOR = '#475569';
+const DEFAULT_BUTTON_COLOR = ThemeColors.category.default;
 
 interface MenuItemCardProps {
   item: MenuItemWithInventory;

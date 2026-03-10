@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { TABLE_STATUS } from '@/constants/enums';
+import { Shadows } from '@/constants/theme';
 import type { TableWithOrder } from '@/hooks/use-tables';
 
 interface TableCardProps {
@@ -52,13 +53,7 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
       className={`min-h-[130px] overflow-hidden rounded-2xl border-2 p-5 ${statusBgColor} ${
         isMaintenance ? 'opacity-50' : ''
       }`}
-      style={{ 
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-      }}
+      style={{ ...Shadows.md, elevation: 3 }}
     >
       <View className="mb-4 flex-row items-center justify-between">
         <Text className="text-pos-2xl font-bold text-pos-text">
@@ -86,19 +81,27 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
               </Text>
             </View>
             {elapsedMinutes > 0 && (
-              <Text 
-                className={`text-pos-xs font-semibold ${
-                  elapsedMinutes > 90 
-                    ? 'text-pos-danger' 
-                    : elapsedMinutes > 60 
-                    ? 'text-pos-warning' 
-                    : 'text-pos-text'
-                }`}
-              >
-                {elapsedMinutes >= 60
-                  ? `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`
-                  : `${elapsedMinutes}m`}
-              </Text>
+              <View className={`rounded-full px-2 py-0.5 ${
+                elapsedMinutes > 90
+                  ? 'bg-red-500/20'
+                  : elapsedMinutes > 60
+                  ? 'bg-amber-500/20'
+                  : 'bg-transparent'
+              }`}>
+                <Text
+                  className={`text-pos-sm font-bold ${
+                    elapsedMinutes > 90
+                      ? 'text-pos-danger'
+                      : elapsedMinutes > 60
+                      ? 'text-pos-warning'
+                      : 'text-pos-text'
+                  }`}
+                >
+                  {elapsedMinutes >= 60
+                    ? `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`
+                    : `${elapsedMinutes}m`}
+                </Text>
+              </View>
             )}
           </View>
         ) : isReserved ? (
@@ -120,8 +123,8 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
             Under maintenance
           </Text>
         ) : (
-          <Text className="text-pos-xs text-pos-success">
-            Tap to start order
+          <Text className="text-pos-sm font-medium text-pos-success">
+            + New Order
           </Text>
         )}
       </View>
