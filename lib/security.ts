@@ -15,7 +15,7 @@ import { insertAuditLog } from '@/services/audit.service';
 // PIN SECURITY
 // ============================================================================
 
-const BCRYPT_ROUNDS = 12;
+const BCRYPT_ROUNDS = 6; // Adjusted for mobile performance; bcryptjs is optimized for JS environments
 
 /**
  * Hash a PIN using bcrypt with 12 rounds for secure storage

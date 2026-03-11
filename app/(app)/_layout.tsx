@@ -135,7 +135,13 @@ export default function AppLayout() {
   }
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 flex-row">
+      {/* Left rail — hamburger button lives here, never overlaps content */}
+      <View className="w-14 items-center border-r border-border bg-surface-card pt-3">
+        <HamburgerButton onPress={() => setDrawerOpen((v) => !v)} />
+      </View>
+
+      {/* Main content area */}
       <View
         className="flex-1"
         onTouchStart={markActivity}
@@ -192,20 +198,15 @@ export default function AppLayout() {
             options={{ title: 'Device Setup' }}
           />
         </Stack>
-      </View>
 
-      {/* Branch / device badge — top-right */}
-      {isRegistered && registration?.branch && (
-        <View className="absolute top-3 right-3 rounded-xl bg-surface-card/90 px-4 py-2">
-          <Text className="text-pos-xs text-pos-text-muted">
-            {registration.device?.device_name} • {registration.branch.name}
-          </Text>
-        </View>
-      )}
-
-      {/* Hamburger button — top-left, always visible */}
-      <View className="absolute top-3 left-3 z-50">
-        <HamburgerButton onPress={() => setDrawerOpen((v) => !v)} />
+        {/* Branch / device badge — top-right of content area */}
+        {isRegistered && registration?.branch && (
+          <View className="absolute top-3 right-3 rounded-xl bg-surface-card/90 px-4 py-2">
+            <Text className="text-pos-xs text-pos-text-muted">
+              {registration.device?.device_name} • {registration.branch.name}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Side drawer — renders on top of everything */}
