@@ -35,6 +35,7 @@ interface UseOrderOptions {
   menuItems?: MenuItemWithInventory[];
   /** When false, adding items and confirming orders is blocked */
   isShiftOpen?: boolean;
+  shiftId?: number | null;
 }
 
 interface OrderItemWithModifiers extends OrderItem {
@@ -131,7 +132,7 @@ function toMenuItem(item: MenuItemWithInventory): MenuItem {
  * Handles draft → confirmed → pending round flow.
  */
 export function useOrder(options: UseOrderOptions): UseOrderReturn {
-  const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true } = options;
+  const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true, shiftId = null } = options;
   const router = useRouter();
   const { user } = useAuth();
 
@@ -474,7 +475,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         user.branch_id,
         tableId,
         user.id,
-        null,
+        shiftId,
         orderType === 'takeaway' ? ORDER_TYPE.TAKEAWAY : ORDER_TYPE.DINE_IN,
         guestCount || 0
       );
@@ -510,7 +511,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       console.error('[useOrder] Error confirming order:', error);
       throw error;
     }
-  }, [user, cartItems, tableId, orderType, guestCount, menuItems, isShiftOpen]);
+  }, [user, cartItems, tableId, orderType, guestCount, menuItems, isShiftOpen, shiftId]);
 
   // Confirm round (pending → confirmed)
   const confirmRound = useCallback(async () => {

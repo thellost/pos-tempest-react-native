@@ -35,7 +35,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
 
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
-  const { isShiftOpen } = useShift();
+  const { isShiftOpen, activeShift } = useShift();
 
   const {
     topLevelCategories,
@@ -102,6 +102,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     orderType: 'takeaway',
     menuItems,
     isShiftOpen,
+    shiftId: activeShift ? (typeof activeShift.id === 'string' ? parseInt(activeShift.id, 10) : activeShift.id) : null,
   });
 
   const isLoading = orderLoading;

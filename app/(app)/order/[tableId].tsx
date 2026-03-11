@@ -91,7 +91,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const tableIdNum = parseInt(tableId, 10);
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
-  const { isShiftOpen } = useShift();
+  const { isShiftOpen, activeShift } = useShift();
 
   const {
     topLevelCategories,
@@ -160,6 +160,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     orderType: 'dine-in',
     menuItems,
     isShiftOpen,
+    shiftId: activeShift ? (typeof activeShift.id === 'string' ? parseInt(activeShift.id, 10) : activeShift.id) : null,
   });
 
   const isLoading = orderLoading;
