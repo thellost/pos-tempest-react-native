@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { router, usePathname } from 'expo-router';
 
 import type { UserRow } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
+import { useShift } from '@/hooks/use-shift';
 
 const DRAWER_WIDTH = 280;
 
@@ -102,6 +103,16 @@ export function SideDrawer({
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const pathname = usePathname();
   const { registration } = useDevice();
+  const { isShiftOpen } = useShift();
+
+  const visibleSystemNav = useMemo(() => {
+    const items = [...SYSTEM_NAV];
+    if (isShiftOpen) {
+      const shiftIndex = items.findIndex((i) => i.href === '/(app)/shifts');
+      items.splice(shiftIndex + 1, 0, { label: 'Cash', icon: '💵', href: '/(app)/cash' });
+    }
+    return items;
+  }, [isShiftOpen]);
 
   // Animate open / close
   useEffect(() => {
@@ -253,7 +264,7 @@ export function SideDrawer({
 
             {/* ── System ────────────────────────────── */}
             <SectionLabel label="System" />
-            {SYSTEM_NAV.map((item) => (
+            {visibleSystemNav.map((item) => (
               <NavRow
                 key={item.href}
                 item={item}

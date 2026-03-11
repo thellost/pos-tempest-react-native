@@ -567,8 +567,10 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
           }
         }
 
+        const numericId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
         return {
           ...item,
+          id: Number.isFinite(numericId) ? numericId : item.id,
           category_group: groupName,
         } as OrderItemDisplay;
       });

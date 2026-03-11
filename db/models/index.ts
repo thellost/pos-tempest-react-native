@@ -214,6 +214,15 @@ export interface InventoryMovement {
 	created_at: Timestamp;
 }
 
+export interface MenuItemIngredient {
+	id: EntityId;
+	menu_item_id: EntityId;
+	inventory_id: EntityId;
+	quantity_needed: number;
+	created_at: Timestamp;
+	updated_at: Timestamp;
+}
+
 export interface Order {
 	id: EntityId;
 	order_number: string;

@@ -182,6 +182,10 @@ export default function AppLayout() {
             options={{ title: 'Shifts' }}
           />
           <Stack.Screen
+            name="cash/index"
+            options={{ title: 'Cash Management' }}
+          />
+          <Stack.Screen
             name="inventory/index"
             options={{ title: 'Inventory' }}
           />

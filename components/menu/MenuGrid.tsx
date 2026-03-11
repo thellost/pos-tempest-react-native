@@ -1,14 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, InteractionManager, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, InteractionManager, type LayoutChangeEvent, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
 
 import { MenuItemCard } from './MenuItemCard';
 
-const { width } = Dimensions.get('window');
 const GRID_PADDING = 10;
 const GAP = 6;
-const COLUMNS = 4;
+const MIN_ITEM_WIDTH = 180;
 const ASPECT_RATIO = 0.5;
 
 function toNumberId(value: unknown): number | null {
@@ -68,7 +67,7 @@ const MenuItemCell = memo(
     return (
       <View
         style={[
-          { width: itemWidth, height: itemHeight, marginRight: GAP, marginBottom: GAP },
+          { width: itemWidth, height: itemHeight },
           !isVisible && ({ display: 'none' } as object),
         ]}
       >
@@ -123,8 +122,16 @@ export function MenuGrid({
   onRefresh,
   disabled = false,
 }: MenuGridProps) {
-  const gridWidth = width * 0.70 - GRID_PADDING * 2;
-  const itemWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && w !== containerWidth) setContainerWidth(w);
+  }, [containerWidth]);
+
+  const gridWidth = containerWidth - GRID_PADDING * 2;
+  const columns = gridWidth > 0 ? Math.max(1, Math.floor((gridWidth + GAP) / (MIN_ITEM_WIDTH + GAP))) : 3;
+  const itemWidth = gridWidth > 0 ? (gridWidth - GAP * (columns - 1)) / columns : MIN_ITEM_WIDTH;
   const itemHeight = itemWidth * ASPECT_RATIO;
 
   // Normalised set of visible IDs — using string keys avoids string/number mismatches
@@ -217,7 +224,7 @@ export function MenuGrid({
   }
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-surface" onLayout={handleLayout}>
       <ScrollView
         contentContainerStyle={{ padding: GRID_PADDING }}
         showsVerticalScrollIndicator={false}
@@ -234,7 +241,7 @@ export function MenuGrid({
         }
       >
         {/* flex-wrap: display:'none' items are removed from layout flow */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
           {allCells.map((cell) => {
             const quantity =
               cell.idNum !== null ? (quantitiesByMenuItemId?.[cell.idNum] ?? 0) : 0;

@@ -3,7 +3,7 @@ import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enum
 import { ThemeColors } from '@/constants/theme';
 import { formatIDR } from '@/utils/currency';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 interface CashTransactionModalProps {
   visible: boolean;
@@ -69,7 +69,6 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
       setSubmitting(true);
       setError('');
       await onSubmit(type, reason, amount, note.trim() || undefined);
-      // Reset form
       setAmountInput('');
       setNote('');
       setError('');
@@ -89,145 +88,148 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
     onClose();
   }
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View className="flex-1 items-center justify-center bg-black/70 p-4">
-        <View className="w-full max-w-2xl rounded-2xl border border-border bg-surface-card">
-          {/* Header */}
-          <View className="border-b border-border p-5">
-            <Text className="text-pos-xl font-bold text-pos-text">Cash Transaction</Text>
-            <Text className="mt-1 text-pos-sm text-pos-text-muted">
-              Available in drawer: {formatIDR(availableCash)}
-            </Text>
-          </View>
+    <View className="absolute inset-0 z-50 items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }}>
+      <View
+        className="overflow-hidden rounded-2xl border border-border bg-surface-card"
+        style={{ width: 520, maxHeight: '85%' }}
+      >
+        {/* Header */}
+        <View className="border-b border-border p-5">
+          <Text className="text-pos-xl font-bold text-pos-text">Cash Transaction</Text>
+          <Text className="mt-1 text-pos-sm text-pos-text-muted">
+            Available in drawer: {formatIDR(availableCash)}
+          </Text>
+        </View>
 
-          <ScrollView className="max-h-[600px]" contentContainerStyle={{ padding: 20 }}>
-            {/* Type Toggle */}
-            <Text className="text-pos-sm font-semibold text-pos-text">Transaction Type</Text>
-            <View className="mt-2 flex-row gap-3">
-              <Pressable
-                className={`flex-1 rounded-xl border p-3 ${
-                  type === CASH_TRANSACTION_TYPE.CASH_OUT
-                    ? 'border-pos-danger bg-pos-danger-muted'
-                    : 'border-border bg-surface'
-                }`}
-                onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_OUT)}>
-                <Text
-                  className={`text-center text-pos-base font-semibold ${
-                    type === CASH_TRANSACTION_TYPE.CASH_OUT ? 'text-pos-danger' : 'text-pos-text-muted'
-                  }`}>
-                  Cash Out
-                </Text>
-              </Pressable>
-              <Pressable
-                className={`flex-1 rounded-xl border p-3 ${
-                  type === CASH_TRANSACTION_TYPE.CASH_IN
-                    ? 'border-pos-success bg-pos-success-muted'
-                    : 'border-border bg-surface'
-                }`}
-                onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_IN)}>
-                <Text
-                  className={`text-center text-pos-base font-semibold ${
-                    type === CASH_TRANSACTION_TYPE.CASH_IN ? 'text-pos-success' : 'text-pos-text-muted'
-                  }`}>
-                  Cash In
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Reason Selector */}
-            <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
-            <View className="mt-2 flex-row flex-wrap gap-2">
-              {Object.entries(REASON_LABELS).map(([key, label]) => (
-                <Pressable
-                  key={key}
-                  className={`rounded-xl border px-4 py-2 ${
-                    reason === key ? 'border-accent bg-accent-muted' : 'border-border bg-surface'
-                  }`}
-                  onPress={() => setReason(key as CashTransactionReason)}>
-                  <Text
-                    className={`text-pos-sm font-medium ${reason === key ? 'text-accent' : 'text-pos-text-muted'}`}>
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Amount Input */}
-            <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Amount</Text>
-            <View className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
-              <Text className="text-pos-2xl font-bold text-accent">{formatIDR(amount)}</Text>
-            </View>
-
-            {/* Validation Warning */}
-            {type === CASH_TRANSACTION_TYPE.CASH_OUT && amount > availableCash && (
-              <View className="mt-2 rounded-xl bg-pos-danger-muted p-3">
-                <Text className="text-pos-sm text-pos-danger">
-                  Insufficient cash in drawer. Maximum: {formatIDR(availableCash)}
-                </Text>
-              </View>
-            )}
-
-            {/* Numpad */}
-            <View className="mt-4 flex-row flex-wrap justify-between">
-              {keypad.map((key) => (
-                <Pressable
-                  key={key}
-                  className="mb-3 h-14 w-[31%] items-center justify-center rounded-xl border border-border bg-surface"
-                  disabled={submitting}
-                  onPress={() => applyKey(key)}>
-                  <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Note Input */}
-            <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Note (Optional)</Text>
-            <TextInput
-              className="mt-2 min-h-[80px] rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
-              placeholder="e.g., Bought ice from nearby store"
-              placeholderTextColor={ThemeColors.text.faint}
-              value={note}
-              onChangeText={setNote}
-              multiline
-              editable={!submitting}
-            />
-
-            {error && (
-              <View className="mt-3 rounded-xl bg-pos-danger-muted p-3">
-                <Text className="text-pos-sm text-pos-danger">{error}</Text>
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Footer Actions */}
-          <View className="border-t border-border p-4 flex-row gap-3">
+        <ScrollView contentContainerStyle={{ padding: 20 }}>
+          {/* Type Toggle */}
+          <Text className="text-pos-sm font-semibold text-pos-text">Transaction Type</Text>
+          <View className="mt-2 flex-row gap-3">
             <Pressable
-              className="flex-1 rounded-xl border border-border bg-surface p-4"
-              disabled={submitting}
-              onPress={handleClose}>
-              <Text className="text-center text-pos-base font-semibold text-pos-text-muted">Cancel</Text>
-            </Pressable>
-            <Pressable
-              className={`flex-1 rounded-xl p-4 ${
-                canSubmit
-                  ? type === CASH_TRANSACTION_TYPE.CASH_OUT
-                    ? 'bg-pos-danger'
-                    : 'bg-pos-success'
-                  : 'bg-surface-soft'
+              className={`flex-1 rounded-xl border p-3 ${
+                type === CASH_TRANSACTION_TYPE.CASH_OUT
+                  ? 'border-pos-danger bg-pos-danger-muted'
+                  : 'border-border bg-surface'
               }`}
-              disabled={!canSubmit || submitting}
-              onPress={handleSubmit}>
+              onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_OUT)}>
               <Text
                 className={`text-center text-pos-base font-semibold ${
-                  canSubmit ? 'text-white' : 'text-pos-text-muted'
+                  type === CASH_TRANSACTION_TYPE.CASH_OUT ? 'text-pos-danger' : 'text-pos-text-muted'
                 }`}>
-                {submitting ? 'Processing...' : 'Record Transaction'}
+                Cash Out
+              </Text>
+            </Pressable>
+            <Pressable
+              className={`flex-1 rounded-xl border p-3 ${
+                type === CASH_TRANSACTION_TYPE.CASH_IN
+                  ? 'border-pos-success bg-pos-success-muted'
+                  : 'border-border bg-surface'
+              }`}
+              onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_IN)}>
+              <Text
+                className={`text-center text-pos-base font-semibold ${
+                  type === CASH_TRANSACTION_TYPE.CASH_IN ? 'text-pos-success' : 'text-pos-text-muted'
+                }`}>
+                Cash In
               </Text>
             </Pressable>
           </View>
+
+          {/* Reason Selector */}
+          <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
+          <View className="mt-2 flex-row flex-wrap gap-2">
+            {Object.entries(REASON_LABELS).map(([key, label]) => (
+              <Pressable
+                key={key}
+                className={`rounded-xl border px-4 py-2 ${
+                  reason === key ? 'border-accent bg-accent-muted' : 'border-border bg-surface'
+                }`}
+                onPress={() => setReason(key as CashTransactionReason)}>
+                <Text
+                  className={`text-pos-sm font-medium ${reason === key ? 'text-accent' : 'text-pos-text-muted'}`}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Amount Input */}
+          <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Amount</Text>
+          <View className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
+            <Text className="text-pos-2xl font-bold text-accent">{formatIDR(amount)}</Text>
+          </View>
+
+          {/* Validation Warning */}
+          {type === CASH_TRANSACTION_TYPE.CASH_OUT && amount > availableCash && (
+            <View className="mt-2 rounded-xl bg-pos-danger-muted p-3">
+              <Text className="text-pos-sm text-pos-danger">
+                Insufficient cash in drawer. Maximum: {formatIDR(availableCash)}
+              </Text>
+            </View>
+          )}
+
+          {/* Numpad */}
+          <View className="mt-4 flex-row flex-wrap justify-between">
+            {keypad.map((key) => (
+              <Pressable
+                key={key}
+                className="mb-3 h-14 w-[31%] items-center justify-center rounded-xl border border-border bg-surface"
+                disabled={submitting}
+                onPress={() => applyKey(key)}>
+                <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Note Input */}
+          <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Note (Optional)</Text>
+          <TextInput
+            className="mt-2 min-h-[80px] rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+            placeholder="e.g., Bought ice from nearby store"
+            placeholderTextColor={ThemeColors.text.faint}
+            value={note}
+            onChangeText={setNote}
+            multiline
+            editable={!submitting}
+          />
+
+          {error && (
+            <View className="mt-3 rounded-xl bg-pos-danger-muted p-3">
+              <Text className="text-pos-sm text-pos-danger">{error}</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Footer Actions */}
+        <View className="border-t border-border p-4 flex-row gap-3">
+          <Pressable
+            className="flex-1 rounded-xl border border-border bg-surface p-4"
+            disabled={submitting}
+            onPress={handleClose}>
+            <Text className="text-center text-pos-base font-semibold text-pos-text-muted">Cancel</Text>
+          </Pressable>
+          <Pressable
+            className={`flex-1 rounded-xl p-4 ${
+              canSubmit
+                ? type === CASH_TRANSACTION_TYPE.CASH_OUT
+                  ? 'bg-pos-danger'
+                  : 'bg-pos-success'
+                : 'bg-surface-soft'
+            }`}
+            disabled={!canSubmit || submitting}
+            onPress={handleSubmit}>
+            <Text
+              className={`text-center text-pos-base font-semibold ${
+                canSubmit ? 'text-white' : 'text-pos-text-muted'
+              }`}>
+              {submitting ? 'Processing...' : 'Record Transaction'}
+            </Text>
+          </Pressable>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }

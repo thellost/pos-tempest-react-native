@@ -331,6 +331,13 @@ export const appSchema = new Schema({
 		registered_at: column.text,
 		last_seen_at: column.text,
 	}),
+	menu_item_ingredients: new Table({
+		menu_item_id: column.integer,
+		inventory_id: column.integer,
+		quantity_needed: column.real,
+		created_at: column.text,
+		updated_at: column.text,
+	}),
 	shift_cash_transactions: new Table({
 		shift_id: column.integer,
 		user_id: column.integer,

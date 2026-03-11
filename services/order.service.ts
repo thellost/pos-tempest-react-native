@@ -2,6 +2,7 @@ import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/cons
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { insertAuditLog } from '@/services/audit.service';
+import { deductStockForItems } from '@/services/inventory.service';
 import { generateOrderNumber } from '@/utils/order-number';
 
 /**
@@ -132,13 +133,22 @@ export async function createOrder(
 /**
  * Confirms an order (moves from pending to confirmed)
  */
-export async function confirmOrder(orderId: number): Promise<void> {
+export async function confirmOrder(orderId: number, cashierId: number): Promise<void> {
   const now = new Date().toISOString();
 
   await powersync.execute(
     `UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`,
     [ORDER_STATUS.CONFIRMED, now, orderId]
   );
+
+  // Deduct inventory stock based on menu_item_ingredients
+  const orderItems = await powersync.getAll<{ menu_item_id: number; quantity: number }>(
+    `SELECT menu_item_id, quantity FROM order_items WHERE order_id = ? AND is_voided = 0`,
+    [orderId]
+  );
+  if (orderItems.length > 0) {
+    await deductStockForItems(orderItems, cashierId, orderId);
+  }
 
   void insertAuditLog({
     action: AUDIT_ACTION.STATUS_CHANGE,

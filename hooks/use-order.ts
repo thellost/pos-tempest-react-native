@@ -8,6 +8,7 @@ import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
+import { deductStockForItems } from '@/services/inventory.service';
 import type { KOTWithItems } from '@/services/kitchen.service';
 import { createKOT } from '@/services/kitchen.service';
 import type { SelectedModifier } from '@/services/order.service';
@@ -497,7 +498,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         throw new Error(`Menu items not found: ${orderFailures.join(', ')}`);
       }
 
-      await confirmOrderService(orderIdNum);
+      await confirmOrderService(orderIdNum, typeof user.id === 'string' ? parseInt(user.id, 10) : user.id);
 
       const orderData = await getOrderWithItems(orderIdNum);
       if (orderData) {
@@ -541,13 +542,24 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         throw new Error(`Menu items not found: ${roundFailures.join(', ')}`);
       }
 
+      // Deduct inventory stock for the new round items
+      if (user) {
+        const userIdNum = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        const itemsForDeduction = pendingRoundItems
+          .filter(ci => !roundFailures.includes(ci.menu_item_name))
+          .map(ci => ({ menu_item_id: ci.menu_item_id, quantity: ci.quantity }));
+        if (itemsForDeduction.length > 0) {
+          await deductStockForItems(itemsForDeduction, userIdNum, orderIdNum);
+        }
+      }
+
       setPendingRoundItems([]);
       await reload();
     } catch (error) {
       console.error('[useOrder] Error confirming round:', error);
       throw error;
     }
-  }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen]);
+  }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen, user]);
 
   // Cancel order (soft cancel only, never deletes)
   const cancelOrder = useCallback(async (reason = 'Cancelled from POS') => {

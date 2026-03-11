@@ -159,3 +159,11 @@ export const CASH_TRANSACTION_REASON = {
 } as const;
 
 export type CashTransactionReason = (typeof CASH_TRANSACTION_REASON)[keyof typeof CASH_TRANSACTION_REASON];
+
+export const MOVEMENT_TYPE = {
+	ORDER_DEDUCTION: 'order_deduction',
+	PURCHASE_ADDITION: 'purchase_addition',
+	MANUAL_ADJUSTMENT: 'manual_adjustment',
+} as const;
+
+export type MovementType = (typeof MOVEMENT_TYPE)[keyof typeof MOVEMENT_TYPE];
