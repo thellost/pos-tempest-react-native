@@ -31,27 +31,24 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
   onSelect,
 }: PaymentMethodSelectorProps) {
   return (
-    <View className="flex-row flex-wrap gap-2">
+    <View className="flex-row gap-1.5">
       {PAYMENT_METHODS.map(({ method, label, emoji, activeColor }) => {
         const isSelected = selected === method;
         return (
           <Pressable
             key={method}
             onPress={() => onSelect(method)}
-            className="flex-row items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5"
+            className="flex-1 items-center justify-center rounded-lg border border-border py-2"
             style={({ pressed }) => ({
-              flexBasis: '31%',
-              flexGrow: 1,
               backgroundColor: isSelected ? `${activeColor}22` : undefined,
               borderColor: isSelected ? activeColor : undefined,
               borderWidth: isSelected ? 1.5 : 1,
               opacity: pressed ? 0.7 : 1,
-              transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <Text style={{ fontSize: 16 }}>{emoji}</Text>
+            <Text style={{ fontSize: 15 }}>{emoji}</Text>
             <Text
-              className={`text-[11px] font-bold ${isSelected ? '' : 'text-pos-text-muted'}`}
+              className={`mt-0.5 text-[10px] font-bold ${isSelected ? '' : 'text-pos-text-muted'}`}
               style={isSelected ? { color: activeColor } : undefined}
             >
               {label}

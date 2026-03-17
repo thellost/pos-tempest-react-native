@@ -15,6 +15,7 @@ import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { PRICING_TYPE } from '@/constants/enums';
 import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { useOrder } from '@/hooks/use-order';
+import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
 import type { SelectedModifier } from '@/services/order.service';
 import { assignCustomerToOrder, confirmOrder as confirmOrderService } from '@/services/order.service';
@@ -35,6 +36,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
 
   const orderIdNum = orderId ? parseInt(orderId, 10) : null;
 
+  const { user } = useAuth();
   const { isShiftOpen, activeShift } = useShift();
 
   const {
@@ -364,8 +366,10 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     try {
       if (order) {
         // Existing draft order loaded from DB — confirm it directly
+        if (!user) throw new Error('Cashier id is not provided');
         const currentOrderId = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
-        await confirmOrderService(currentOrderId);
+        const cashierId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        await confirmOrderService(currentOrderId, cashierId);
         await reload();
       } else {
         // New order from local cart — delegate to hook (creates order, adds items, confirms)
@@ -378,7 +382,7 @@ function TakeawayOrderContent({ orderId }: TakeawayOrderContentProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, order, confirmOrderHook, reload]);
+  }, [isSubmitting, order, user, confirmOrderHook, reload]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;

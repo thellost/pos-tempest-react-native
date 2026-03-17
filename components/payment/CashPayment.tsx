@@ -6,6 +6,7 @@ import { formatIDR } from '@/utils/currency';
 
 const QUICK_AMOUNTS_ROW1 = [1_000, 2_000, 5_000, 10_000, 20_000] as const;
 const QUICK_AMOUNTS_ROW2 = [50_000, 100_000, 200_000, 500_000] as const;
+const NUMPAD_ROWS = [['7','8','9'], ['4','5','6'], ['1','2','3'], ['.','0','⌫']] as const;
 
 interface CashPaymentProps {
   value: string;
@@ -97,8 +98,8 @@ export const CashPayment = memo(function CashPayment({
         </Pressable>
       </View>
 
-      {/* Numpad — 4 rows × 3 columns */}
-      {[['1','2','3'], ['4','5','6'], ['7','8','9'], ['.','0','⌫']].map((row, rowIdx) => (
+      {/* Numpad — calculator layout (7,8,9 top → 1,2,3 bottom) */}
+      {NUMPAD_ROWS.map((row, rowIdx) => (
         <View key={rowIdx} className="flex-row gap-1.5 mb-1.5">
           {row.map((key) => {
             const isBackspace = key === '⌫';
