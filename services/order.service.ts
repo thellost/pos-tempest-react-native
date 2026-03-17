@@ -4,6 +4,7 @@ import { powersync } from '@/db/provider';
 import { insertAuditLog } from '@/services/audit.service';
 import { deductStockForItems } from '@/services/inventory.service';
 import { generateOrderNumber } from '@/utils/order-number';
+import { toInt } from '@/utils/coerce';
 
 /**
  * Selected modifier for an order item
@@ -119,7 +120,7 @@ export async function createOrder(
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'orders',
-    recordId: typeof order.id === 'string' ? parseInt(order.id, 10) : order.id,
+    recordId: toInt(order.id),
     userId: cashierId,
     branchId: branchId,
     newValues: { order_number: orderNumber, order_type: orderType, table_id: tableId, shift_id: shiftId },
@@ -210,14 +211,7 @@ export async function addItemToOrder(
     );
 
     if (existingItem) {
-      const existingQty = typeof existingItem.quantity === 'string'
-        ? parseInt(existingItem.quantity as unknown as string, 10)
-        : existingItem.quantity;
-
-      await updateItemQuantity(
-        typeof existingItem.id === 'string' ? parseInt(existingItem.id as unknown as string, 10) : existingItem.id,
-        existingQty + quantity
-      );
+      await updateItemQuantity(toInt(existingItem.id), toInt(existingItem.quantity) + quantity);
 
       console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
       return;
@@ -386,10 +380,7 @@ export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: num
     throw new Error('Order item not found');
   }
 
-  const quantity = typeof orderItem.quantity === 'string'
-    ? parseInt(orderItem.quantity as string, 10)
-    : orderItem.quantity;
-  const newSubtotal = (newUnitPrice + orderItem.modifier_total) * quantity;
+  const newSubtotal = (newUnitPrice + orderItem.modifier_total) * toInt(orderItem.quantity);
 
   await powersync.execute(
     `UPDATE order_items
@@ -468,10 +459,7 @@ export async function updateItemModifiers(
 
   const modifierTotal = modifiers.reduce((sum, mod) => sum + mod.extra_price, 0);
   const itemPrice = orderItem.unit_price + modifierTotal;
-  const quantity = typeof orderItem.quantity === 'string'
-    ? parseInt(orderItem.quantity as string, 10)
-    : orderItem.quantity;
-  const newSubtotal = itemPrice * quantity;
+  const newSubtotal = itemPrice * toInt(orderItem.quantity);
 
   await powersync.execute(
     `UPDATE order_items 
@@ -576,8 +564,7 @@ export async function voidOrder(orderId: number, voidedBy: number, reason: strin
     [orderId]
   );
 
-  const normalizedOrderId =
-    typeof existingOrder.id === 'string' ? parseInt(existingOrder.id, 10) : existingOrder.id;
+  const normalizedOrderId = toInt(existingOrder.id);
 
   void insertAuditLog({
     action: AUDIT_ACTION.VOID,

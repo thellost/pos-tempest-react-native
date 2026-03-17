@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 import { ORDER_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { DiningTable, FloorArea } from '@/db/models';
+import { toInt } from '@/utils/coerce';
 import { powersync } from '@/db/provider';
 import { useAuth } from './use-auth';
 import { useDevice } from './use-device';
@@ -73,7 +74,7 @@ export function useTables() {
     const seen = new Set<number>();
     return rawTablesData
       .filter(table => {
-        const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+        const tableId = toInt(table.id);
         if (seen.has(tableId)) return false;
         seen.add(tableId);
         return true;

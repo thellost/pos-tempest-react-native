@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { Category } from '@/db/models';
 import { ThemeColors } from '@/constants/theme';
+import { toInt } from '@/utils/coerce';
 
 interface CategoryTabsProps {
   categories: Category[];
@@ -37,7 +38,7 @@ export function CategoryTabs({
       console.log('[CategoryTabs] Categories:', categories.map(c => ({ name: c.name, button_color: c.button_color })));
     }
     return categories.map((category) => {
-      const categoryId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
+      const categoryId = toInt(category.id);
       const isSelected = categoryId === selectedCategoryId;
       const baseColor = category.button_color || DEFAULT_BUTTON_COLOR;
 
@@ -61,7 +62,7 @@ export function CategoryTabs({
 
   const renderedSubCategoryTabs = useMemo(() => {
     return subCategories.map((subCategory) => {
-      const subCategoryId = typeof subCategory.id === 'string' ? parseInt(subCategory.id, 10) : subCategory.id;
+      const subCategoryId = toInt(subCategory.id);
       const isSelected = subCategoryId === selectedSubCategoryId;
       const hasCustomColor = Boolean(subCategory.button_color);
 

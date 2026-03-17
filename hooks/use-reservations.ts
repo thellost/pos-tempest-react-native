@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 
 import type { ReservationStatus } from '@/constants/enums';
 import { RESERVATION_STATUS } from '@/constants/enums';
+import { toIntOrNull } from '@/utils/coerce';
 import type { Reservation } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { useAuth } from './use-auth';
@@ -72,7 +73,7 @@ export function useReservations() {
   const getReservationsForTable = useCallback(
     (tableId: number): ReservationWithCustomer[] => {
       return activeReservations.filter((r) => {
-        const id = typeof r.table_id === 'string' ? parseInt(r.table_id, 10) : r.table_id;
+        const id = toIntOrNull(r.table_id);
         return id === tableId;
       });
     },

@@ -12,14 +12,15 @@ import { OrderPanel } from '@/components/order/OrderPanel';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
-import { ORDER_STATUS, PRICING_TYPE } from '@/constants/enums';
+import { ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
-import { useMenu, type MenuItemWithInventory, type ModifierGroupWithModifiers } from '@/hooks/use-menu';
+import { useMenu, type MenuItemWithInventory } from '@/hooks/use-menu';
+import { useModifierPicker } from '@/hooks/use-modifier-picker';
 import { useOrder } from '@/hooks/use-order';
 import { useShift } from '@/hooks/use-shift';
-import type { SelectedModifier } from '@/services/order.service';
 import { assignCustomerToOrder } from '@/services/order.service';
 import { PerfProfiler, logPerf, nowMs, timedAsync, useMountTimer } from '@/utils/perf-debug';
+import { toInt, toIntOrNull } from '@/utils/coerce';
 
 export default function OrderScreen() {
   const { tableId, orderId } = useLocalSearchParams<{ tableId: string; orderId?: string }>();
@@ -55,7 +56,7 @@ interface OrderTableData {
 async function getOrderTableById(tableId: number): Promise<OrderTableData | null> {
   try {
     const result = await powersync.getOptional<OrderTableData>(
-      `SELECT 
+      `SELECT
         t.*,
         fa.name as floor_area_name,
         o.id as active_order_id,
@@ -66,7 +67,7 @@ async function getOrderTableById(tableId: number): Promise<OrderTableData | null
         o.status as order_status
       FROM tables t
       LEFT JOIN floor_areas fa ON t.floor_area_id = fa.id
-      LEFT JOIN orders o ON t.id = o.table_id 
+      LEFT JOIN orders o ON t.id = o.table_id
         AND o.status NOT IN (?, ?, ?)
       WHERE t.id = ?`,
       [
@@ -111,16 +112,6 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [assignedCustomer, setAssignedCustomer] = useState<AssignedCustomer | null>(null);
 
-  // Modifier picker UI state
-  const [showModifierPicker, setShowModifierPicker] = useState(false);
-  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemWithInventory | null>(null);
-  const [menuItemModifiers, setMenuItemModifiers] = useState<ModifierGroupWithModifiers[]>([]);
-  const [editingOrderItemId, setEditingOrderItemId] = useState<number | null>(null);
-  const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
-  const [editingItemNotes, setEditingItemNotes] = useState<string>('');
-  const [editingItemModifiers, setEditingItemModifiers] = useState<SelectedModifier[]>([]);
-  const [editingItemWeight, setEditingItemWeight] = useState<string>('');
-
   const hasLoadedTableIdRef = useRef<number | null>(null);
 
   // Order hook — manages all order state and lifecycle
@@ -160,7 +151,31 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     orderType: 'dine-in',
     menuItems,
     isShiftOpen,
-    shiftId: activeShift ? (typeof activeShift.id === 'string' ? parseInt(activeShift.id, 10) : activeShift.id) : null,
+    shiftId: activeShift ? toInt(activeShift.id) : null,
+  });
+
+  // Modifier picker state + handlers
+  const {
+    showModifierPicker,
+    selectedMenuItem,
+    menuItemModifiers,
+    editingItemModifiers,
+    editingItemNotes,
+    editingItemWeight,
+    isEditing,
+    handleMenuItemPress,
+    handleModifierConfirm,
+    handleEditModifiers,
+    handleCancel: handleModifierCancel,
+  } = useModifierPicker({
+    cartItems,
+    orderItems,
+    menuItems,
+    getModifierGroupsForMenuItem,
+    addItemToOrder: addItemToOrderHandler,
+    updateCartItem,
+    editModifiers,
+    logTag: 'OrderScreen',
   });
 
   const isLoading = orderLoading;
@@ -181,7 +196,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
       .then((c) => {
         if (!cancelled && c) {
           setAssignedCustomer({
-            id: typeof c.id === 'string' ? parseInt(c.id as string, 10) : c.id,
+            id: toInt(c.id),
             name: c.name,
             phone: c.phone,
             loyalty_points: c.loyalty_points,
@@ -193,7 +208,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, [order?.customer_id]);
 
   const handleAssignCustomer = useCallback(async (customer: AssignedCustomer) => {
-    const orderId = order ? (typeof order.id === 'string' ? parseInt(order.id as string, 10) : order.id) : null;
+    const orderId = order ? toInt(order.id) : null;
     if (orderId) {
       try {
         await assignCustomerToOrder(orderId, customer.id);
@@ -205,7 +220,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, [order]);
 
   const handleClearCustomer = useCallback(async () => {
-    const orderId = order ? (typeof order.id === 'string' ? parseInt(order.id as string, 10) : order.id) : null;
+    const orderId = order ? toInt(order.id) : null;
     if (orderId) {
       try {
         await assignCustomerToOrder(orderId, null);
@@ -245,134 +260,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
 
   useEffect(() => {
     if (topLevelCategories.length > 0 && !selectedCategoryId) {
-      const firstCategoryId = typeof topLevelCategories[0].id === 'string'
-        ? parseInt(topLevelCategories[0].id, 10)
-        : topLevelCategories[0].id;
-      setSelectedCategoryId(firstCategoryId);
+      setSelectedCategoryId(toInt(topLevelCategories[0].id));
     }
   }, [topLevelCategories, selectedCategoryId]);
-
-  const handleMenuItemPress = useCallback(async (item: MenuItemWithInventory) => {
-    try {
-      const itemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
-      const modifiers = await getModifierGroupsForMenuItem(itemId);
-      const isWeightBased = item.pricing_type === 'weight_based';
-
-      if (modifiers.length > 0 || isWeightBased) {
-        setSelectedMenuItem(item);
-        setMenuItemModifiers(modifiers);
-        setShowModifierPicker(true);
-      } else {
-        await addItemToOrderHandler(item, [], null, '');
-      }
-    } catch (error) {
-      console.error('[OrderScreen] Error handling menu item press:', error);
-    }
-  }, [getModifierGroupsForMenuItem, addItemToOrderHandler]);
-
-  const handleModifierConfirm = useCallback(async (
-    modifiers: SelectedModifier[],
-    weight: number | null,
-    notes: string
-  ) => {
-    if (!selectedMenuItem) return;
-
-    if (editingCartItemId) {
-      const modifierTotal = modifiers.reduce((sum, m) => sum + (Number(m.extra_price) || 0), 0);
-      const weightedUnitPrice = weight ? selectedMenuItem.price * weight : selectedMenuItem.price;
-      const currentCartItem = cartItems.find(i => i.id === editingCartItemId);
-      const quantity = currentCartItem?.quantity ?? 1;
-      updateCartItem(editingCartItemId, {
-        modifiers,
-        notes: notes || null,
-        weight,
-        unit_price: weightedUnitPrice,
-        modifier_total: modifierTotal,
-        total: (weightedUnitPrice + modifierTotal) * quantity,
-      });
-      setEditingCartItemId(null);
-      setEditingItemNotes('');
-      setEditingItemModifiers([]);
-      setEditingItemWeight('');
-    } else if (editingOrderItemId) {
-      const unitPrice = selectedMenuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && weight && weight > 0
-        ? selectedMenuItem.price * weight
-        : undefined;
-      await editModifiers(editingOrderItemId, modifiers, weight, notes, unitPrice);
-      setEditingOrderItemId(null);
-      setEditingItemNotes('');
-      setEditingItemModifiers([]);
-      setEditingItemWeight('');
-    } else {
-      await addItemToOrderHandler(selectedMenuItem, modifiers, weight, notes);
-    }
-    setShowModifierPicker(false);
-    setSelectedMenuItem(null);
-    setMenuItemModifiers([]);
-  }, [selectedMenuItem, editingCartItemId, editingOrderItemId, updateCartItem, editModifiers, addItemToOrderHandler]);
-
-  const handleEditModifiers = useCallback(async (itemId: number | string) => {
-    if (typeof itemId === 'string') {
-      const cartItem = cartItems.find(item => item.id === itemId);
-      if (!cartItem) return;
-
-      const menuItem = menuItems.find(m => {
-        const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-        return mId === cartItem.menu_item_id;
-      });
-      if (!menuItem) return;
-
-      const modifiers = await getModifierGroupsForMenuItem(cartItem.menu_item_id);
-      setSelectedMenuItem(menuItem);
-      setMenuItemModifiers(modifiers);
-      setEditingCartItemId(itemId);
-      setEditingItemModifiers(cartItem.modifiers);
-      setEditingItemNotes(cartItem.notes ?? '');
-      setEditingItemWeight(cartItem.weight ? cartItem.weight.toString() : '');
-      setShowModifierPicker(true);
-    } else {
-      const targetItem = orderItems.find((item) => {
-        const currentId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
-        return currentId === itemId;
-      });
-
-      if (!targetItem) return;
-
-      const menuItemId = typeof targetItem.menu_item_id === 'string'
-        ? parseInt(targetItem.menu_item_id as string, 10)
-        : targetItem.menu_item_id;
-      const menuItem = menuItems.find((item) => {
-        const currentId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
-        return currentId === menuItemId;
-      });
-
-      if (!menuItem) return;
-
-      const modifiers = await getModifierGroupsForMenuItem(menuItemId);
-      const selectedModifiers = targetItem.modifiers.map((modifier) => {
-        const modifierId = typeof modifier.modifier_id === 'string'
-          ? parseInt(modifier.modifier_id as string, 10)
-          : modifier.modifier_id;
-        return {
-          modifier_id: modifierId,
-          modifier_name: modifier.modifier_name,
-          modifier_group_name: modifier.modifier_group_name,
-          extra_price: modifier.extra_price,
-        };
-      });
-      setSelectedMenuItem(menuItem);
-      setMenuItemModifiers(modifiers);
-      setEditingOrderItemId(itemId);
-      setEditingItemNotes(targetItem.notes ?? '');
-      setEditingItemModifiers(selectedModifiers);
-      if (menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && menuItem.price > 0) {
-        setEditingItemWeight((targetItem.unit_price / menuItem.price).toString());
-      } else {
-        setEditingItemWeight('');
-      }
-      setShowModifierPicker(true);
-    }
-  }, [getModifierGroupsForMenuItem, menuItems, orderItems, cartItems]);
 
   const handleGuestCountChange = useCallback((count: number) => {
     setGuestCount(count);
@@ -434,34 +324,20 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, [printBill]);
 
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
-    const menuItemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+    const menuItemId = toInt(item.id);
 
     if (order) {
       const matchingItems = orderItems.filter((orderItem) => {
-        const orderMenuItemId = typeof orderItem.menu_item_id === 'string'
-          ? parseInt(orderItem.menu_item_id as string, 10)
-          : orderItem.menu_item_id;
-        return orderMenuItemId === menuItemId && !orderItem.is_voided;
+        return toInt(orderItem.menu_item_id) === menuItemId && !orderItem.is_voided;
       });
 
       if (matchingItems.length === 0) return;
 
       const targetOrderItem = matchingItems
         .slice()
-        .sort((left, right) => {
-          const leftId = typeof left.id === 'string' ? parseInt(left.id as string, 10) : left.id;
-          const rightId = typeof right.id === 'string' ? parseInt(right.id as string, 10) : right.id;
-          return rightId - leftId;
-        })[0];
+        .sort((left, right) => toInt(right.id) - toInt(left.id))[0];
 
-      const targetItemId = typeof targetOrderItem.id === 'string'
-        ? parseInt(targetOrderItem.id as string, 10)
-        : targetOrderItem.id;
-      const currentQuantity = typeof targetOrderItem.quantity === 'string'
-        ? parseInt(targetOrderItem.quantity as string, 10)
-        : targetOrderItem.quantity;
-
-      await updateQuantity(targetItemId, currentQuantity - 1);
+      await updateQuantity(toInt(targetOrderItem.id), toInt(targetOrderItem.quantity) - 1);
     } else {
       const matchingItems = cartItems.filter(cartItem => cartItem.menu_item_id === menuItemId);
       if (matchingItems.length === 0) return;
@@ -478,12 +354,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     if (order) {
       orderItems.forEach((orderItem) => {
         if (orderItem.is_voided) return;
-        const menuItemId = typeof orderItem.menu_item_id === 'string'
-          ? parseInt(orderItem.menu_item_id as string, 10)
-          : orderItem.menu_item_id;
-        const quantity = typeof orderItem.quantity === 'string'
-          ? parseInt(orderItem.quantity as string, 10)
-          : orderItem.quantity;
+        const menuItemId = toInt(orderItem.menu_item_id);
+        const quantity = toInt(orderItem.quantity);
         result[menuItemId] = (result[menuItemId] || 0) + quantity;
       });
       pendingRoundItems.forEach((pendingItem) => {
@@ -500,10 +372,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   }, [order, orderItems, cartItems, pendingRoundItems]);
 
   const currentCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
-  const currentSubCategory = selectedSubCategoryId ? subCategories.find(c => {
-    const catId = typeof c.id === 'string' ? parseInt(c.id, 10) : c.id;
-    return catId === selectedSubCategoryId;
-  }) : undefined;
+  const currentSubCategory = selectedSubCategoryId ? subCategories.find(c => toInt(c.id) === selectedSubCategoryId) : undefined;
 
   const allMenuItems = useMemo(() => {
     const start = nowMs();
@@ -521,8 +390,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const categoryById = useMemo(() => {
     const map = new Map<number, { name: string; button_color?: string | null }>();
     categories.forEach((cat) => {
-      const catId = typeof cat.id === 'string' ? parseInt(cat.id, 10) : cat.id;
-      map.set(catId, { name: cat.name, button_color: cat.button_color });
+      map.set(toInt(cat.id), { name: cat.name, button_color: cat.button_color });
     });
     return map;
   }, [categories]);
@@ -539,12 +407,9 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
     } else if (!selectedSubCategoryId) {
       result = allMenuItems;
     } else {
-      result = allMenuItems.filter((item: MenuItemWithInventory) => {
-        const itemCategoryId = typeof item.category_id === 'string'
-          ? parseInt(item.category_id as string, 10)
-          : item.category_id;
-        return itemCategoryId === selectedSubCategoryId;
-      });
+      result = allMenuItems.filter((item: MenuItemWithInventory) =>
+        toIntOrNull(item.category_id) === selectedSubCategoryId
+      );
     }
     logPerf('useMemo:menuItemsList', nowMs() - start, { subCategoryId: selectedSubCategoryId, count: result.length });
     return result;
@@ -553,19 +418,12 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const menuCategoryByItemId = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
     menuItems.forEach((item) => {
-      const itemId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
-      const categoryId = typeof item.category_id === 'string'
-        ? parseInt(item.category_id as string, 10)
-        : item.category_id;
-      const category = categories.find((cat) => {
-        const catId = typeof cat.id === 'string' ? parseInt(cat.id, 10) : cat.id;
-        return catId === categoryId;
-      });
+      const itemId = toInt(item.id);
+      const categoryId = toIntOrNull(item.category_id);
+      if (categoryId === null) return;
+      const category = categories.find((cat) => toInt(cat.id) === categoryId);
       if (category) {
-        map.set(itemId, {
-          id: typeof category.id === 'string' ? parseInt(category.id, 10) : category.id,
-          name: category.name,
-        });
+        map.set(itemId, { id: toInt(category.id), name: category.name });
       }
     });
     return map;
@@ -574,12 +432,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const topLevelCategoryById = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
     categories.forEach((category) => {
-      const catId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
-      const parentId = category.parent_id === null
-        ? null
-        : typeof category.parent_id === 'string'
-          ? parseInt(category.parent_id as string, 10)
-          : category.parent_id;
+      const catId = toInt(category.id);
+      const parentId = toIntOrNull(category.parent_id);
       if (parentId === null) {
         map.set(catId, { id: catId, name: category.name });
       }
@@ -590,12 +444,8 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const topLevelBySubCategoryId = useMemo(() => {
     const map = new Map<number, { id: number; name: string }>();
     categories.forEach((category) => {
-      const catId = typeof category.id === 'string' ? parseInt(category.id, 10) : category.id;
-      const parentId = category.parent_id === null
-        ? null
-        : typeof category.parent_id === 'string'
-          ? parseInt(category.parent_id as string, 10)
-          : category.parent_id;
+      const catId = toInt(category.id);
+      const parentId = toIntOrNull(category.parent_id);
       if (parentId !== null) {
         const parent = topLevelCategoryById.get(parentId);
         if (parent) {
@@ -609,9 +459,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
   const itemsForPanel = useMemo<OrderItemDisplay[]>(() => {
     if (order) {
       return orderItems.map((item) => {
-        const itemId = typeof item.menu_item_id === 'string'
-          ? parseInt(item.menu_item_id as string, 10)
-          : item.menu_item_id;
+        const itemId = toInt(item.menu_item_id);
         const category = menuCategoryByItemId.get(itemId);
         let groupName = category?.name ?? 'Other';
 
@@ -623,7 +471,7 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
           }
         }
 
-        const numericId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+        const numericId = toInt(item.id);
         return {
           ...item,
           id: Number.isFinite(numericId) ? numericId : item.id,
@@ -792,21 +640,12 @@ function OrderScreenContent({ tableId, orderId }: OrderScreenContentProps) {
           visible={showModifierPicker}
           menuItem={selectedMenuItem}
           modifierGroups={menuItemModifiers}
-          initialSelectedModifiers={editingOrderItemId || editingCartItemId ? editingItemModifiers : undefined}
-          initialNotes={editingOrderItemId || editingCartItemId ? editingItemNotes : undefined}
-          initialWeight={editingOrderItemId || editingCartItemId ? editingItemWeight : undefined}
-          submitLabel={editingOrderItemId || editingCartItemId ? 'Update Item' : undefined}
+          initialSelectedModifiers={isEditing ? editingItemModifiers : undefined}
+          initialNotes={isEditing ? editingItemNotes : undefined}
+          initialWeight={isEditing ? editingItemWeight : undefined}
+          submitLabel={isEditing ? 'Update Item' : undefined}
           onConfirm={handleModifierConfirm}
-          onCancel={() => {
-            setShowModifierPicker(false);
-            setSelectedMenuItem(null);
-            setMenuItemModifiers([]);
-            setEditingOrderItemId(null);
-            setEditingCartItemId(null);
-            setEditingItemNotes('');
-            setEditingItemModifiers([]);
-            setEditingItemWeight('');
-          }}
+          onCancel={handleModifierCancel}
         />
       )}
       </View>

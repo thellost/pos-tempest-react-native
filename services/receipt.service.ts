@@ -1,5 +1,6 @@
 import { ORDER_TYPE } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { toInt } from '@/utils/coerce';
 
 // ── Data shapes ───────────────────────────────────────────────────────────────
 
@@ -129,8 +130,7 @@ export async function getBillData(
 
   const items: BillLineItem[] = [];
   for (const row of itemRows) {
-    const itemId =
-      typeof row.id === 'string' ? parseInt(row.id, 10) : row.id;
+    const itemId = toInt(row.id);
     const modRows = await powersync.getAll<{ modifier_name: string }>(
       `SELECT modifier_name FROM order_item_modifiers WHERE order_item_id = ?`,
       [itemId],

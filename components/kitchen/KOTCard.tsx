@@ -1,6 +1,7 @@
 import { useQuery } from '@powersync/react';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { toInt } from '@/utils/coerce';
 
 import type { KotStatus } from '@/constants/enums';
 import { KOT_STATUS, ORDER_TYPE } from '@/constants/enums';
@@ -74,8 +75,7 @@ const STATUS_CONFIG: Record<
  * Loads its own items reactively via useQuery.
  */
 export function KOTCard({ kot, onAdvance }: KOTCardProps) {
-  const kotId =
-    typeof kot.id === 'string' ? parseInt(kot.id, 10) : kot.id;
+  const kotId = toInt(kot.id);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
   const elapsed = getElapsed(kot.created_at);

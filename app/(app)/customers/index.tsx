@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toInt } from '@/utils/coerce';
 import {
     ActivityIndicator,
     Alert,
@@ -212,8 +213,7 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
   const [orderHistory, setOrderHistory] = useState<CustomerOrderHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const customerId =
-    typeof customer.id === 'string' ? parseInt(customer.id as string, 10) : customer.id;
+  const customerId = toInt(customer.id);
 
   useEffect(() => {
     setHistoryLoading(true);

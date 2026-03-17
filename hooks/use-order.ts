@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toInt, toIntOrNull } from '@/utils/coerce';
 import { Alert } from 'react-native';
 
 import type { CartItem } from '@/components/order/types';
@@ -196,7 +197,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   }, [orderId]);
 
   // Reload order from database
-  const currentOrderId = order ? (typeof order.id === 'string' ? parseInt(order.id, 10) : order.id) : null;
+  const currentOrderId = order ? toInt(order.id) : null;
 
   const reload = useCallback(async () => {
     if (currentOrderId === null) return;
@@ -234,7 +235,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       if (order.status === ORDER_STATUS.CONFIRMED || order.status === ORDER_STATUS.PREPARING) {
         const newPendingItem: CartItem = {
           id: generateLocalId(),
-          menu_item_id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+          menu_item_id: toInt(item.id),
           menu_item_name: item.name,
           quantity: 1,
           unit_price: basePrice,
@@ -249,7 +250,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       } else {
         // Order exists but not confirmed yet - add directly to DB
         try {
-          const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+          const orderIdNum = toInt(order.id);
           const menuItem: MenuItem = {
             id: item.id,
             category_id: item.category_id,
@@ -280,7 +281,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       // No order yet - add to cart items (draft state)
       const newCartItem: CartItem = {
         id: generateLocalId(),
-        menu_item_id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+        menu_item_id: toInt(item.id),
         menu_item_name: item.name,
         quantity: 1,
         unit_price: basePrice,
@@ -480,14 +481,11 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         guestCount || 0
       );
 
-      const orderIdNum = typeof newOrder.id === 'string' ? parseInt(newOrder.id, 10) : newOrder.id;
+      const orderIdNum = toInt(newOrder.id);
 
       const orderFailures: string[] = [];
       for (const cartItem of cartItems) {
-        const menuItem = menuItems.find(m => {
-          const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-          return mId === cartItem.menu_item_id;
-        });
+        const menuItem = menuItems.find(m => toInt(m.id) === cartItem.menu_item_id);
 
         if (!menuItem) {
           orderFailures.push(cartItem.menu_item_name);
@@ -499,7 +497,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         throw new Error(`Menu items not found: ${orderFailures.join(', ')}`);
       }
 
-      await confirmOrderService(orderIdNum, typeof user.id === 'string' ? parseInt(user.id, 10) : user.id);
+      await confirmOrderService(orderIdNum, toInt(user.id));
 
       const orderData = await getOrderWithItems(orderIdNum);
       if (orderData) {
@@ -523,15 +521,12 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     try {
-      const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+      const orderIdNum = toInt(order.id);
       const newRound = currentRound + 1;
 
       const roundFailures: string[] = [];
       for (const cartItem of pendingRoundItems) {
-        const menuItem = menuItems.find(m => {
-          const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-          return mId === cartItem.menu_item_id;
-        });
+        const menuItem = menuItems.find(m => toInt(m.id) === cartItem.menu_item_id);
 
         if (!menuItem) {
           roundFailures.push(cartItem.menu_item_name);
@@ -545,7 +540,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
       // Deduct inventory stock for the new round items
       if (user) {
-        const userIdNum = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+        const userIdNum = toInt(user.id);
         const itemsForDeduction = pendingRoundItems
           .filter(ci => !roundFailures.includes(ci.menu_item_name))
           .map(ci => ({ menu_item_id: ci.menu_item_id, quantity: ci.quantity }));
@@ -575,7 +570,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     try {
-      const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+      const orderIdNum = toInt(order.id);
       await voidOrder(orderIdNum, user.id, reason);
 
       // Clear current order state from UI after cancel
@@ -607,8 +602,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     const roundToPrint = roundNumber ?? currentRound;
-    const orderIdNum =
-      typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+    const orderIdNum = toInt(order.id);
 
     try {
       const kot = await createKOT(orderIdNum, roundToPrint);
@@ -643,8 +637,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       return;
     }
     try {
-      const orderIdNum =
-        typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+      const orderIdNum = toInt(order.id);
       const bill = await getBillData(orderIdNum, false);
       setLastBill(bill);
     } catch (error) {
@@ -664,7 +657,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   // Go to payment
   const goToPayment = useCallback(() => {
     if (!order) return;
-    const orderIdNum = typeof order.id === 'string' ? parseInt(order.id, 10) : order.id;
+    const orderIdNum = toInt(order.id);
     router.push({ pathname: '/(app)/checkout/[orderId]', params: { orderId: String(orderIdNum) } });
   }, [order, router]);
 

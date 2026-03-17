@@ -1,5 +1,6 @@
 import { useQuery } from '@powersync/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { toInt } from '@/utils/coerce';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -244,8 +245,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
     async (discount: Discount) => {
       if (!user) return;
       try {
-        const discountIdNum =
-          typeof discount.id === 'string' ? parseInt(discount.id, 10) : discount.id;
+        const discountIdNum = toInt(discount.id);
         await applyOrderDiscount(orderId, discountIdNum, user.id);
         const updated = await getOrderDiscount(orderId);
         setAppliedDiscount(updated);

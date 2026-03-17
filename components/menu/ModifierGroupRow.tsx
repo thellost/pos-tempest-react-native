@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { formatIDR } from '@/utils/currency';
+import { toInt } from '@/utils/coerce';
 
 interface ModifierGroupRowProps {
   group: ModifierGroupWithModifiers;
@@ -29,7 +30,7 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
 
       <View className="flex-row flex-wrap gap-2">
         {group.modifiers.map((modifier) => {
-          const modifierId = typeof modifier.id === 'string' ? parseInt(modifier.id, 10) : modifier.id;
+          const modifierId = toInt(modifier.id);
           const isSelected = selectedModifierIds.has(modifierId);
 
           return (

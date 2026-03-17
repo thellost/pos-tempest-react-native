@@ -17,6 +17,7 @@ import { RESERVATION_STATUS } from '@/constants/enums';
 import { useCustomers } from '@/hooks/use-customers';
 import { useReservations, type ReservationWithCustomer } from '@/hooks/use-reservations';
 import type { TableWithOrder } from '@/hooks/use-tables';
+import { toInt } from '@/utils/coerce';
 
 interface ReservationModalProps {
   visible: boolean;
@@ -68,8 +69,7 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
 
-  const tableId =
-    table ? (typeof table.id === 'string' ? parseInt(table.id, 10) : table.id) : null;
+  const tableId = table ? toInt(table.id) : null;
 
   const tableReservations = tableId ? getReservationsForTable(tableId) : [];
 
@@ -167,8 +167,7 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
           text: label,
           onPress: async () => {
             try {
-              const resId =
-                typeof reservation.id === 'string' ? parseInt(reservation.id, 10) : reservation.id;
+              const resId = toInt(reservation.id);
               await updateReservationStatus(resId, newStatus);
             } catch (err) {
               Alert.alert('Error', 'Failed to update reservation status.');

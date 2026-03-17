@@ -11,6 +11,7 @@ import { useReservations } from '@/hooks/use-reservations';
 import { useShift } from '@/hooks/use-shift';
 import { useTables, type TableWithOrder } from '@/hooks/use-tables';
 import { useTakeaway, type TakeawayOrder } from '@/hooks/use-takeaway';
+import { toInt } from '@/utils/coerce';
 
 export default function FloorScreen() {
   const {
@@ -41,7 +42,7 @@ export default function FloorScreen() {
 
   useEffect(() => {
     if (floorAreas.length > 0 && selectedAreaId === null && !isTakeawaySelected) {
-      const firstAreaId = typeof floorAreas[0].id === 'string' ? parseInt(floorAreas[0].id, 10) : floorAreas[0].id;
+      const firstAreaId = toInt(floorAreas[0].id);
       setSelectedAreaId(firstAreaId);
     }
   }, [floorAreas, selectedAreaId, isTakeawaySelected]);
@@ -252,12 +253,12 @@ export default function FloorScreen() {
                   onPress={() => handleTablePress(table.id, table.active_order_id, table.status)}
                   onLongPress={() => handleTableLongPress(table)}
                   reservationName={(() => {
-                    const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+                    const tableId = toInt(table.id);
                     const res = getReservationsForTable(tableId)[0];
                     return res?.resolved_customer_name ?? null;
                   })()}
                   reservationTime={(() => {
-                    const tableId = typeof table.id === 'string' ? parseInt(table.id, 10) : table.id;
+                    const tableId = toInt(table.id);
                     const res = getReservationsForTable(tableId)[0];
                     return res ? formatReservationTime(res.reservation_datetime) : null;
                   })()}

@@ -3,6 +3,7 @@ import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
 import { insertAuditLog } from '@/services/audit.service';
 import { generateTicketNumber } from '@/utils/order-number';
+import { toInt } from '@/utils/coerce';
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -121,8 +122,7 @@ export async function createKOT(
   const itemDetails: KOTItemDetail[] = [];
 
   for (const oi of orderItems) {
-    const orderItemId =
-      typeof oi.id === 'string' ? parseInt(oi.id, 10) : oi.id;
+    const orderItemId = toInt(oi.id);
 
     // Collect modifier names via GROUP_CONCAT
     const modRow = await powersync.getOptional<{ names: string | null }>(
@@ -301,21 +301,14 @@ export async function getKOTsForOrder(
 
   return Promise.all(
     rows.map(async (row) => {
-      const kotId =
-        typeof row.id === 'string' ? parseInt(row.id, 10) : row.id;
+      const kotId = toInt(row.id);
       return {
         id: kotId,
         order_id: orderId,
         ticket_number: row.ticket_number,
         status: row.status as KotStatus,
-        priority:
-          typeof row.priority === 'string'
-            ? parseInt(row.priority, 10)
-            : row.priority ?? 1,
-        round_number:
-          typeof row.round_number === 'string'
-            ? parseInt(row.round_number, 10)
-            : row.round_number ?? 1,
+        priority: toInt(row.priority ?? 1),
+        round_number: toInt(row.round_number ?? 1),
         table_number: row.table_number,
         order_number: row.order_number,
         order_type: row.order_type,
@@ -354,12 +347,9 @@ async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
   );
 
   return rows.map((row) => ({
-    id: typeof row.id === 'string' ? parseInt(row.id, 10) : row.id,
+    id: toInt(row.id),
     kot_id: kotId,
-    order_item_id:
-      typeof row.order_item_id === 'string'
-        ? parseInt(row.order_item_id, 10)
-        : row.order_item_id,
+    order_item_id: toInt(row.order_item_id),
     menu_item_name: row.menu_item_name,
     quantity:
       typeof row.quantity === 'string'

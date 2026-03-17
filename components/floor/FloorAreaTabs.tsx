@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { FloorArea } from '@/db/models';
 import { ThemeColors } from '@/constants/theme';
+import { toInt } from '@/utils/coerce';
 
 interface FloorAreaTabsProps {
   floorAreas: FloorArea[];
@@ -35,7 +36,7 @@ export function FloorAreaTabs({
         contentContainerStyle={{ paddingHorizontal: 4 }}
       >
         {floorAreas.map((area) => {
-          const areaId = typeof area.id === 'string' ? parseInt(area.id, 10) : area.id;
+          const areaId = toInt(area.id);
           const isSelected = areaId === selectedAreaId && !isTakeawaySelected;
           
           return (

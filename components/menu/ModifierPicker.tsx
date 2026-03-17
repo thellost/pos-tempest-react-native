@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { toInt } from '@/utils/coerce';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
@@ -84,10 +85,7 @@ export function ModifierPicker({
         }
       }
 
-      const modifier = group.modifiers.find(m => {
-        const mId = typeof m.id === 'string' ? parseInt(m.id, 10) : m.id;
-        return mId === modifierId;
-      });
+      const modifier = group.modifiers.find(m => toInt(m.id) === modifierId);
 
       if (modifier) {
         newSelected.set(modifierId, {
@@ -197,7 +195,7 @@ export function ModifierPicker({
           )}
 
           {sortedGroups.map((group) => {
-            const groupId = typeof group.id === 'string' ? parseInt(group.id, 10) : group.id;
+            const groupId = toInt(group.id);
             const selectedIds = new Set(
               Array.from(selectedModifiers.entries())
                 .filter(([, mod]) => mod.modifier_group_name === group.name)

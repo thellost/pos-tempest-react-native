@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { toInt } from '@/utils/coerce';
 import {
   ActivityIndicator,
   Modal,
@@ -167,7 +168,7 @@ export function CustomerPickerRow({
                 </View>
               ) : (
                 customers.map((c) => {
-                  const cId = typeof c.id === 'string' ? parseInt(c.id as string, 10) : (c.id as number);
+                  const cId = toInt(c.id);
                   return (
                     <Pressable
                       key={cId}
