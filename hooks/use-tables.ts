@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 
 import { ORDER_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { DiningTable, FloorArea } from '@/db/models';
-import { toInt } from '@/utils/coerce';
 import { powersync } from '@/db/provider';
+import { toInt } from '@/utils/coerce';
 import { useAuth } from './use-auth';
 import { useDevice } from './use-device';
 
@@ -63,7 +63,7 @@ export function useTables() {
       ORDER_STATUS.SERVED,
       branchId ?? 0
     ]
-  );
+      );
 
 
   // Deduplicate tables - keep only the first occurrence (most recent order due to ORDER BY).
