@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { PaymentMethodType } from '@/constants/enums';
+import { PAYMENT_METHOD_COLOR, PAYMENT_METHOD_LABEL } from '@/constants/payment';
 import { formatIDR } from '@/utils/currency';
 
 export interface PendingPayment {
@@ -10,24 +11,6 @@ export interface PendingPayment {
   amount: number;
   referenceNumber: string | null;
 }
-
-const METHOD_LABELS: Record<string, string> = {
-  cash:          'Cash',
-  qris:          'QRIS',
-  debit_card:    'Debit',
-  credit_card:   'Credit',
-  ewallet:       'E-Wallet',
-  bank_transfer: 'Transfer',
-};
-
-const METHOD_COLORS: Record<string, string> = {
-  cash:          '#10B981',
-  qris:          '#6366F1',
-  debit_card:    '#3B82F6',
-  credit_card:   '#F59E0B',
-  ewallet:       '#EC4899',
-  bank_transfer: '#8B5CF6',
-};
 
 interface SplitPaymentProps {
   payments: PendingPayment[];
@@ -49,7 +32,7 @@ export const SplitPayment = memo(function SplitPayment({
   return (
     <View className="overflow-hidden rounded-lg border border-border">
       {payments.map((payment, index) => {
-        const color = METHOD_COLORS[payment.method] ?? '#94A3B8';
+        const color = PAYMENT_METHOD_COLOR[payment.method] ?? '#94A3B8';
         return (
           <View
             key={payment.id}
@@ -64,7 +47,7 @@ export const SplitPayment = memo(function SplitPayment({
 
             {/* Method label */}
             <Text className="flex-1 text-pos-xs font-bold" style={{ color }}>
-              {METHOD_LABELS[payment.method] ?? payment.method}
+              {PAYMENT_METHOD_LABEL[payment.method] ?? payment.method}
             </Text>
 
             {/* Reference number */}

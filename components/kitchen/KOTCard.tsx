@@ -7,6 +7,7 @@ import type { KotStatus } from '@/constants/enums';
 import { KOT_STATUS, ORDER_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
 import type { KOTRow } from '@/hooks/use-kitchen';
+import { formatElapsed } from '@/utils/date';
 
 interface KOTCardProps {
   kot: KOTRow;
@@ -23,15 +24,6 @@ interface KOTItemRow {
   modifier_names: string | null;
 }
 
-function getElapsed(createdAt: string): string {
-  const elapsed = Math.floor(
-    (Date.now() - new Date(createdAt).getTime()) / 1000
-  );
-  if (elapsed < 60) return `${elapsed}s`;
-  const mins = Math.floor(elapsed / 60);
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-}
 
 const STATUS_CONFIG: Record<
   string,
@@ -78,7 +70,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
   const kotId = toInt(kot.id);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
-  const elapsed = getElapsed(kot.created_at);
+  const elapsed = formatElapsed(kot.created_at);
   const elapsedMins = Math.floor(
     (Date.now() - new Date(kot.created_at).getTime()) / 60000
   );

@@ -14,9 +14,9 @@ The codebase has significant code duplication, especially between the two order 
 |-------|--------|
 | 1 — `toInt()` utility | ✅ Done |
 | 2 — Modifier picker hook | ✅ Done |
-| 3 — Order screen consolidation | ⬜ Pending |
-| 4 — Payment method config | ⬜ Pending |
-| 5 — Date formatting utils | ⬜ Pending |
+| 3 — Order screen consolidation | ✅ Done |
+| 4 — Payment method config | ✅ Done |
+| 5 — Date formatting utils | ✅ Done |
 | 6 — Pressable style helper (optional) | ⬜ Pending |
 
 ---
@@ -25,7 +25,7 @@ The codebase has significant code duplication, especially between the two order 
 
 ```
 Phase 1 (toInt utility) ──┐
-                           ├──> Phase 3 (order screen consolidation)
+                          ├──> Phase 3 (order screen consolidation)
 Phase 2 (modifier hook) ──┘
 
 Phase 4, 5, 6 — fully independent, can run in any order or in parallel
@@ -55,7 +55,7 @@ Created `hooks/use-modifier-picker.ts`. Removed 8 duplicated state variables and
 
 ## Phase 3: Consolidate Order Screens Into Shared Hook
 
-**Status:** Pending
+**Status:** Complete
 **Complexity:** Large | **Risk:** Medium | **Est. Lines Saved:** ~1,000
 **Depends on:** Phase 1 + Phase 2 (both done)
 
