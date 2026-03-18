@@ -1,5 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, InteractionManager, type LayoutChangeEvent, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ClipboardList, Lock } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
 
@@ -266,7 +268,7 @@ export function MenuGrid({
         {items.length === 0 && allItems.length > 0 && (
           <View className="flex-1 items-center justify-center p-8">
             <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-              <Text className="text-3xl">📋</Text>
+              <ClipboardList size={32} color={ThemeColors.text.muted} />
             </View>
             <Text className="text-pos-lg text-pos-text-muted">No items available</Text>
             <Text className="mt-2 text-pos-sm text-pos-text-faint">in this category</Text>
@@ -281,7 +283,7 @@ export function MenuGrid({
           style={{ backgroundColor: 'rgba(10, 13, 20, 0.82)' }}
         >
           <View className="items-center rounded-2xl bg-surface-card px-10 py-8">
-            <Text className="mb-2 text-4xl">🔒</Text>
+            <Lock size={36} color={ThemeColors.text.muted} style={{ marginBottom: 8 }} />
             <Text className="text-pos-lg font-bold text-pos-text">No Active Shift</Text>
             <Text className="mt-1 text-pos-sm text-pos-text-muted text-center">
               Open a shift to start taking orders

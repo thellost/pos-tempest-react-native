@@ -1,6 +1,7 @@
-import { Brand } from '@/constants/theme';
+import { Brand, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect, router } from 'expo-router';
+import { Delete, Lock } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -145,7 +146,7 @@ export default function PinScreen() {
     <View className="flex-1 items-center justify-center bg-surface px-6">
       <View className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-8">
         <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
-          <Text className="text-3xl">🔐</Text>
+          <Lock size={28} color={ThemeColors.accent.primary} />
         </View>
         <Text className="text-center text-pos-2xl font-bold text-pos-text">
           Enter PIN
@@ -227,15 +228,19 @@ export default function PinScreen() {
                     onDigitPress(key);
                   }
                 }}>
-                <Text className={`text-pos-xl font-semibold ${
-                  isDisabled
-                    ? 'text-pos-text-faint/50'
-                    : isAction
-                    ? 'text-pos-text-muted'
-                    : 'text-accent'
-                }`}>
-                  {key}
-                </Text>
+                {key === '⌫' ? (
+                  <Delete size={22} color={isDisabled ? ThemeColors.text.faint : ThemeColors.text.muted} />
+                ) : (
+                  <Text className={`text-pos-xl font-semibold ${
+                    isDisabled
+                      ? 'text-pos-text-faint/50'
+                      : isAction
+                      ? 'text-pos-text-muted'
+                      : 'text-accent'
+                  }`}>
+                    {key}
+                  </Text>
+                )}
               </Pressable>
             );
           })}

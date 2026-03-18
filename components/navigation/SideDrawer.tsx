@@ -2,10 +2,27 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { router, usePathname } from 'expo-router';
+import {
+  BarChart2,
+  Banknote,
+  ChefHat,
+  DollarSign,
+  LayoutGrid,
+  Lock,
+  LogOut,
+  Monitor,
+  Package,
+  Settings,
+  Store,
+  Tablet,
+  Users,
+} from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 
 import type { UserRow } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
+import { ThemeColors } from '@/constants/theme';
 
 const DRAWER_WIDTH = 280;
 
@@ -13,28 +30,28 @@ const DRAWER_WIDTH = 280;
 
 interface NavItem {
   label: string;
-  icon: string;
+  icon: LucideIcon;
   href: string;
   roles?: string[]; // if set, only shown to these roles
 }
 
 const MAIN_NAV: NavItem[] = [
-  { label: 'Tables & Orders', icon: '🏠', href: '/(app)/floor' },
-  { label: 'Kitchen Display', icon: '🍳', href: '/(app)/kitchen' },
-  { label: 'Inventory', icon: '📦', href: '/(app)/inventory' },
-  { label: 'Customers', icon: '👥', href: '/(app)/customers' },
+  { label: 'Tables & Orders', icon: LayoutGrid, href: '/(app)/floor' },
+  { label: 'Kitchen Display', icon: ChefHat,    href: '/(app)/kitchen' },
+  { label: 'Inventory',       icon: Package,    href: '/(app)/inventory' },
+  { label: 'Customers',       icon: Users,      href: '/(app)/customers' },
   {
     label: 'Reports',
-    icon: '📊',
+    icon: BarChart2,
     href: '/(app)/reports',
     roles: ['admin', 'manager'],
   },
 ];
 
 const SYSTEM_NAV: NavItem[] = [
-  { label: 'Shift', icon: '💰', href: '/(app)/shifts' },
-  { label: 'Settings', icon: '⚙️', href: '/(app)/settings' },
-  { label: 'Dashboard', icon: '📱', href: '/(tabs)/explore' },
+  { label: 'Shift',     icon: DollarSign, href: '/(app)/shifts' },
+  { label: 'Settings',  icon: Settings,   href: '/(app)/settings' },
+  { label: 'Dashboard', icon: Monitor,    href: '/(tabs)/explore' },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -57,7 +74,9 @@ function NavRow({ item, isActive, onPress }: NavRowProps) {
       {isActive && (
         <View className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-brand" />
       )}
-      <Text className="mr-3 text-base">{item.icon}</Text>
+      <View className="mr-3">
+        <item.icon size={18} color={isActive ? ThemeColors.accent.primary : ThemeColors.text.muted} />
+      </View>
       <Text
         className={`text-pos-sm font-medium ${
           isActive ? 'text-brand' : 'text-pos-text'
@@ -109,7 +128,7 @@ export function SideDrawer({
     const items = [...SYSTEM_NAV];
     if (isShiftOpen) {
       const shiftIndex = items.findIndex((i) => i.href === '/(app)/shifts');
-      items.splice(shiftIndex + 1, 0, { label: 'Cash', icon: '💵', href: '/(app)/cash' });
+      items.splice(shiftIndex + 1, 0, { label: 'Cash', icon: Banknote, href: '/(app)/cash' });
     }
     return items;
   }, [isShiftOpen]);
@@ -237,14 +256,16 @@ export function SideDrawer({
             {(branchName || deviceName) ? (
               <View className="mt-3 rounded-lg bg-surface-raised px-3 py-2">
                 {branchName ? (
-                  <Text className="text-pos-xs text-pos-text-muted">
-                    🏪 {branchName}
-                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Store size={11} color={ThemeColors.text.muted} />
+                    <Text className="text-pos-xs text-pos-text-muted">{branchName}</Text>
+                  </View>
                 ) : null}
                 {deviceName ? (
-                  <Text className="mt-0.5 text-pos-xs text-pos-text-muted">
-                    📱 {deviceName}
-                  </Text>
+                  <View className="mt-0.5 flex-row items-center gap-1.5">
+                    <Tablet size={11} color={ThemeColors.text.muted} />
+                    <Text className="text-pos-xs text-pos-text-muted">{deviceName}</Text>
+                  </View>
                 ) : null}
               </View>
             ) : null}
@@ -285,7 +306,9 @@ export function SideDrawer({
             }}
             className="mb-1.5 flex-row items-center rounded-lg px-3 py-3 active:bg-surface-elevated"
           >
-            <Text className="mr-3 text-base">🔒</Text>
+            <View className="mr-3">
+              <Lock size={18} color={ThemeColors.text.muted} />
+            </View>
             <Text className="text-pos-sm font-medium text-pos-text-muted">
               Lock Screen
             </Text>
@@ -299,7 +322,9 @@ export function SideDrawer({
             }}
             className="flex-row items-center rounded-lg bg-pos-danger-muted px-3 py-3 active:opacity-70"
           >
-            <Text className="mr-3 text-base">🚪</Text>
+            <View className="mr-3">
+              <LogOut size={18} color={ThemeColors.danger.DEFAULT} />
+            </View>
             <Text className="text-pos-sm font-semibold text-pos-danger">
               Sign Out
             </Text>

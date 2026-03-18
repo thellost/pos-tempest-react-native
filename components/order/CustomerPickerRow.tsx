@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { toInt } from '@/utils/coerce';
+import { Search, Star, UserPlus, X } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 import {
   ActivityIndicator,
   Modal,
@@ -84,14 +86,17 @@ export function CustomerPickerRow({
               ) : null}
             </View>
             {assignedCustomer.loyalty_points ? (
-              <Text className="text-[10px] text-brand">⭐{assignedCustomer.loyalty_points}</Text>
+              <View className="flex-row items-center gap-0.5">
+                <Star size={10} color={ThemeColors.accent.primary} />
+                <Text className="text-[10px] text-brand">{assignedCustomer.loyalty_points}</Text>
+              </View>
             ) : null}
             <Pressable
               onPress={onClear}
               disabled={disabled}
               className="ml-1 h-5 w-5 items-center justify-center rounded-full bg-brand/20 active:bg-brand/40"
             >
-              <Text className="text-[10px] font-bold text-brand">✕</Text>
+              <X size={10} color={ThemeColors.accent.primary} />
             </Pressable>
           </View>
         ) : (
@@ -101,7 +106,8 @@ export function CustomerPickerRow({
             disabled={disabled}
             className="flex-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 active:bg-surface-raised disabled:opacity-40"
           >
-            <Text className="text-pos-xs text-pos-text-muted">👤 Add Customer</Text>
+            <UserPlus size={14} color={ThemeColors.text.muted} />
+            <Text className="text-pos-xs text-pos-text-muted">Add Customer</Text>
           </Pressable>
         )}
       </View>
@@ -124,14 +130,14 @@ export function CustomerPickerRow({
                 onPress={close}
                 className="h-7 w-7 items-center justify-center rounded-full bg-surface-raised"
               >
-                <Text className="text-pos-xs text-pos-text-muted">✕</Text>
+                <X size={14} color={ThemeColors.text.muted} />
               </Pressable>
             </View>
 
             {/* Search input */}
             <View className="border-b border-border px-4 py-3">
               <View className="flex-row items-center rounded-xl border border-border bg-surface px-3 py-2.5">
-                <Text className="mr-2 text-pos-sm text-pos-text-muted">🔍</Text>
+                <Search size={14} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
                 <TextInput
                   ref={inputRef}
                   value={searchQuery}
@@ -143,7 +149,7 @@ export function CustomerPickerRow({
                 />
                 {searchQuery.length > 0 && (
                   <Pressable onPress={() => setSearchQuery('')}>
-                    <Text className="text-pos-sm text-pos-text-muted">✕</Text>
+                    <X size={14} color={ThemeColors.text.muted} />
                   </Pressable>
                 )}
               </View>
@@ -194,7 +200,10 @@ export function CustomerPickerRow({
                         </Text>
                       </View>
                       {c.loyalty_points > 0 && (
-                        <Text className="text-pos-xs text-brand">⭐ {c.loyalty_points} pts</Text>
+                        <View className="flex-row items-center gap-0.5">
+                        <Star size={12} color={ThemeColors.accent.primary} />
+                        <Text className="text-pos-xs text-brand">{c.loyalty_points} pts</Text>
+                      </View>
                       )}
                     </Pressable>
                   );

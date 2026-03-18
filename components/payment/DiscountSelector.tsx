@@ -2,7 +2,8 @@ import { memo, useCallback } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { DISCOUNT_TYPE } from '@/constants/enums';
-import { Brand } from '@/constants/theme';
+import { Brand, ThemeColors } from '@/constants/theme';
+import { Tag, X } from 'lucide-react-native';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import type { Discount, OrderDiscount } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
@@ -63,9 +64,10 @@ export const DiscountSelector = memo(function DiscountSelector({
         >
           {/* Header */}
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-            <Text className="text-pos-base font-bold text-pos-text">
-              🏷️  Select Discount
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Tag size={16} color={ThemeColors.text.primary} />
+              <Text className="text-pos-base font-bold text-pos-text">Select Discount</Text>
+            </View>
             <Pressable
               onPress={onClose}
               className="rounded border border-border bg-surface-raised px-3 py-1.5"
@@ -89,9 +91,12 @@ export const DiscountSelector = memo(function DiscountSelector({
                   className="border-b border-border bg-pos-danger-muted px-5 py-3.5"
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
-                  <Text className="text-pos-sm font-bold text-pos-danger">
-                    ✕  Remove: {appliedDiscount.discount_name}
-                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <X size={14} color={ThemeColors.danger.DEFAULT} />
+                    <Text className="text-pos-sm font-bold text-pos-danger">
+                      Remove: {appliedDiscount.discount_name}
+                    </Text>
+                  </View>
                   <Text className="mt-0.5 text-pos-xs text-pos-text-muted">
                     Currently applied: −{formatIDR(appliedDiscount.applied_amount)}
                   </Text>

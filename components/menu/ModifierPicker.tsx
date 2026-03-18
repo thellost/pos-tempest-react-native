@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toInt } from '@/utils/coerce';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { X } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 
 import { PRICING_TYPE } from '@/constants/enums';
 import { ModifierGroupRow } from '@/components/menu/ModifierGroupRow';
@@ -175,7 +177,7 @@ export function ModifierPicker({
               onPress={onCancel}
               className="h-10 w-10 items-center justify-center rounded-full bg-surface-raised"
             >
-              <Text className="text-pos-lg text-pos-text-muted">✕</Text>
+              <X size={18} color={ThemeColors.text.muted} />
             </Pressable>
           </View>
         </View>

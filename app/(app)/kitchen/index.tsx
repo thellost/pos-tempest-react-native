@@ -1,8 +1,9 @@
+import { ThemeColors } from '@/constants/theme';
+import { CheckCircle, ChefHat, Clock } from 'lucide-react-native';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 import { KOTCard } from '@/components/kitchen/KOTCard';
 import type { KotStatus } from '@/constants/enums';
-import { ThemeColors } from '@/constants/theme';
 import type { KOTRow } from '@/hooks/use-kitchen';
 import { useKitchen } from '@/hooks/use-kitchen';
 
@@ -66,9 +67,13 @@ function KDSColumn({
       >
         {kots.length === 0 ? (
           <View className="items-center py-10">
-            <Text className="text-2xl mb-2">
-              {label === 'Pending' ? '⏳' : label === 'In Progress' ? '🍳' : '✅'}
-            </Text>
+            <View className="mb-2">
+              {label === 'Pending'
+                ? <Clock size={28} color={ThemeColors.text.faint} />
+                : label === 'In Progress'
+                  ? <ChefHat size={28} color={ThemeColors.text.faint} />
+                  : <CheckCircle size={28} color={ThemeColors.text.faint} />}
+            </View>
             <Text className="text-pos-sm text-pos-text-faint text-center">
               {emptyMessage}
             </Text>
@@ -113,9 +118,10 @@ export default function KitchenScreen() {
       {/* ── Top bar ── */}
       <View className="border-b border-border bg-surface-card px-5 py-3 flex-row items-center justify-between">
         <View className="flex-row items-center gap-3">
-          <Text className="text-pos-2xl font-bold text-pos-text">
-            🍳 Kitchen Display
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <ChefHat size={22} color={ThemeColors.text.primary} />
+            <Text className="text-pos-2xl font-bold text-pos-text">Kitchen Display</Text>
+          </View>
           {totalActive > 0 && (
             <View className="rounded-full bg-brand px-3 py-0.5">
               <Text className="text-pos-xs font-bold text-white">

@@ -1,6 +1,7 @@
-import { Colors } from '@/constants/theme';
+import { Colors, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { router } from 'expo-router';
+import { Eye, EyeOff, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import 'react-native-url-polyfill/auto';
@@ -112,7 +113,7 @@ export default function LoginScreen() {
       <View className="flex-1 items-center justify-center p-8">
         <View className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-8">
           <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
-            <Text className="text-3xl">⚡</Text>
+            <Zap size={28} color={ThemeColors.accent.primary} />
           </View>
           <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text">
             POS Tempest
@@ -177,9 +178,9 @@ export default function LoginScreen() {
               className="absolute right-3 top-3"
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
-              <Text className="text-pos-sm text-pos-text-muted">
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </Text>
+              {showPassword
+                ? <Eye size={18} color={ThemeColors.text.muted} />
+                : <EyeOff size={18} color={ThemeColors.text.muted} />}
             </Pressable>
           </View>
 

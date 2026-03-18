@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toInt } from '@/utils/coerce';
+import { Mail, Phone, Search, Star, User, Users, X } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 import {
     ActivityIndicator,
     Alert,
@@ -107,7 +109,7 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
                 Phone Number *
               </Text>
               <View className="flex-row items-center rounded-xl border border-brand bg-surface px-4 py-3">
-                <Text className="mr-2 text-pos-base text-pos-text-muted">📱</Text>
+                <Phone size={16} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
                 <TextInput
                   value={phone}
                   onChangeText={setPhone}
@@ -233,17 +235,23 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
               {customer.name}
             </Text>
             {customer.phone ? (
-              <Text className="mt-0.5 text-pos-sm text-pos-text-muted">📱 {customer.phone}</Text>
+              <View className="mt-0.5 flex-row items-center gap-1.5">
+                <Phone size={12} color={ThemeColors.text.muted} />
+                <Text className="text-pos-sm text-pos-text-muted">{customer.phone}</Text>
+              </View>
             ) : null}
             {customer.email ? (
-              <Text className="text-pos-sm text-pos-text-muted">✉️ {customer.email}</Text>
+              <View className="flex-row items-center gap-1.5">
+                <Mail size={12} color={ThemeColors.text.muted} />
+                <Text className="text-pos-sm text-pos-text-muted">{customer.email}</Text>
+              </View>
             ) : null}
           </View>
           <Pressable
             onPress={onClose}
             className="ml-4 h-10 w-10 items-center justify-center rounded-full bg-surface-raised"
           >
-            <Text className="text-pos-base text-pos-text-muted">✕</Text>
+            <X size={18} color={ThemeColors.text.muted} />
           </Pressable>
         </View>
 
@@ -365,7 +373,7 @@ export default function CustomersScreen() {
 
           {/* Search bar */}
           <View className="mt-4 flex-row items-center rounded-xl border border-border bg-surface px-4 py-2.5">
-            <Text className="mr-2 text-pos-base text-pos-text-muted">🔍</Text>
+            <Search size={16} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -375,7 +383,7 @@ export default function CustomersScreen() {
             />
             {searchQuery.length > 0 && (
               <Pressable onPress={() => setSearchQuery('')}>
-                <Text className="text-pos-base text-pos-text-muted">✕</Text>
+                <X size={16} color={ThemeColors.text.muted} />
               </Pressable>
             )}
           </View>
@@ -388,7 +396,7 @@ export default function CustomersScreen() {
           </View>
         ) : customers.length === 0 ? (
           <View className="flex-1 items-center justify-center p-6">
-            <Text className="text-3xl">👤</Text>
+            <User size={32} color={ThemeColors.text.muted} />
             <Text className="mt-3 text-center text-pos-base text-pos-text-muted">
               {searchQuery
                 ? `No customers matching "${searchQuery}"`
@@ -438,7 +446,7 @@ export default function CustomersScreen() {
                     {customer.loyalty_points > 0 && (
                       <View className="rounded-full bg-brand/10 px-2 py-0.5">
                         <Text className="text-pos-xs font-semibold text-brand">
-                          ⭐ {customer.loyalty_points}
+                          <Star size={10} color={ThemeColors.accent.primary} /> {customer.loyalty_points}
                         </Text>
                       </View>
                     )}
@@ -469,7 +477,7 @@ export default function CustomersScreen() {
         ) : (
           <View className="flex-1 items-center justify-center p-8">
             <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-surface-card">
-              <Text className="text-4xl">👥</Text>
+              <Users size={40} color={ThemeColors.text.muted} />
             </View>
             <Text className="text-pos-xl font-semibold text-pos-text">Customer Details</Text>
             <Text className="mt-2 text-center text-pos-base text-pos-text-muted">

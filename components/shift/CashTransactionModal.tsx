@@ -1,6 +1,7 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
+import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -179,7 +180,10 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
                 className="mb-3 h-14 w-[31%] items-center justify-center rounded-xl border border-border bg-surface"
                 disabled={submitting}
                 onPress={() => applyKey(key)}>
-                <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
+                {key === '⌫'
+                  ? <Delete size={20} color={ThemeColors.text.muted} />
+                  : <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
+                }
               </Pressable>
             ))}
           </View>

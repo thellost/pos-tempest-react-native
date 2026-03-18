@@ -1,9 +1,11 @@
+import { ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
 import { formatIDR } from '@/utils/currency';
+import { router } from 'expo-router';
+import { Banknote } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { router } from 'expo-router';
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -123,7 +125,10 @@ export default function ShiftsScreen() {
           <Pressable
             className="mt-4 rounded-xl border border-accent bg-accent-muted p-4"
             onPress={() => router.push('/(app)/cash/index')}>
-            <Text className="text-center text-pos-base font-semibold text-accent">💵 Manage Cash</Text>
+            <View className="flex-row items-center justify-center gap-2">
+              <Banknote size={16} color={ThemeColors.accent.primary} />
+              <Text className="text-pos-base font-semibold text-accent">Manage Cash</Text>
+            </View>
           </Pressable>
 
           <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Closing Cash Input</Text>

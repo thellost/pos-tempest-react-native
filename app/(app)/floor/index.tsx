@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Armchair, MapPin, ShoppingBag } from 'lucide-react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
 import { ReservationModal } from '@/components/floor/ReservationModal';
@@ -131,7 +132,7 @@ export default function FloorScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-6">
         <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-          <Text className="text-3xl">📍</Text>
+          <MapPin size={32} color={ThemeColors.text.muted} />
         </View>
         <Text className="text-pos-xl font-semibold text-pos-text">No Floor Areas</Text>
         <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
@@ -150,21 +151,30 @@ export default function FloorScreen() {
             onPress={handleTakeawayPress}
             className="flex-row items-center rounded-xl bg-amber-500 px-5 py-3 active:bg-amber-600"
           >
-            <Text className="mr-2 text-lg">🛍</Text>
-            <Text className="text-pos-base font-bold text-white">Takeaway</Text>
+            <ShoppingBag size={18} color="white" />
+            <Text className="ml-2 text-pos-base font-bold text-white">Takeaway</Text>
           </Pressable>
         </View>
         <View className="mt-4 flex-row items-center gap-6">
           <View className="rounded-xl bg-status-available-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">🟢 Available</Text>
+            <View className="flex-row items-center gap-1">
+              <View className="h-2 w-2 rounded-full bg-status-available" />
+              <Text className="text-pos-xs text-pos-text-muted">Available</Text>
+            </View>
             <Text className="text-pos-xl font-bold text-status-available">{availableTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-status-occupied-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">🔴 Occupied</Text>
+            <View className="flex-row items-center gap-1">
+              <View className="h-2 w-2 rounded-full bg-status-occupied" />
+              <Text className="text-pos-xs text-pos-text-muted">Occupied</Text>
+            </View>
             <Text className="text-pos-xl font-bold text-status-occupied">{occupiedTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-status-reserved-muted px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">🟡 Reserved</Text>
+            <View className="flex-row items-center gap-1">
+              <View className="h-2 w-2 rounded-full bg-status-reserved" />
+              <Text className="text-pos-xs text-pos-text-muted">Reserved</Text>
+            </View>
             <Text className="text-pos-xl font-bold text-status-reserved">{reservedTablesCount}</Text>
           </View>
           <View className="rounded-xl bg-surface-raised px-4 py-2">
@@ -191,7 +201,7 @@ export default function FloorScreen() {
           takeawayOrders.length === 0 ? (
             <View className="items-center justify-center py-16">
               <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-                <Text className="text-3xl">🛍</Text>
+                <ShoppingBag size={32} color={ThemeColors.text.muted} />
               </View>
               <Text className="text-pos-base text-pos-text-muted">No active takeaway orders</Text>
               <Pressable
@@ -210,9 +220,10 @@ export default function FloorScreen() {
                   className="w-[31%] rounded-xl bg-surface-card p-4 active:bg-surface-raised"
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-pos-lg font-bold text-pos-text">
-                      🛍 {order.order_number}
-                    </Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <ShoppingBag size={14} color={ThemeColors.text.primary} />
+                      <Text className="text-pos-lg font-bold text-pos-text">{order.order_number}</Text>
+                    </View>
                     <Text className="text-pos-xs text-pos-text-muted">
                       {getTakeawayElapsedMinutes(order.created_at)}m ago
                     </Text>
@@ -237,7 +248,7 @@ export default function FloorScreen() {
         ) : currentTables.length === 0 ? (
           <View className="items-center justify-center py-16">
             <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-              <Text className="text-3xl">🪑</Text>
+              <Armchair size={32} color={ThemeColors.text.muted} />
             </View>
             <Text className="text-pos-base text-pos-text-muted">
               No tables in this area

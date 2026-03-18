@@ -5,7 +5,8 @@ import { Redirect, Stack, usePathname } from 'expo-router';
 
 import { HamburgerButton } from '@/components/navigation/HamburgerButton';
 import { SideDrawer } from '@/components/navigation/SideDrawer';
-import { Brand } from '@/constants/theme';
+import { Brand, ThemeColors } from '@/constants/theme';
+import { AlertTriangle, Ban } from 'lucide-react-native';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
@@ -50,7 +51,7 @@ export default function AppLayout() {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-8">
         <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-          <Text className="text-3xl">⚠️</Text>
+          <AlertTriangle size={32} color={ThemeColors.warning.DEFAULT} />
         </View>
         <Text className="mb-4 text-center text-pos-lg font-semibold text-pos-text">
           Profile Loading Error
@@ -80,7 +81,7 @@ export default function AppLayout() {
     return (
       <View className="flex-1 items-center justify-center bg-surface p-8">
         <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
-          <Text className="text-3xl">🚫</Text>
+          <Ban size={32} color={ThemeColors.danger.DEFAULT} />
         </View>
         <Text className="mb-4 text-center text-pos-lg font-semibold text-pos-text">
           Account Inactive

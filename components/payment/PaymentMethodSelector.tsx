@@ -15,7 +15,7 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
 }: PaymentMethodSelectorProps) {
   return (
     <View className="flex-row gap-1.5">
-      {PAYMENT_METHODS.map(({ method, label, emoji, color }) => {
+      {PAYMENT_METHODS.map(({ method, label, icon: Icon, color }) => {
         const isSelected = selected === method;
         return (
           <Pressable
@@ -29,7 +29,7 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Text style={{ fontSize: 15 }}>{emoji}</Text>
+            <Icon size={20} color={color} />
             <Text
               className={`mt-0.5 text-[10px] font-bold ${isSelected ? '' : 'text-pos-text-muted'}`}
               style={isSelected ? { color } : undefined}

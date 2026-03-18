@@ -1,5 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { Delete } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 
 import { formatIDR } from '@/utils/currency';
 
@@ -114,12 +116,10 @@ export const CashPayment = memo(function CashPayment({
                 }`}
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <Text
-                  className={`font-semibold ${isBackspace ? 'text-pos-danger' : 'text-pos-text'}`}
-                  style={{ fontSize: 18 }}
-                >
-                  {key}
-                </Text>
+                {isBackspace
+                  ? <Delete size={20} color={ThemeColors.danger.DEFAULT} />
+                  : <Text className="font-semibold text-pos-text" style={{ fontSize: 18 }}>{key}</Text>
+                }
               </Pressable>
             );
           })}

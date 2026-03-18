@@ -1,5 +1,7 @@
 import { useQuery } from '@powersync/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ChevronLeft, Receipt, ShoppingBag, Tag, X } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 import { toInt } from '@/utils/coerce';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -335,9 +337,10 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
     );
   }
 
+  const isTakeaway = order.order_type === 'takeaway';
   const tableLabel =
-    order.order_type === 'takeaway'
-      ? 'Takeaway 🛍️'
+    isTakeaway
+      ? null
       : order.table_number
       ? `Table ${order.table_number}`
       : 'Order';
@@ -357,13 +360,21 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
             className="rounded border border-border bg-surface-raised px-2.5 py-1.5"
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
-            <Text className="text-pos-sm text-pos-text-muted">← Back</Text>
+            <View className="flex-row items-center gap-1">
+              <ChevronLeft size={14} color={ThemeColors.text.muted} />
+              <Text className="text-pos-sm text-pos-text-muted">Back</Text>
+            </View>
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text className="text-pos-base font-extrabold text-pos-text">
-              {tableLabel}
-            </Text>
+            {isTakeaway ? (
+              <View className="flex-row items-center gap-1.5">
+                <ShoppingBag size={14} color={ThemeColors.text.primary} />
+                <Text className="text-pos-base font-extrabold text-pos-text">Takeaway</Text>
+              </View>
+            ) : (
+              <Text className="text-pos-base font-extrabold text-pos-text">{tableLabel}</Text>
+            )}
             <Text className="text-pos-xs text-pos-text-faint">{order.order_number}</Text>
           </View>
 
@@ -498,7 +509,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
             {appliedDiscount ? (
               <View className="flex-row items-center gap-2 rounded-lg border border-pos-success/30 bg-pos-success/10 p-2.5">
-                <Text style={{ fontSize: 16 }}>🏷️</Text>
+                <Tag size={16} color={ThemeColors.success.DEFAULT} />
                 <View className="flex-1">
                   <Text className="text-pos-xs font-bold text-pos-success">
                     {appliedDiscount.discount_name}
@@ -512,7 +523,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
                   hitSlop={8}
                   style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
                 >
-                  <Text className="text-pos-sm font-bold text-pos-danger">✕</Text>
+                  <X size={14} color={ThemeColors.danger.DEFAULT} />
                 </Pressable>
               </View>
             ) : (
@@ -618,7 +629,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
                 >
                   Complete &amp; Print Receipt
                 </Text>
-                <Text style={{ fontSize: 18 }}>🧾</Text>
+                <Receipt size={18} color={ThemeColors.text.primary} />
               </>
             )}
           </Pressable>

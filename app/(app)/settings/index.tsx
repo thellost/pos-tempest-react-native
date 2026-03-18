@@ -1,5 +1,7 @@
 import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
-import { Brand } from '@/constants/theme';
+import { Brand, ThemeColors } from '@/constants/theme';
+import { ChefHat, Moon, Receipt, Sun } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import type { Device } from '@/db/models';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/hooks/use-auth';
@@ -203,7 +205,7 @@ export default function SettingsScreen() {
   const renderPrinterSection = (
     type: PrinterType,
     label: string,
-    icon: string,
+    icon: LucideIcon,
     address: string | null,
     name: string | null,
   ) => {
@@ -213,7 +215,7 @@ export default function SettingsScreen() {
     return (
       <View key={type} className="mb-4 rounded-xl bg-surface-card p-4">
         <View className="mb-3 flex-row items-center gap-2">
-          <Text className="text-pos-base">{icon}</Text>
+          {(() => { const Icon = icon; return <Icon size={18} color={ThemeColors.text.muted} />; })()}
           <Text className="text-pos-sm font-semibold text-pos-text">{label}</Text>
         </View>
 
@@ -446,9 +448,10 @@ export default function SettingsScreen() {
                   }`}
                   onPress={() => setColorScheme(scheme)}
                 >
-                  <Text className="text-pos-base">
-                    {scheme === 'dark' ? '🌙' : '☀️'}
-                  </Text>
+                  {scheme === 'dark'
+                    ? <Moon size={18} color={active ? '#fff' : ThemeColors.text.primary} />
+                    : <Sun size={18} color={active ? '#fff' : ThemeColors.text.primary} />
+                  }
                   <Text
                     className={`text-pos-sm font-semibold capitalize ${
                       active ? 'text-white' : 'text-pos-text'
@@ -567,7 +570,7 @@ export default function SettingsScreen() {
             {renderPrinterSection(
               'kitchen',
               'Kitchen Printer',
-              '🍳',
+              ChefHat,
               kitchenPrinter?.address ?? null,
               kitchenPrinter?.name ?? null,
             )}
@@ -576,7 +579,7 @@ export default function SettingsScreen() {
             {renderPrinterSection(
               'cashier',
               'Cashier / Receipt Printer',
-              '🧾',
+              Receipt,
               cashierPrinter?.address ?? null,
               cashierPrinter?.name ?? null,
             )}

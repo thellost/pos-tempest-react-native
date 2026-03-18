@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, CalendarDays, CheckCircle, Star, X, XCircle } from 'lucide-react-native';
+import { ThemeColors } from '@/constants/theme';
 import {
     ActivityIndicator,
     Alert,
@@ -216,7 +218,7 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
               onPress={onClose}
               className="h-10 w-10 items-center justify-center rounded-full bg-surface-raised active:bg-surface"
             >
-              <Text className="text-pos-lg text-pos-text-muted">✕</Text>
+              <X size={18} color={ThemeColors.text.muted} />
             </Pressable>
           </View>
 
@@ -239,7 +241,7 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
 
               {tableReservations.length === 0 ? (
                 <View className="items-center py-10">
-                  <Text className="text-4xl">📅</Text>
+                  <CalendarDays size={36} color={ThemeColors.text.muted} />
                   <Text className="mt-3 text-pos-base text-pos-text-muted">
                     No reservations for this table
                   </Text>
@@ -303,25 +305,28 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.SEATED)}
                           className="flex-1 items-center rounded-xl bg-status-available/20 py-2.5 active:bg-status-available/30"
                         >
-                          <Text className="text-pos-sm font-semibold text-status-available">
-                            ✅ Seated
-                          </Text>
+                          <View className="flex-row items-center gap-1.5">
+                            <CheckCircle size={14} color={ThemeColors.success.DEFAULT} />
+                            <Text className="text-pos-sm font-semibold text-status-available">Seated</Text>
+                          </View>
                         </Pressable>
                         <Pressable
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.NO_SHOW)}
                           className="flex-1 items-center rounded-xl bg-pos-warning/20 py-2.5 active:bg-pos-warning/30"
                         >
-                          <Text className="text-pos-sm font-semibold text-pos-warning">
-                            🚫 No Show
-                          </Text>
+                          <View className="flex-row items-center gap-1.5">
+                            <XCircle size={14} color={ThemeColors.warning.DEFAULT} />
+                            <Text className="text-pos-sm font-semibold text-pos-warning">No Show</Text>
+                          </View>
                         </Pressable>
                         <Pressable
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.CANCELLED)}
                           className="flex-1 items-center rounded-xl bg-pos-danger/20 py-2.5 active:bg-pos-danger/30"
                         >
-                          <Text className="text-pos-sm font-semibold text-pos-danger">
-                            ✕ Cancel
-                          </Text>
+                          <View className="flex-row items-center gap-1.5">
+                            <X size={14} color={ThemeColors.danger.DEFAULT} />
+                            <Text className="text-pos-sm font-semibold text-pos-danger">Cancel</Text>
+                          </View>
                         </Pressable>
                       </View>
                     )}
@@ -349,7 +354,7 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                   onPress={() => setView('list')}
                   className="h-9 w-9 items-center justify-center rounded-full bg-surface-raised"
                 >
-                  <Text className="text-pos-base text-pos-text">←</Text>
+                  <ArrowLeft size={18} color={ThemeColors.text.primary} />
                 </Pressable>
                 <Text className="text-pos-lg font-bold text-pos-text">New Reservation</Text>
               </View>
@@ -388,7 +393,10 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                           <Text className="text-pos-xs text-pos-text-muted">{c.phone}</Text>
                         ) : null}
                         {c.loyalty_points > 0 ? (
-                          <Text className="text-pos-xs text-brand">⭐ {c.loyalty_points} pts</Text>
+                          <View className="flex-row items-center gap-0.5">
+                            <Star size={10} color={ThemeColors.accent.primary} />
+                            <Text className="text-pos-xs text-brand">{c.loyalty_points} pts</Text>
+                          </View>
                         ) : null}
                       </Pressable>
                     ))}
@@ -404,7 +412,10 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                 )}
                 {selectedCustomerId && (
                   <View className="mt-1.5 flex-row items-center gap-2 rounded-lg bg-brand/10 px-3 py-1.5">
-                    <Text className="text-pos-xs text-brand">✓ Linked to existing customer</Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <CheckCircle size={12} color={ThemeColors.accent.primary} />
+                      <Text className="text-pos-xs text-brand">Linked to existing customer</Text>
+                    </View>
                     <Pressable onPress={() => setSelectedCustomerId(null)}>
                       <Text className="text-pos-xs text-pos-danger">(unlink)</Text>
                     </Pressable>
