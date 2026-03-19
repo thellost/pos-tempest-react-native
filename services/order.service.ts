@@ -192,29 +192,35 @@ export async function addItemToOrder(
 
   const normalizedNotes = notes?.trim() ?? '';
 
-  // Fast path: merge repeated plain taps into existing row instead of creating duplicates.
-  // We only merge when there are no modifiers and no notes to avoid losing customization intent.
-  // Also only merge if same round number
-  if (modifiers.length === 0 && normalizedNotes.length === 0) {
-    const existingItem = await powersync.getOptional<OrderItem>(
+  // Fast path: merge repeated taps into existing row instead of creating duplicates.
+  // Match by menu item, round, price, notes, and modifier total — then verify modifiers match exactly.
+  {
+    const candidates = await powersync.getAll<OrderItem>(
       `SELECT * FROM order_items
        WHERE order_id = ?
          AND menu_item_id = ?
          AND is_voided = 0
-         AND COALESCE(notes, '') = ''
-         AND modifier_total = 0
+         AND COALESCE(notes, '') = ?
+         AND modifier_total = ?
          AND unit_price = ?
          AND round_number = ?
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [orderId, menuItem.id, unitPrice, roundNumber]
+       ORDER BY created_at DESC`,
+      [orderId, menuItem.id, normalizedNotes, modifierTotal, unitPrice, roundNumber]
     );
 
-    if (existingItem) {
-      await updateItemQuantity(toInt(existingItem.id), toInt(existingItem.quantity) + quantity);
+    for (const candidate of candidates) {
+      const existingMods = await powersync.getAll<{ modifier_id: string }>(
+        `SELECT modifier_id FROM order_item_modifiers WHERE order_item_id = ? ORDER BY modifier_id`,
+        [candidate.id]
+      );
+      const incomingIds = [...modifiers.map(m => String(m.modifier_id))].sort();
+      const existingIds = existingMods.map(m => String(m.modifier_id));
 
-      console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
-      return;
+      if (incomingIds.length === existingIds.length && incomingIds.every((id, i) => id === existingIds[i])) {
+        await updateItemQuantity(toInt(candidate.id), toInt(candidate.quantity) + quantity);
+        console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
+        return;
+      }
     }
   }
 

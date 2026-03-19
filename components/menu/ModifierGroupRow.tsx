@@ -37,30 +37,30 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
             <Pressable
               key={modifier.id}
               onPress={() => onToggle(modifierId)}
-              className={`rounded-xl border px-4 py-3 ${
+              className={`rounded-xl border px-5 py-4 ${
                 isSelected
                   ? 'border-amber-500 bg-amber-500/20'
                   : 'border-border bg-surface-card'
               }`}
             >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <View
-                    className={`mr-2 h-4 w-4 items-center justify-center rounded-full ${
-                      isSelected ? 'bg-amber-500' : 'bg-surface-raised'
-                    }`}
-                  >
-                    {isSelected && <Text className="text-[10px] text-white">✓</Text>}
-                  </View>
-                  <Text className="text-pos-sm text-pos-text">
+              <View className="flex-row items-start">
+                <View
+                  className={`mr-3 mt-0.5 h-5 w-5 items-center justify-center rounded-full ${
+                    isSelected ? 'bg-amber-500' : 'bg-surface-raised'
+                  }`}
+                >
+                  {isSelected && <Text className="text-[11px] text-white">✓</Text>}
+                </View>
+                <View>
+                  <Text className="text-pos-base text-pos-text">
                     {modifier.name}
                   </Text>
+                  {modifier.extra_price > 0 && (
+                    <Text className="mt-0.5 text-pos-sm font-semibold text-pos-price">
+                      +{formatIDR(modifier.extra_price)}
+                    </Text>
+                  )}
                 </View>
-                {modifier.extra_price > 0 && (
-                  <Text className="text-pos-xs font-semibold text-pos-price">
-                    +{formatIDR(modifier.extra_price)}
-                  </Text>
-                )}
               </View>
             </Pressable>
           );

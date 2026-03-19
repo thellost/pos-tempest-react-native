@@ -233,20 +233,38 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     if (order) {
       // If order is confirmed/preparing, add to pending round items
       if (order.status === ORDER_STATUS.CONFIRMED || order.status === ORDER_STATUS.PREPARING) {
-        const newPendingItem: CartItem = {
-          id: generateLocalId(),
-          menu_item_id: toInt(item.id),
-          menu_item_name: item.name,
-          quantity: 1,
-          unit_price: basePrice,
-          modifier_total: modifierTotal,
-          total,
-          notes: notes || null,
-          modifiers,
-          weight,
-          round_number: currentRound + 1,
-        };
-        setPendingRoundItems(prev => [...prev, newPendingItem]);
+        const targetRound = currentRound + 1;
+        const normalizedNotes = notes || null;
+        const incomingModIds = modifiers.map(m => String(m.modifier_id)).sort();
+
+        setPendingRoundItems(prev => {
+          const matchIdx = prev.findIndex(p =>
+            p.menu_item_id === toInt(item.id) &&
+            p.round_number === targetRound &&
+            p.unit_price === basePrice &&
+            p.modifier_total === modifierTotal &&
+            (p.notes ?? null) === normalizedNotes &&
+            p.modifiers.map(m => String(m.modifier_id)).sort().join(',') === incomingModIds.join(',')
+          );
+          if (matchIdx !== -1) {
+            const updated = [...prev];
+            updated[matchIdx] = { ...updated[matchIdx], quantity: updated[matchIdx].quantity + 1, total: (updated[matchIdx].quantity + 1) * (basePrice + modifierTotal) };
+            return updated;
+          }
+          return [...prev, {
+            id: generateLocalId(),
+            menu_item_id: toInt(item.id),
+            menu_item_name: item.name,
+            quantity: 1,
+            unit_price: basePrice,
+            modifier_total: modifierTotal,
+            total,
+            notes: normalizedNotes,
+            modifiers,
+            weight,
+            round_number: targetRound,
+          }];
+        });
       } else {
         // Order exists but not confirmed yet - add directly to DB
         try {
@@ -279,20 +297,36 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       }
     } else {
       // No order yet - add to cart items (draft state)
-      const newCartItem: CartItem = {
-        id: generateLocalId(),
-        menu_item_id: toInt(item.id),
-        menu_item_name: item.name,
-        quantity: 1,
-        unit_price: basePrice,
-        modifier_total: modifierTotal,
-        total,
-        notes: notes || null,
-        modifiers,
-        weight,
-        round_number: 1,
-      };
-      setCartItems(prev => [...prev, newCartItem]);
+      const normalizedNotes = notes || null;
+      const incomingModIds = modifiers.map(m => String(m.modifier_id)).sort();
+
+      setCartItems(prev => {
+        const matchIdx = prev.findIndex(p =>
+          p.menu_item_id === toInt(item.id) &&
+          p.unit_price === basePrice &&
+          p.modifier_total === modifierTotal &&
+          (p.notes ?? null) === normalizedNotes &&
+          p.modifiers.map(m => String(m.modifier_id)).sort().join(',') === incomingModIds.join(',')
+        );
+        if (matchIdx !== -1) {
+          const updated = [...prev];
+          updated[matchIdx] = { ...updated[matchIdx], quantity: updated[matchIdx].quantity + 1, total: (updated[matchIdx].quantity + 1) * (basePrice + modifierTotal) };
+          return updated;
+        }
+        return [...prev, {
+          id: generateLocalId(),
+          menu_item_id: toInt(item.id),
+          menu_item_name: item.name,
+          quantity: 1,
+          unit_price: basePrice,
+          modifier_total: modifierTotal,
+          total,
+          notes: normalizedNotes,
+          modifiers,
+          weight,
+          round_number: 1,
+        }];
+      });
     }
   }, [order, user, currentRound, reload, isShiftOpen]);
 

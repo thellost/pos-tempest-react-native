@@ -1,16 +1,13 @@
 import { Colors, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { router } from 'expo-router';
 import { Eye, EyeOff, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
 export default function LoginScreen() {
-  const { 
-    isAuthenticated, 
-    isLocked, 
-    signIn, 
+  const {
+    signIn,
     loginAttempts,
     isLoginLocked,
     loginResetInMs,
@@ -39,12 +36,6 @@ export default function LoginScreen() {
       return () => clearInterval(interval);
     }
   }, [isLoginLocked, loginResetInMs]);
-
-  useEffect(() => {
-    if (isAuthenticated && !isLocked) {
-      router.replace('/(app)/floor');
-    }
-  }, [isAuthenticated, isLocked]);
 
   async function handleSignIn() {
     const trimmedEmail = email.trim();
