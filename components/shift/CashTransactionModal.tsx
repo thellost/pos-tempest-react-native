@@ -5,6 +5,7 @@ import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Button, SelectButton } from '@/components/ui';
 
 interface CashTransactionModalProps {
   visible: boolean;
@@ -109,12 +110,11 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
           {/* Type Toggle */}
           <Text className="text-pos-sm font-semibold text-pos-text">Transaction Type</Text>
           <View className="mt-2 flex-row gap-3">
-            <Pressable
-              className={`flex-1 rounded-xl border p-3 ${
-                type === CASH_TRANSACTION_TYPE.CASH_OUT
-                  ? 'border-pos-danger bg-pos-danger-muted'
-                  : 'border-border bg-surface'
-              }`}
+            <SelectButton
+              selected={type === CASH_TRANSACTION_TYPE.CASH_OUT}
+              selectedClassName="border-pos-danger bg-pos-danger-muted"
+              unselectedClassName="border-border bg-surface"
+              className="flex-1 rounded-xl p-3"
               onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_OUT)}>
               <Text
                 className={`text-center text-pos-base font-semibold ${
@@ -122,13 +122,12 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
                 }`}>
                 Cash Out
               </Text>
-            </Pressable>
-            <Pressable
-              className={`flex-1 rounded-xl border p-3 ${
-                type === CASH_TRANSACTION_TYPE.CASH_IN
-                  ? 'border-pos-success bg-pos-success-muted'
-                  : 'border-border bg-surface'
-              }`}
+            </SelectButton>
+            <SelectButton
+              selected={type === CASH_TRANSACTION_TYPE.CASH_IN}
+              selectedClassName="border-pos-success bg-pos-success-muted"
+              unselectedClassName="border-border bg-surface"
+              className="flex-1 rounded-xl p-3"
               onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_IN)}>
               <Text
                 className={`text-center text-pos-base font-semibold ${
@@ -136,24 +135,25 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
                 }`}>
                 Cash In
               </Text>
-            </Pressable>
+            </SelectButton>
           </View>
 
           {/* Reason Selector */}
           <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
             {Object.entries(REASON_LABELS).map(([key, label]) => (
-              <Pressable
+              <SelectButton
                 key={key}
-                className={`rounded-xl border px-4 py-2 ${
-                  reason === key ? 'border-accent bg-accent-muted' : 'border-border bg-surface'
-                }`}
+                selected={reason === key}
+                selectedClassName="border-accent bg-accent-muted"
+                unselectedClassName="border-border bg-surface"
+                className="rounded-xl px-4 py-2"
                 onPress={() => setReason(key as CashTransactionReason)}>
                 <Text
                   className={`text-pos-sm font-medium ${reason === key ? 'text-accent' : 'text-pos-text-muted'}`}>
                   {label}
                 </Text>
-              </Pressable>
+              </SelectButton>
             ))}
           </View>
 
@@ -209,14 +209,14 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
 
         {/* Footer Actions */}
         <View className="border-t border-border p-4 flex-row gap-3">
-          <Pressable
-            className="flex-1 rounded-xl border border-border bg-surface p-4"
+          <Button
+            className="flex-1 items-center justify-center rounded-xl border border-border bg-surface p-4"
             disabled={submitting}
             onPress={handleClose}>
             <Text className="text-center text-pos-base font-semibold text-pos-text-muted">Cancel</Text>
-          </Pressable>
-          <Pressable
-            className={`flex-1 rounded-xl p-4 ${
+          </Button>
+          <Button
+            className={`flex-1 items-center justify-center rounded-xl p-4 ${
               canSubmit
                 ? type === CASH_TRANSACTION_TYPE.CASH_OUT
                   ? 'bg-pos-danger'
@@ -231,7 +231,7 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
               }`}>
               {submitting ? 'Processing...' : 'Record Transaction'}
             </Text>
-          </Pressable>
+          </Button>
         </View>
       </View>
     </View>

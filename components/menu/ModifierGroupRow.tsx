@@ -1,8 +1,9 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { ModifierGroupWithModifiers } from '@/hooks/use-menu';
 import { formatIDR } from '@/utils/currency';
 import { toInt } from '@/utils/coerce';
+import { SelectButton } from '@/components/ui';
 
 interface ModifierGroupRowProps {
   group: ModifierGroupWithModifiers;
@@ -34,14 +35,13 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
           const isSelected = selectedModifierIds.has(modifierId);
 
           return (
-            <Pressable
+            <SelectButton
               key={modifier.id}
               onPress={() => onToggle(modifierId)}
-              className={`rounded-xl border px-5 py-4 ${
-                isSelected
-                  ? 'border-amber-500 bg-amber-500/20'
-                  : 'border-border bg-surface-card'
-              }`}
+              selected={isSelected}
+              selectedClassName="border-amber-500 bg-amber-500/20"
+              unselectedClassName="border-border bg-surface-card"
+              className="px-5 py-4"
             >
               <View className="flex-row items-start">
                 <View
@@ -62,7 +62,7 @@ export function ModifierGroupRow({ group, selectedModifierIds, onToggle }: Modif
                   )}
                 </View>
               </View>
-            </Pressable>
+            </SelectButton>
           );
         })}
       </View>

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 import { Armchair, MapPin, ShoppingBag } from 'lucide-react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
@@ -147,39 +148,39 @@ export default function FloorScreen() {
       <View className="border-b border-border bg-surface-card px-5 py-5">
         <View className="flex-row items-center justify-between">
           <Text className="text-pos-2xl font-bold text-pos-text">Tables & Orders</Text>
-          <Pressable
+          <Button
             onPress={handleTakeawayPress}
-            className="flex-row items-center rounded-lg bg-amber-500 px-5 py-3 active:bg-amber-600"
+            className="flex-row items-center rounded-lg bg-amber-500 px-5 py-3"
           >
             <ShoppingBag size={18} color="white" />
             <Text className="ml-2 text-pos-base font-bold text-white">Takeaway</Text>
-          </Pressable>
+          </Button>
         </View>
         <View className="mt-4 flex-row items-center gap-3">
-          <View className="w-28 rounded-lg bg-status-available-muted px-4 py-2">
+          <View className="w-28 rounded-lg bg-status-available-muted px-4 py-2 items-center">
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-available" />
               <Text className="text-pos-xs text-pos-text-muted">Available</Text>
             </View>
-            <Text className="text-pos-xl font-bold text-status-available">{availableTablesCount}</Text>
+            <Text className="text-pos-xl font-bold text-status-available text-center">{availableTablesCount}</Text>
           </View>
-          <View className="w-28 rounded-lg bg-status-occupied-muted px-4 py-2">
+          <View className="w-28 rounded-lg bg-status-occupied-muted px-4 py-2 items-center">
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-occupied" />
               <Text className="text-pos-xs text-pos-text-muted">Occupied</Text>
             </View>
-            <Text className="text-pos-xl font-bold text-status-occupied">{occupiedTablesCount}</Text>
+            <Text className="text-pos-xl font-bold text-status-occupied text-center">{occupiedTablesCount}</Text>
           </View>
-          <View className="w-28 rounded-lg bg-status-reserved-muted px-4 py-2">
+          <View className="w-28 rounded-lg bg-status-reserved-muted px-4 py-2 items-center">
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-reserved" />
               <Text className="text-pos-xs text-pos-text-muted">Reserved</Text>
             </View>
-            <Text className="text-pos-xl font-bold text-status-reserved">{reservedTablesCount}</Text>
+            <Text className="text-pos-xl font-bold text-status-reserved text-center">{reservedTablesCount}</Text>
           </View>
-          <View className="w-28 rounded-lg bg-surface-raised px-4 py-2">
+          <View className="w-28 rounded-lg bg-surface-raised px-4 py-2 items-center">
             <Text className="text-pos-xs text-pos-text-muted">Total</Text>
-            <Text className="text-pos-xl font-bold text-pos-text">{totalTablesCount}</Text>
+            <Text className="text-pos-xl font-bold text-pos-text text-center">{totalTablesCount}</Text>
           </View>
         </View>
       </View>
@@ -204,12 +205,12 @@ export default function FloorScreen() {
                 <ShoppingBag size={32} color={ThemeColors.text.muted} />
               </View>
               <Text className="text-pos-base text-pos-text-muted">No active takeaway orders</Text>
-              <Pressable
+              <Button
                 onPress={handleTakeawayPress}
-                className="mt-4 rounded-lg bg-amber-500 px-6 py-3 active:bg-amber-600"
+                className="mt-4 rounded-lg bg-amber-500 px-6 py-3"
               >
                 <Text className="text-pos-base font-bold text-white">Create Takeaway Order</Text>
-              </Pressable>
+              </Button>
             </View>
           ) : (
             <View className="flex-row flex-wrap gap-4">

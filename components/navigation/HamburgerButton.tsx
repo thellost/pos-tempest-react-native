@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { IconButton } from '@/components/ui';
 
 interface HamburgerButtonProps {
   onPress: () => void;
@@ -10,14 +11,15 @@ interface HamburgerButtonProps {
  */
 export function HamburgerButton({ onPress }: HamburgerButtonProps) {
   return (
-    <Pressable
+    <IconButton
       onPress={onPress}
-      className="h-10 w-10 items-center justify-center rounded-lg bg-surface-raised active:bg-surface-elevated"
+      size="lg"
+      className="bg-surface-raised active:bg-surface-elevated"
       hitSlop={8}
     >
       <View className="h-0.5 w-5 rounded-full bg-pos-text-muted" />
       <View className="mt-1 h-0.5 w-5 rounded-full bg-pos-text-muted" />
       <View className="mt-1 h-0.5 w-5 rounded-full bg-pos-text-muted" />
-    </Pressable>
+    </IconButton>
   );
 }

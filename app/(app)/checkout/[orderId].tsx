@@ -8,12 +8,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Pressable,
     ScrollView,
     Text,
     TextInput,
     View,
 } from 'react-native';
+import { Button, IconButton, PrimaryButton } from '@/components/ui';
 
 import { CashPayment } from '@/components/payment/CashPayment';
 import { DiscountSelector } from '@/components/payment/DiscountSelector';
@@ -355,16 +355,15 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
         {/* Header */}
         <View className="flex-row items-center gap-3 border-b border-border bg-surface-card px-4 py-3">
-          <Pressable
+          <Button
             onPress={() => router.back()}
             className="rounded border border-border bg-surface-raised px-2.5 py-1.5"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <View className="flex-row items-center gap-1">
               <ChevronLeft size={14} color={ThemeColors.text.muted} />
               <Text className="text-pos-sm text-pos-text-muted">Back</Text>
             </View>
-          </Pressable>
+          </Button>
 
           <View style={{ flex: 1 }}>
             {isTakeaway ? (
@@ -496,15 +495,14 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
           <SectionCard>
             <View className="mb-2.5 flex-row items-center justify-between">
               <Text className="text-[11px] font-bold tracking-widest text-pos-text-faint">DISCOUNT</Text>
-              <Pressable
+              <Button
                 onPress={handleOpenDiscountPicker}
                 className="rounded border border-accent/30 bg-accent/10 px-2.5 py-1"
-                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
                 <Text className="text-[11px] font-bold text-accent-hover">
                   {appliedDiscount ? 'Change' : '+ Apply'}
                 </Text>
-              </Pressable>
+              </Button>
             </View>
 
             {appliedDiscount ? (
@@ -518,13 +516,14 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
                     −{formatIDR(appliedDiscount.applied_amount)}
                   </Text>
                 </View>
-                <Pressable
+                <IconButton
                   onPress={handleRemoveDiscount}
+                  size="sm"
                   hitSlop={8}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+                  className="bg-transparent"
                 >
                   <X size={14} color={ThemeColors.danger.DEFAULT} />
-                </Pressable>
+                </IconButton>
               </View>
             ) : (
               <Text className="text-pos-xs italic text-pos-text-muted">No discount applied</Text>
@@ -560,17 +559,15 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
               />
             )}
 
-            <Pressable
+            <PrimaryButton
               onPress={handleAddPayment}
-              className="mt-3 h-11 items-center justify-center rounded-lg bg-accent"
-              style={({ pressed }) => ({
-                opacity: (isCash && !cashInput) ? 0.5 : pressed ? 0.8 : 1,
-              })}
+              disabled={isCash && !cashInput}
+              className="mt-3 h-11 rounded-lg"
             >
               <Text className="text-pos-sm font-extrabold text-white">
                 + Add Payment
               </Text>
-            </Pressable>
+            </PrimaryButton>
           </SectionCard>
 
           {/* Pending payments list */}
@@ -611,13 +608,12 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
             </View>
           )}
 
-          <Pressable
+          <Button
             onPress={handleComplete}
             disabled={!canComplete}
             className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
               canComplete ? 'bg-accent' : 'bg-accent/40'
             }`}
-            style={({ pressed }) => ({ opacity: pressed && canComplete ? 0.8 : 1 })}
           >
             {isProcessing ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
@@ -632,7 +628,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
                 <Receipt size={18} color={ThemeColors.text.primary} />
               </>
             )}
-          </Pressable>
+          </Button>
         </View>
       </View>
 

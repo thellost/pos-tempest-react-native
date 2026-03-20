@@ -13,6 +13,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 
 import type { ReservationStatus } from '@/constants/enums';
 import { RESERVATION_STATUS } from '@/constants/enums';
@@ -214,12 +215,13 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                 Capacity: {table.capacity} · {table.floor_area_name}
               </Text>
             </View>
-            <Pressable
+            <IconButton
+              size="lg"
               onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full bg-surface-raised active:bg-surface"
+              className="rounded-full bg-surface-raised"
             >
               <X size={18} color={ThemeColors.text.muted} />
-            </Pressable>
+            </IconButton>
           </View>
 
           {view === 'list' ? (
@@ -231,12 +233,12 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                     ? 'No active reservations'
                     : `${tableReservations.length} reservation${tableReservations.length > 1 ? 's' : ''}`}
                 </Text>
-                <Pressable
+                <Button
                   onPress={() => setView('create')}
-                  className="flex-row items-center rounded-xl bg-brand px-4 py-2.5 active:bg-brand-hover"
+                  className="flex-row items-center justify-center rounded-xl bg-brand px-4 py-2.5"
                 >
                   <Text className="text-pos-sm font-bold text-white">+ New Reservation</Text>
-                </Pressable>
+                </Button>
               </View>
 
               {tableReservations.length === 0 ? (
@@ -245,14 +247,14 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                   <Text className="mt-3 text-pos-base text-pos-text-muted">
                     No reservations for this table
                   </Text>
-                  <Pressable
+                  <Button
                     onPress={() => setView('create')}
-                    className="mt-4 rounded-xl bg-brand px-6 py-3 active:bg-brand-hover"
+                    className="mt-4 items-center justify-center rounded-xl bg-brand px-6 py-3"
                   >
                     <Text className="text-pos-base font-bold text-white">
                       Create Reservation
                     </Text>
-                  </Pressable>
+                  </Button>
                 </View>
               ) : (
                 tableReservations.map((res) => (
@@ -301,45 +303,45 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
                     {/* Action buttons */}
                     {res.status === RESERVATION_STATUS.CONFIRMED && (
                       <View className="mt-3 flex-row gap-2">
-                        <Pressable
+                        <Button
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.SEATED)}
-                          className="flex-1 items-center rounded-xl bg-status-available/20 py-2.5 active:bg-status-available/30"
+                          className="flex-1 items-center justify-center rounded-xl bg-status-available/20 py-2.5"
                         >
                           <View className="flex-row items-center gap-1.5">
                             <CheckCircle size={14} color={ThemeColors.success.DEFAULT} />
                             <Text className="text-pos-sm font-semibold text-status-available">Seated</Text>
                           </View>
-                        </Pressable>
-                        <Pressable
+                        </Button>
+                        <Button
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.NO_SHOW)}
-                          className="flex-1 items-center rounded-xl bg-pos-warning/20 py-2.5 active:bg-pos-warning/30"
+                          className="flex-1 items-center justify-center rounded-xl bg-pos-warning/20 py-2.5"
                         >
                           <View className="flex-row items-center gap-1.5">
                             <XCircle size={14} color={ThemeColors.warning.DEFAULT} />
                             <Text className="text-pos-sm font-semibold text-pos-warning">No Show</Text>
                           </View>
-                        </Pressable>
-                        <Pressable
+                        </Button>
+                        <Button
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.CANCELLED)}
-                          className="flex-1 items-center rounded-xl bg-pos-danger/20 py-2.5 active:bg-pos-danger/30"
+                          className="flex-1 items-center justify-center rounded-xl bg-pos-danger/20 py-2.5"
                         >
                           <View className="flex-row items-center gap-1.5">
                             <X size={14} color={ThemeColors.danger.DEFAULT} />
                             <Text className="text-pos-sm font-semibold text-pos-danger">Cancel</Text>
                           </View>
-                        </Pressable>
+                        </Button>
                       </View>
                     )}
                     {res.status === RESERVATION_STATUS.SEATED && (
                       <View className="mt-3 flex-row gap-2">
-                        <Pressable
+                        <Button
                           onPress={() => handleStatusChange(res, RESERVATION_STATUS.COMPLETED)}
-                          className="flex-1 items-center rounded-xl bg-surface-raised py-2.5 active:bg-surface"
+                          className="flex-1 items-center justify-center rounded-xl bg-surface-raised py-2.5"
                         >
                           <Text className="text-pos-sm font-semibold text-pos-text-muted">
                             Mark Completed
                           </Text>
-                        </Pressable>
+                        </Button>
                       </View>
                     )}
                   </View>
@@ -350,12 +352,13 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
             /* ── Create reservation form ── */
             <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
               <View className="mb-5 flex-row items-center gap-3">
-                <Pressable
+                <IconButton
+                  size="md"
                   onPress={() => setView('list')}
-                  className="h-9 w-9 items-center justify-center rounded-full bg-surface-raised"
+                  className="rounded-full bg-surface-raised"
                 >
                   <ArrowLeft size={18} color={ThemeColors.text.primary} />
-                </Pressable>
+                </IconButton>
                 <Text className="text-pos-lg font-bold text-pos-text">New Reservation</Text>
               </View>
 
@@ -510,17 +513,17 @@ export function ReservationModal({ visible, table, onClose }: ReservationModalPr
               </View>
 
               {/* Submit */}
-              <Pressable
+              <Button
                 onPress={handleSubmit}
                 disabled={isSubmitting}
-                className="items-center rounded-2xl bg-brand py-4 active:bg-brand-hover disabled:opacity-50"
+                className="items-center justify-center rounded-2xl bg-brand py-4"
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text className="text-pos-base font-bold text-white">Save Reservation</Text>
                 )}
-              </Pressable>
+              </Button>
             </ScrollView>
           )}
         </View>

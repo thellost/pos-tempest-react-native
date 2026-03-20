@@ -14,6 +14,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 
 import type { Customer } from '@/db/models';
 import {
@@ -176,23 +177,23 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
 
             {/* Actions */}
             <View className="flex-row gap-3">
-              <Pressable
+              <Button
                 onPress={handleClose}
-                className="flex-1 items-center rounded-2xl border border-border py-3.5 active:bg-surface-raised"
+                className="flex-1 items-center rounded-2xl border border-border py-3.5"
               >
                 <Text className="text-pos-base font-semibold text-pos-text-muted">Cancel</Text>
-              </Pressable>
-              <Pressable
+              </Button>
+              <Button
                 onPress={handleSubmit}
                 disabled={isLoading}
-                className="flex-[2] items-center rounded-2xl bg-brand py-3.5 active:bg-brand-hover disabled:opacity-50"
+                className="flex-[2] items-center rounded-2xl bg-brand py-3.5"
               >
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text className="text-pos-base font-bold text-white">Register Customer</Text>
                 )}
-              </Pressable>
+              </Button>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -247,12 +248,13 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
               </View>
             ) : null}
           </View>
-          <Pressable
+          <IconButton
+            size="lg"
             onPress={onClose}
-            className="ml-4 h-10 w-10 items-center justify-center rounded-full bg-surface-raised"
+            className="ml-4 rounded-full bg-surface-raised"
           >
             <X size={18} color={ThemeColors.text.muted} />
-          </Pressable>
+          </IconButton>
         </View>
 
         {/* Loyalty stats */}
@@ -363,12 +365,12 @@ export default function CustomersScreen() {
         <View className="border-b border-border px-5 py-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-pos-2xl font-bold text-pos-text">Customers</Text>
-            <Pressable
+            <Button
               onPress={() => setShowNewModal(true)}
-              className="flex-row items-center rounded-xl bg-brand px-4 py-2.5 active:bg-brand-hover"
+              className="flex-row items-center rounded-xl bg-brand px-4 py-2.5"
             >
               <Text className="text-pos-sm font-bold text-white">+ Register</Text>
-            </Pressable>
+            </Button>
           </View>
 
           {/* Search bar */}
@@ -484,12 +486,12 @@ export default function CustomersScreen() {
               Select a customer from the list to view their profile,{'\n'}
               order history and loyalty points.
             </Text>
-            <Pressable
+            <Button
               onPress={() => setShowNewModal(true)}
-              className="mt-6 flex-row items-center rounded-2xl bg-brand px-6 py-3.5 active:bg-brand-hover"
+              className="mt-6 flex-row items-center rounded-2xl bg-brand px-6 py-3.5"
             >
               <Text className="text-pos-base font-bold text-white">+ Register New Customer</Text>
-            </Pressable>
+            </Button>
           </View>
         )}
       </View>

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -106,33 +107,35 @@ export function OrderItemRow({
           <View className="mt-1.5 flex-row items-center justify-between">
             {!item.is_voided ? (
               <View className="flex-row items-center gap-1.5">
-                <Pressable
+                <IconButton
+                  size="sm"
                   onPress={() => onUpdateQuantity(itemId, displayQuantity - 1)}
-                  className="h-5 w-5 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                  className="bg-surface-raised"
                 >
                   <Text className="text-[11px] text-pos-text">−</Text>
-                </Pressable>
+                </IconButton>
                 <Text className="min-w-[14px] text-center text-[11px] font-semibold text-pos-text">
                   {displayQuantity}
                 </Text>
-                <Pressable
+                <IconButton
+                  size="sm"
                   onPress={() => onUpdateQuantity(itemId, displayQuantity + 1)}
-                  className="h-5 w-5 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                  className="bg-surface-raised"
                 >
                   <Text className="text-[11px] text-pos-text">+</Text>
-                </Pressable>
+                </IconButton>
               </View>
             ) : null}
 
 
             {!item.is_voided ? (
               <View className="ml-2 flex-row items-center gap-1.5">
-                <Pressable
+                <Button
                   onPress={() => onEditModifiers(itemId)}
                   className="h-6 w-6 items-center justify-center rounded-full bg-amber-500/15"
                 >
                   <MaterialIcons name="edit" size={14} color="#F59E0B" />
-                </Pressable>
+                </Button>
 
                 <Text className="text-pos-sm font-bold text-accent">
                   {formatIDR(item.total)}

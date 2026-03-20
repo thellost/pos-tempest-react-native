@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { IconButton } from '@/components/ui';
 
 import { PRICING_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
@@ -71,25 +72,27 @@ function MenuItemCardComponent({
       </Pressable>
 
       <View className="flex-row items-center justify-end gap-1.5 border-t border-border px-2 py-1.5">
-        <Pressable
+        <IconButton
+          size="sm"
           onPress={handleDecrement}
           disabled={!isAvailable || quantity <= 0}
-          className="h-6 w-6 items-center justify-center rounded-sm border border-border bg-surface-raised active:opacity-60"
+          className="border border-border bg-surface-raised"
         >
           <Text className="text-[12px] text-pos-text">−</Text>
-        </Pressable>
+        </IconButton>
 
         <Text className="w-4 text-center text-[12px] font-semibold text-pos-text">
           {quantity}
         </Text>
 
-        <Pressable
+        <IconButton
+          size="sm"
           onPress={handleAdd}
           disabled={!isAvailable}
-          className="h-6 w-6 items-center justify-center rounded-sm border border-border bg-surface-raised active:opacity-60"
+          className="border border-border bg-surface-raised"
         >
           <Text className="text-[12px] text-pos-text">+</Text>
-        </Pressable>
+        </IconButton>
       </View>
 
       {isLowStock && isAvailable && (

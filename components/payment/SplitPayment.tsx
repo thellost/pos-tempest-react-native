@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { IconButton } from '@/components/ui';
 
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_COLOR, PAYMENT_METHOD_LABEL } from '@/constants/payment';
@@ -67,13 +68,14 @@ export const SplitPayment = memo(function SplitPayment({
             </Text>
 
             {/* Remove */}
-            <Pressable
+            <IconButton
+              size="sm"
               onPress={() => onRemove(payment.id)}
               hitSlop={8}
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+              className="bg-transparent"
             >
               <Text className="text-pos-sm font-bold text-pos-danger">✕</Text>
-            </Pressable>
+            </IconButton>
           </View>
         );
       })}

@@ -5,7 +5,8 @@ import { useShift } from '@/hooks/use-shift';
 import { formatIDR } from '@/utils/currency';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -90,11 +91,11 @@ export default function CashScreen() {
           </View>
         )}
 
-        <Pressable
-          className="mt-4 rounded-xl border border-accent bg-accent-muted p-4"
+        <Button
+          className="mt-4 items-center justify-center rounded-xl border border-accent bg-accent-muted p-4"
           onPress={() => setShowCashTxModal(true)}>
           <Text className="text-center text-pos-base font-semibold text-accent">Cash In / Out</Text>
-        </Pressable>
+        </Button>
 
         <CashTransactionList transactions={cashTransactions} openingCash={activeShift.opening_cash} />
       </ScrollView>

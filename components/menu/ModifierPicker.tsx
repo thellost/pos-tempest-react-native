@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toInt } from '@/utils/coerce';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, ScrollView, Text, TextInput, View } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 import { X } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 
@@ -173,12 +174,13 @@ export function ModifierPicker({
                 {isWeightBased && ` per ${menuItem.unit_of_measure}`}
               </Text>
             </View>
-            <Pressable
+            <IconButton
+              size="lg"
               onPress={onCancel}
-              className="h-10 w-10 items-center justify-center rounded-full bg-surface-raised"
+              className="rounded-full bg-surface-raised"
             >
               <X size={18} color={ThemeColors.text.muted} />
-            </Pressable>
+            </IconButton>
           </View>
         </View>
 
@@ -238,17 +240,17 @@ export function ModifierPicker({
                 {formatIDR(calculateTotal())}
               </Text>
             </View>
-            <Pressable
+            <Button
               onPress={handleConfirm}
               disabled={!canSubmit}
-              className={`rounded-xl px-8 py-4 ${
+              className={`items-center justify-center rounded-xl px-8 py-4 ${
                 canSubmit ? 'bg-amber-500' : 'bg-surface-raised'
               }`}
             >
               <Text className={`text-pos-base font-semibold ${canSubmit ? 'text-white' : 'text-pos-text-muted'}`}>
                 {submitLabel ?? 'Add to Order'}
               </Text>
-            </Pressable>
+            </Button>
           </View>
         </View>
       </View>

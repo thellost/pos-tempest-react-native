@@ -4,7 +4,7 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { ActivityIndicator, Modal, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -16,7 +16,7 @@ import { DeviceProvider } from '@/hooks/use-device';
 import '../global.css';
 
 function ThemedApp() {
-  const { themeVars } = useAppTheme();
+  const { themeVars, isThemeChanging } = useAppTheme();
 
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
@@ -26,6 +26,11 @@ function ThemedApp() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* themeVars applies CSS custom properties to all children */}
       <View style={[{ flex: 1 }, themeVars]}>
+        <Modal visible={isThemeChanging} transparent animationType="none" statusBarTranslucent>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          </View>
+        </Modal>
         <PowerSyncProvider>
           <AuthProvider>
             <DeviceProvider>

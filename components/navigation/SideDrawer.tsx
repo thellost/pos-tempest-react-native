@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 import { router, usePathname } from 'expo-router';
 import {
@@ -315,12 +316,12 @@ export function SideDrawer({
           </Pressable>
 
           {/* Sign out */}
-          <Pressable
+          <Button
             onPress={() => {
               onClose();
               setTimeout(onSignOut, 80);
             }}
-            className="flex-row items-center rounded-lg bg-pos-danger-muted px-3 py-3 active:opacity-70"
+            className="flex-row items-center rounded-lg bg-pos-danger-muted px-3 py-3"
           >
             <View className="mr-3">
               <LogOut size={18} color={ThemeColors.danger.DEFAULT} />
@@ -328,7 +329,7 @@ export function SideDrawer({
             <Text className="text-pos-sm font-semibold text-pos-danger">
               Sign Out
             </Text>
-          </Pressable>
+          </Button>
         </View>
       </Animated.View>
     </View>

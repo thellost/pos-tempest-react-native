@@ -24,6 +24,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "babel-preset-expo": "^54.0.10",
     "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.8",

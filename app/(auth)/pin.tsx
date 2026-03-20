@@ -4,6 +4,7 @@ import { Redirect, router } from 'expo-router';
 import { Delete, Lock } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 export default function PinScreen() {
   const { 
@@ -246,14 +247,14 @@ export default function PinScreen() {
           })}
         </View>
 
-        <Pressable
-          className="mt-4 rounded-xl border border-border bg-surface-card p-4"
+        <Button
+          className="mt-4 items-center justify-center rounded-xl border border-border bg-surface-card p-4"
           onPress={onSignOut}
           disabled={loading}>
           <Text className="text-center text-pos-sm text-pos-text-muted">
             Sign out and use different account
           </Text>
-        </Pressable>
+        </Button>
 
         <Text className="mt-4 text-center text-pos-xs text-pos-text-faint">
           PIN is validated securely without sending over network

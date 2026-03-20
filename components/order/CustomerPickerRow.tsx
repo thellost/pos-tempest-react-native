@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 
 import { useCustomers } from '@/hooks/use-customers';
 
@@ -91,24 +92,25 @@ export function CustomerPickerRow({
                 <Text className="text-[10px] text-brand">{assignedCustomer.loyalty_points}</Text>
               </View>
             ) : null}
-            <Pressable
+            <IconButton
+              size="sm"
               onPress={onClear}
               disabled={disabled}
-              className="ml-1 h-5 w-5 items-center justify-center rounded-full bg-brand/20 active:bg-brand/40"
+              className="ml-1 rounded-full bg-brand/20"
             >
               <X size={10} color={ThemeColors.accent.primary} />
-            </Pressable>
+            </IconButton>
           </View>
         ) : (
           /* No customer — show add button */
-          <Pressable
+          <Button
             onPress={open}
             disabled={disabled}
-            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 active:bg-surface-raised disabled:opacity-40"
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2"
           >
             <UserPlus size={14} color={ThemeColors.text.muted} />
             <Text className="text-pos-xs text-pos-text-muted">Add Customer</Text>
-          </Pressable>
+          </Button>
         )}
       </View>
 
@@ -126,12 +128,13 @@ export function CustomerPickerRow({
             {/* Modal header */}
             <View className="flex-row items-center justify-between border-b border-border px-4 py-3.5">
               <Text className="text-pos-base font-bold text-pos-text">Assign Customer</Text>
-              <Pressable
+              <IconButton
+                size="sm"
                 onPress={close}
-                className="h-7 w-7 items-center justify-center rounded-full bg-surface-raised"
+                className="rounded-full bg-surface-raised"
               >
                 <X size={14} color={ThemeColors.text.muted} />
-              </Pressable>
+              </IconButton>
             </View>
 
             {/* Search input */}

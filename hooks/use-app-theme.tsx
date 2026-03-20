@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { vars } from 'nativewind';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 export type ColorScheme = 'dark' | 'light';
 
@@ -48,6 +48,7 @@ interface ThemeContextValue {
   colorScheme: ColorScheme;
   themeVars: ReturnType<typeof vars>;
   isDark: boolean;
+  isThemeChanging: boolean;
   setColorScheme: (scheme: ColorScheme) => void;
   toggleColorScheme: () => void;
 }
@@ -58,6 +59,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>('dark');
+  const [isThemeChanging, setIsThemeChanging] = useState(false);
+  const changingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restore persisted preference on mount
   useEffect(() => {
@@ -69,8 +72,17 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setColorScheme = useCallback((scheme: ColorScheme) => {
-    setColorSchemeState(scheme);
-    AsyncStorage.setItem(STORAGE_KEY, scheme);
+    if (changingTimerRef.current) clearTimeout(changingTimerRef.current);
+    // Show spinner first, then change theme in the next frame so the
+    // spinner gets a chance to paint before the heavy re-render begins.
+    setIsThemeChanging(true);
+    setTimeout(() => {
+      setColorSchemeState(scheme);
+      AsyncStorage.setItem(STORAGE_KEY, scheme);
+      changingTimerRef.current = setTimeout(() => {
+        setIsThemeChanging(false);
+      }, 800);
+    }, 50);
   }, []);
 
   const toggleColorScheme = useCallback(() => {
@@ -83,6 +95,7 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
         colorScheme,
         themeVars: colorScheme === 'dark' ? darkVars : lightVars,
         isDark: colorScheme === 'dark',
+        isThemeChanging,
         setColorScheme,
         toggleColorScheme,
       }}

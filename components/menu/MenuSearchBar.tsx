@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import { IconButton } from '@/components/ui';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -39,9 +40,9 @@ export function MenuSearchBar({
         clearButtonMode="never"
       />
       {value.length > 0 && (
-        <Pressable onPress={handleClear} hitSlop={8}>
+        <IconButton size="sm" onPress={handleClear} hitSlop={8} className="bg-transparent">
           <MaterialIcons name="cancel" size={18} color="#64748B" />
-        </Pressable>
+        </IconButton>
       )}
     </View>
   );

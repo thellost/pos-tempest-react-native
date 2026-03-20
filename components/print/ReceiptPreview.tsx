@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 import type { BillData } from '@/services/receipt.service';
 import { formatIDR } from '@/utils/currency';
@@ -81,12 +82,12 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
                 {isReceipt ? 'Receipt' : 'Bill Preview'}
               </Text>
             </View>
-            <Pressable
+            <Button
               onPress={onDismiss}
-              className="rounded-lg bg-surface-raised px-4 py-1.5 active:opacity-60"
+              className="rounded-lg bg-surface-raised px-4 py-1.5"
             >
               <Text className="text-pos-sm font-semibold text-pos-text-muted">Dismiss</Text>
-            </Pressable>
+            </Button>
           </View>
 
           {/* ── Thermal paper body ── */}

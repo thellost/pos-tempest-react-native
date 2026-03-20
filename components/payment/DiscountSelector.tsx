@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 import { DISCOUNT_TYPE } from '@/constants/enums';
 import { Brand, ThemeColors } from '@/constants/theme';
@@ -68,13 +69,12 @@ export const DiscountSelector = memo(function DiscountSelector({
               <Tag size={16} color={ThemeColors.text.primary} />
               <Text className="text-pos-base font-bold text-pos-text">Select Discount</Text>
             </View>
-            <Pressable
+            <Button
               onPress={onClose}
               className="rounded border border-border bg-surface-raised px-3 py-1.5"
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
               <Text className="text-pos-xs font-semibold text-pos-text-muted">Close</Text>
-            </Pressable>
+            </Button>
           </View>
 
           {/* Body */}

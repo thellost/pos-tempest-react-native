@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 import { Redirect, Stack, usePathname } from 'expo-router';
 
@@ -59,20 +60,20 @@ export default function AppLayout() {
         <Text className="mb-6 text-center text-pos-sm text-pos-text-muted">
           Unable to load user profile. This may happen if the device has no internet connection on first launch. Please check your connection and try again.
         </Text>
-        <Pressable
+        <Button
           className="mb-3 w-full rounded-xl bg-brand px-6 py-3"
           onPress={() => {
             refreshProfile().catch(() => {});
           }}>
           <Text className="text-center text-pos-base font-semibold text-white">Retry</Text>
-        </Pressable>
-        <Pressable
+        </Button>
+        <Button
           className="w-full rounded-xl border border-border bg-surface-card px-6 py-3"
           onPress={async () => {
             await signOut();
           }}>
           <Text className="text-center text-pos-base font-semibold text-pos-text">Sign Out</Text>
-        </Pressable>
+        </Button>
       </View>
     );
   }
@@ -89,13 +90,13 @@ export default function AppLayout() {
         <Text className="mb-6 text-center text-pos-sm text-pos-text-muted">
           Your account has been deactivated. Please contact your administrator.
         </Text>
-        <Pressable
+        <Button
           className="rounded-xl border border-border bg-surface-card px-6 py-3"
           onPress={async () => {
             await signOut();
           }}>
           <Text className="text-pos-base font-semibold text-pos-text">Sign Out</Text>
-        </Pressable>
+        </Button>
       </View>
     );
   }

@@ -19,12 +19,12 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
-    Pressable,
     ScrollView,
     Text,
     TextInput,
     View,
 } from 'react-native';
+import { Button, SelectButton } from '@/components/ui';
 
 export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useAppTheme();
@@ -248,14 +248,14 @@ export default function SettingsScreen() {
               />
             </View>
             <View className="flex-row gap-2">
-              <Pressable
-                className="flex-1 rounded-xl bg-brand py-2.5"
+              <Button
+                className="flex-1 items-center justify-center rounded-xl bg-brand py-2.5"
                 onPress={handleSavePrinter}
               >
                 <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 rounded-xl border border-border bg-surface py-2.5"
+              </Button>
+              <Button
+                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2.5"
                 onPress={() => {
                   setEditingPrinterType(null);
                   setPrinterAddress('');
@@ -263,7 +263,7 @@ export default function SettingsScreen() {
                 }}
               >
                 <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
-              </Pressable>
+              </Button>
             </View>
           </View>
         ) : address ? (
@@ -276,8 +276,8 @@ export default function SettingsScreen() {
               ) : null}
             </View>
             <View className="flex-row gap-2">
-              <Pressable
-                className="flex-1 rounded-xl border border-border bg-surface py-2"
+              <Button
+                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2"
                 onPress={() => {
                   setEditingPrinterType(type);
                   setPrinterAddress(address);
@@ -285,9 +285,9 @@ export default function SettingsScreen() {
                 }}
               >
                 <Text className="text-center text-pos-xs text-pos-text">Edit</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 rounded-xl border border-border bg-surface py-2"
+              </Button>
+              <Button
+                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2"
                 onPress={() => handleTestPrint(type)}
                 disabled={isTesting}
               >
@@ -296,20 +296,20 @@ export default function SettingsScreen() {
                 ) : (
                   <Text className="text-center text-pos-xs text-pos-text">Test Print</Text>
                 )}
-              </Pressable>
-              <Pressable
-                className="flex-1 rounded-xl border border-pos-danger/30 bg-pos-danger-muted py-2"
+              </Button>
+              <Button
+                className="flex-1 items-center justify-center rounded-xl border border-pos-danger/30 bg-pos-danger-muted py-2"
                 onPress={() => handleClearPrinter(type)}
               >
                 <Text className="text-center text-pos-xs text-pos-danger">Remove</Text>
-              </Pressable>
+              </Button>
             </View>
           </>
         ) : (
           <View className="flex-row items-center justify-between">
             <Text className="text-pos-sm text-pos-muted">Not configured</Text>
-            <Pressable
-              className="rounded-xl border border-brand bg-brand-muted px-4 py-2"
+            <Button
+              className="items-center justify-center rounded-xl border border-brand bg-brand-muted px-4 py-2"
               onPress={() => {
                 setEditingPrinterType(type);
                 setPrinterAddress('');
@@ -317,7 +317,7 @@ export default function SettingsScreen() {
               }}
             >
               <Text className="text-pos-xs font-semibold text-brand">+ Add Printer</Text>
-            </Pressable>
+            </Button>
           </View>
         )}
       </View>
@@ -347,21 +347,21 @@ export default function SettingsScreen() {
               autoFocus
             />
             <View className="flex-row gap-2">
-              <Pressable
-                className="flex-1 rounded-xl bg-accent p-3"
+              <Button
+                className="flex-1 items-center justify-center rounded-xl bg-accent p-3"
                 onPress={() => handleRenameDevice(item)}
               >
                 <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
-              </Pressable>
-              <Pressable
-                className="flex-1 rounded-xl border border-border bg-surface p-3"
+              </Button>
+              <Button
+                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface p-3"
                 onPress={() => {
                   setEditingDeviceId(null);
                   setEditingName('');
                 }}
               >
                 <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
-              </Pressable>
+              </Button>
             </View>
           </View>
         ) : (
@@ -394,30 +394,30 @@ export default function SettingsScreen() {
             
             {canManageDevices && (
               <View className="mt-3 flex-row gap-2">
-                <Pressable
-                  className="rounded-lg border border-border bg-surface px-3 py-1.5"
+                <Button
+                  className="items-center justify-center rounded-lg border border-border bg-surface px-3 py-1.5"
                   onPress={() => {
                     setEditingDeviceId(item.id);
                     setEditingName(item.device_name);
                   }}
                 >
                   <Text className="text-pos-xs text-pos-text">Rename</Text>
-                </Pressable>
-                
+                </Button>
+
                 {item.status === DEVICE_STATUS.ACTIVE ? (
-                  <Pressable
-                    className="rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-3 py-1.5"
+                  <Button
+                    className="items-center justify-center rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-3 py-1.5"
                     onPress={() => handleDeactivateDevice(item)}
                   >
                     <Text className="text-pos-xs text-pos-danger">Deactivate</Text>
-                  </Pressable>
+                  </Button>
                 ) : (
-                  <Pressable
-                    className="rounded-lg border border-pos-success/20 bg-pos-success-muted px-3 py-1.5"
+                  <Button
+                    className="items-center justify-center rounded-lg border border-pos-success/20 bg-pos-success-muted px-3 py-1.5"
                     onPress={() => handleReactivateDevice(item)}
                   >
                     <Text className="text-pos-xs text-pos-success">Reactivate</Text>
-                  </Pressable>
+                  </Button>
                 )}
               </View>
             )}
@@ -441,11 +441,12 @@ export default function SettingsScreen() {
             {(['dark', 'light'] as const).map((scheme) => {
               const active = colorScheme === scheme;
               return (
-                <Pressable
+                <SelectButton
                   key={scheme}
-                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border py-3 ${
-                    active ? 'border-brand bg-brand' : 'border-border bg-surface'
-                  }`}
+                  selected={active}
+                  selectedClassName="border-brand bg-brand"
+                  unselectedClassName="border-border bg-surface"
+                  className="flex-1 flex-row gap-2 rounded-xl py-3"
                   onPress={() => setColorScheme(scheme)}
                 >
                   {scheme === 'dark'
@@ -459,7 +460,7 @@ export default function SettingsScreen() {
                   >
                     {scheme}
                   </Text>
-                </Pressable>
+                </SelectButton>
               );
             })}
           </View>
@@ -545,13 +546,12 @@ export default function SettingsScreen() {
               </Text>
               <View className="flex-row gap-3">
                 {(['58mm', '80mm'] as const).map((w) => (
-                  <Pressable
+                  <SelectButton
                     key={w}
-                    className={`flex-1 rounded-xl border py-2.5 ${
-                      paperWidth === w
-                        ? 'border-brand bg-brand'
-                        : 'border-border bg-surface'
-                    }`}
+                    selected={paperWidth === w}
+                    selectedClassName="border-brand bg-brand"
+                    unselectedClassName="border-border bg-surface"
+                    className="flex-1 rounded-xl py-2.5"
                     onPress={() => updatePaperWidth(w)}
                   >
                     <Text
@@ -561,7 +561,7 @@ export default function SettingsScreen() {
                     >
                       {w}
                     </Text>
-                  </Pressable>
+                  </SelectButton>
                 ))}
               </View>
             </View>
@@ -592,14 +592,14 @@ export default function SettingsScreen() {
           Device Management
         </Text>
 
-        <Pressable
-          className="mb-4 rounded-xl bg-pos-danger p-4"
+        <Button
+          className="mb-4 items-center justify-center rounded-xl bg-pos-danger p-4"
           onPress={handleResetDevice}
         >
           <Text className="text-center text-pos-base font-semibold text-white">
             Reset Device Registration
           </Text>
-        </Pressable>
+        </Button>
       </View>
 
       <View className="rounded-xl bg-surface-card p-4">

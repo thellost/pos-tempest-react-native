@@ -1,5 +1,6 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Button, SelectButton } from '@/components/ui';
 import { AlertTriangle, UtensilsCrossed } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 
@@ -279,21 +280,21 @@ export const OrderPanel = memo(function OrderPanel({
           <View className="mt-3 flex-row items-center justify-between">
             <Text className="text-pos-xs text-pos-text-muted">Guests</Text>
             <View className="flex-row items-center gap-2">
-              <Pressable
+              <Button
                 onPress={handleGuestDecrease}
-                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised"
               >
                 <Text className="text-pos-sm text-pos-text">−</Text>
-              </Pressable>
+              </Button>
               <Text className="min-w-[24px] text-center text-pos-sm font-bold text-pos-text">
                 {guestCount}
               </Text>
-              <Pressable
+              <Button
                 onPress={handleGuestIncrease}
-                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised active:opacity-60"
+                className="h-7 w-7 items-center justify-center rounded-sm bg-surface-raised"
               >
                 <Text className="text-pos-sm text-pos-text">+</Text>
-              </Pressable>
+              </Button>
             </View>
           </View>
         )}
@@ -352,17 +353,20 @@ export const OrderPanel = memo(function OrderPanel({
         <View className="flex-row items-center border-t border-border bg-surface-card px-3 py-1.5">
           <Text className="mr-2 text-pos-xs text-pos-text-muted">Ticket:</Text>
           {availableRounds.map((r) => (
-            <Pressable
+            <SelectButton
               key={r}
+              selected={printRound === r}
+              selectedClassName="bg-accent"
+              unselectedClassName="bg-surface-raised"
+              className="mr-1 rounded px-2.5 py-1"
               onPress={() => setPrintRound(r)}
-              className={`mr-1 rounded px-2.5 py-1 ${printRound === r ? 'bg-accent' : 'bg-surface-raised'}`}
             >
               <Text
                 className={`text-pos-xs font-bold ${printRound === r ? 'text-white' : 'text-pos-text-muted'}`}
               >
                 R{r}
               </Text>
-            </Pressable>
+            </SelectButton>
           ))}
         </View>
       )}

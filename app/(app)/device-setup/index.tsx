@@ -7,12 +7,12 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    Pressable,
     ScrollView,
     Text,
     TextInput,
     View
 } from 'react-native';
+import { Button, SelectButton } from '@/components/ui';
 
 export default function DeviceSetupScreen() {
   const router = useRouter();
@@ -83,12 +83,12 @@ export default function DeviceSetupScreen() {
         <Text className="mb-8 text-center text-pos-sm text-pos-text-muted">
           This terminal has been deactivated. Please ask your administrator to reactivate it before use.
         </Text>
-        <Pressable
+        <Button
           className="rounded-xl bg-surface-card px-8 py-3"
           onPress={() => setInactiveDeviceName(null)}
         >
           <Text className="text-center text-pos-base font-semibold text-pos-text">Go Back</Text>
-        </Pressable>
+        </Button>
       </View>
     );
   }
@@ -147,25 +147,24 @@ export default function DeviceSetupScreen() {
               <Text className="mb-3 text-pos-sm text-pos-warning">
                 No branches found. This may happen on first launch while data is syncing. Please wait a moment and tap Refresh.
               </Text>
-              <Pressable
+              <Button
                 className="rounded-lg bg-surface-card px-4 py-2"
                 onPress={() => refresh().catch(() => {})}
               >
                 <Text className="text-center text-pos-sm font-semibold text-pos-text">
                   Refresh
                 </Text>
-              </Pressable>
+              </Button>
             </View>
           ) : (
             <View className="gap-2">
               {branches.map((branch) => (
-                <Pressable
+                <SelectButton
                   key={branch.id}
-                  className={`rounded-xl border p-4 ${
-                    selectedBranchId === branch.id
-                      ? 'border-accent bg-accent-muted'
-                      : 'border-border bg-surface-card'
-                  }`}
+                  selected={selectedBranchId === branch.id}
+                  selectedClassName="border-accent bg-accent-muted"
+                  unselectedClassName="border-border bg-surface-card"
+                  className="rounded-xl p-4"
                   onPress={() => setSelectedBranchId(branch.id)}
                 >
                   <Text
@@ -180,7 +179,7 @@ export default function DeviceSetupScreen() {
                       {branch.address}
                     </Text>
                   )}
-                </Pressable>
+                </SelectButton>
               ))}
             </View>
           )}
@@ -212,7 +211,7 @@ export default function DeviceSetupScreen() {
           </View>
         )}
 
-        <Pressable
+        <Button
           className={`rounded-xl p-4 ${
             registering || !selectedBranchId || !deviceName.trim()
               ? 'bg-accent/40'
@@ -233,7 +232,7 @@ export default function DeviceSetupScreen() {
               Register Device
             </Text>
           )}
-        </Pressable>
+        </Button>
 
         <View className="mt-8 rounded-xl bg-surface-card p-4">
           <Text className="text-pos-sm text-pos-text-muted">

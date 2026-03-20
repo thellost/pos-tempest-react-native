@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 import { Delete } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 
@@ -64,40 +65,37 @@ export const CashPayment = memo(function CashPayment({
       {/* Quick amounts row 1 */}
       <View className="mb-1.5 flex-row gap-1.5">
         {QUICK_AMOUNTS_ROW1.map((amount) => (
-          <Pressable
+          <Button
             key={amount}
             onPress={() => handleQuickAmount(amount)}
             className="flex-1 items-center rounded border border-accent/30 bg-accent/10 py-1.5"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <Text className="text-[11px] font-bold text-accent-hover">
               {amount >= 1000 ? `${amount / 1000}k` : String(amount)}
             </Text>
-          </Pressable>
+          </Button>
         ))}
       </View>
 
       {/* Quick amounts row 2 + Exact */}
       <View className="mb-2 flex-row gap-1.5">
         {QUICK_AMOUNTS_ROW2.map((amount) => (
-          <Pressable
+          <Button
             key={amount}
             onPress={() => handleQuickAmount(amount)}
             className="flex-1 items-center rounded border border-accent/30 bg-accent/10 py-1.5"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <Text className="text-[11px] font-bold text-accent-hover">
               {amount >= 1000 ? `${amount / 1000}k` : String(amount)}
             </Text>
-          </Pressable>
+          </Button>
         ))}
-        <Pressable
+        <Button
           onPress={onExact}
           className="flex-1 items-center rounded border border-pos-success/30 bg-pos-success/10 py-1.5"
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         >
           <Text className="text-[11px] font-bold text-pos-success">Exact</Text>
-        </Pressable>
+        </Button>
       </View>
 
       {/* Numpad — calculator layout (7,8,9 top → 1,2,3 bottom) */}

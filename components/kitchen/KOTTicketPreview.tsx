@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 import { ORDER_TYPE } from '@/constants/enums';
 import type { KOTWithItems } from '@/services/kitchen.service';
@@ -67,14 +68,14 @@ export function KOTTicketPreview({ kot, onDismiss }: KOTTicketPreviewProps) {
                 Kitchen Ticket Sent
               </Text>
             </View>
-            <Pressable
+            <Button
               onPress={onDismiss}
-              className="rounded-lg bg-surface-raised px-4 py-1.5 active:opacity-60"
+              className="rounded-lg bg-surface-raised px-4 py-1.5"
             >
               <Text className="text-pos-sm font-semibold text-pos-text-muted">
                 Dismiss
               </Text>
-            </Pressable>
+            </Button>
           </View>
 
           {/* ── Thermal paper body ── */}

@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { Banknote } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Button } from '@/components/ui';
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -122,14 +123,14 @@ export default function ShiftsScreen() {
             Opening Cash: {formatIDR(activeShift.opening_cash)}
           </Text>
 
-          <Pressable
-            className="mt-4 rounded-xl border border-accent bg-accent-muted p-4"
+          <Button
+            className="mt-4 items-center justify-center rounded-xl border border-accent bg-accent-muted p-4"
             onPress={() => router.push('/(app)/cash/index')}>
             <View className="flex-row items-center justify-center gap-2">
               <Banknote size={16} color={ThemeColors.accent.primary} />
               <Text className="text-pos-base font-semibold text-accent">Manage Cash</Text>
             </View>
-          </Pressable>
+          </Button>
 
           <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Closing Cash Input</Text>
           <View className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
@@ -161,14 +162,14 @@ export default function ShiftsScreen() {
             ))}
           </View>
 
-          <Pressable
-            className="mt-2 rounded-xl bg-pos-warning-muted border border-pos-warning/30 p-4"
+          <Button
+            className="mt-2 items-center justify-center rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-4"
             disabled={submitting || closingInput.length === 0}
             onPress={onCloseShift}>
             <Text className="text-center text-pos-base font-semibold text-pos-warning">
               {submitting ? 'Closing Shift...' : 'Close Shift'}
             </Text>
-          </Pressable>
+          </Button>
         </View>
       ) : (
         <View className="mt-4 rounded-2xl border border-border bg-surface-card p-5">
@@ -191,14 +192,14 @@ export default function ShiftsScreen() {
             ))}
           </View>
 
-          <Pressable
-            className="rounded-xl bg-accent p-4"
+          <Button
+            className="items-center justify-center rounded-xl bg-accent p-4"
             disabled={submitting || openingInput.length === 0}
             onPress={onOpenShift}>
             <Text className="text-center text-pos-base font-semibold text-white">
               {submitting ? 'Opening Shift...' : 'Open Shift'}
             </Text>
-          </Pressable>
+          </Button>
         </View>
       )}
 

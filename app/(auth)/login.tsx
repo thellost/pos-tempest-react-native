@@ -2,7 +2,8 @@ import { Colors, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TextInput, View } from 'react-native';
+import { Button, IconButton } from '@/components/ui';
 import 'react-native-url-polyfill/auto';
 
 export default function LoginScreen() {
@@ -163,24 +164,21 @@ export default function LoginScreen() {
               onSubmitEditing={onSubmitEditing}
               className="rounded-xl border border-border bg-surface px-4 py-3.5 pr-12 text-pos-base text-pos-text"
             />
-            <Pressable
+            <IconButton
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading || isLoginLocked}
-              className="absolute right-3 top-3"
+              size="sm"
+              className="absolute right-3 top-3 bg-transparent"
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
               {showPassword
                 ? <Eye size={18} color={ThemeColors.text.muted} />
                 : <EyeOff size={18} color={ThemeColors.text.muted} />}
-            </Pressable>
+            </IconButton>
           </View>
 
-          <Pressable
-            className={`rounded-xl p-4 ${
-              loading || isLoginLocked || !email.trim() || !password.trim()
-                ? 'bg-accent/30'
-                : 'bg-accent'
-            }`}
+          <Button
+            className="items-center justify-center rounded-xl bg-accent p-4"
             onPress={handleSignIn}
             disabled={loading || isLoginLocked || !email.trim() || !password.trim()}>
             <View className="flex-row items-center justify-center">
@@ -189,7 +187,7 @@ export default function LoginScreen() {
                 {loading ? 'Signing in...' : isLoginLocked ? 'Locked' : 'Sign in'}
               </Text>
             </View>
-          </Pressable>
+          </Button>
 
           <Text className="mt-5 text-center text-pos-xs text-pos-text-faint">
             Your credentials are encrypted and secure
