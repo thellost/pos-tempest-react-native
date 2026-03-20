@@ -6,6 +6,7 @@ import { router, usePathname } from 'expo-router';
 import {
   BarChart2,
   Banknote,
+  CalendarDays,
   ChefHat,
   DollarSign,
   LayoutGrid,
@@ -37,9 +38,10 @@ interface NavItem {
 }
 
 const MAIN_NAV: NavItem[] = [
-  { label: 'Tables & Orders', icon: LayoutGrid, href: '/(app)/floor' },
-  { label: 'Kitchen Display', icon: ChefHat,    href: '/(app)/kitchen' },
-  { label: 'Inventory',       icon: Package,    href: '/(app)/inventory' },
+  { label: 'Tables & Orders', icon: LayoutGrid,   href: '/(app)/floor' },
+  { label: 'Reservations',    icon: CalendarDays, href: '/(app)/reservations' },
+  { label: 'Kitchen Display', icon: ChefHat,      href: '/(app)/kitchen' },
+  { label: 'Inventory',       icon: Package,      href: '/(app)/inventory' },
   { label: 'Customers',       icon: Users,      href: '/(app)/customers' },
   {
     label: 'Reports',

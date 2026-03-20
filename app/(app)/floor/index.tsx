@@ -114,7 +114,20 @@ export default function FloorScreen() {
     }
   };
 
-  const handleTableLongPress = (table: TableWithOrder) => {
+  const handleTableLongPress = async (table: TableWithOrder) => {
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      Alert.alert(
+        'No Connection',
+        'Reservations require an internet connection for backend verification.',
+      );
+      return;
+    }
     setReservationTable(table);
   };
 
