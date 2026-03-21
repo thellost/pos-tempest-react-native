@@ -203,6 +203,46 @@ export function useReservations() {
   );
 
   /**
+   * Updates editable fields of a reservation (guest_count, table_id, notes).
+   * Corresponds to PUT /api/v1/reservations/:id.
+   */
+  const updateReservation = useCallback(
+    async (reservationId: number, payload: {
+      guest_count?: number;
+      table_id?: number | null;
+      notes?: string | null;
+    }): Promise<void> => {
+      const now = new Date().toISOString();
+      const parts: string[] = [];
+      const values: unknown[] = [];
+
+      if (payload.guest_count !== undefined) {
+        parts.push('guest_count = ?');
+        values.push(payload.guest_count);
+      }
+      if (payload.table_id !== undefined) {
+        parts.push('table_id = ?');
+        values.push(payload.table_id);
+      }
+      if (payload.notes !== undefined) {
+        parts.push('notes = ?');
+        values.push(payload.notes);
+      }
+      if (parts.length === 0) return;
+
+      parts.push('updated_at = ?');
+      values.push(now);
+      values.push(reservationId);
+
+      await powersync.execute(
+        `UPDATE reservations SET ${parts.join(', ')} WHERE id = ?`,
+        values
+      );
+    },
+    []
+  );
+
+  /**
    * Deletes a reservation (hard delete — not recommended; prefer updateReservationStatus to CANCELLED).
    */
   const deleteReservation = useCallback(
@@ -234,6 +274,7 @@ export function useReservations() {
     allLoading,
     getReservationsForTable,
     createReservation,
+    updateReservation,
     updateReservationStatus,
     deleteReservation,
     formatReservationTime,

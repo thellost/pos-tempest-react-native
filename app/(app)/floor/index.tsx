@@ -116,10 +116,13 @@ export default function FloorScreen() {
 
   const handleTableLongPress = async (table: TableWithOrder) => {
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       if (!res.ok) throw new Error();
     } catch {
       Alert.alert(

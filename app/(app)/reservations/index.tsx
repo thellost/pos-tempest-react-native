@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,21 +11,30 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   CalendarDays,
-  ChevronDown,
+  Check,
+  Clock,
+  Pencil,
   Plus,
+  Users,
   WifiOff,
   X,
 } from 'lucide-react-native';
 import { Button, IconButton } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
-import { RESERVATION_STATUS, type ReservationStatus } from '@/constants/enums';
+import { RESERVATION_STATUS, TABLE_STATUS, type ReservationStatus } from '@/constants/enums';
 import { useOnlineCheck } from '@/hooks/use-online-check';
 import { useReservations, type ReservationWithCustomer } from '@/hooks/use-reservations';
-import { useTables } from '@/hooks/use-tables';
+import { useTables, type TableWithOrder } from '@/hooks/use-tables';
 import { useCustomers } from '@/hooks/use-customers';
-import { toInt } from '@/utils/coerce';
+import { toInt, toIntOrNull } from '@/utils/coerce';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type DateFilter = 'today' | 'tomorrow' | 'week' | 'all';
+type StatusFilter = ReservationStatus | 'all';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -36,24 +46,69 @@ const STATUS_LABELS: Record<ReservationStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_COLORS: Record<ReservationStatus, string> = {
-  confirmed: 'bg-brand/20 text-brand',
-  seated: 'bg-status-available/20 text-status-available',
-  completed: 'bg-surface-raised text-pos-text-muted',
-  no_show: 'bg-pos-danger/20 text-pos-danger',
-  cancelled: 'bg-pos-danger/20 text-pos-danger',
+const STATUS_COLORS: Record<ReservationStatus, { bg: string; text: string }> = {
+  confirmed: { bg: 'bg-brand/20', text: 'text-brand' },
+  seated: { bg: 'bg-status-available/20', text: 'text-status-available' },
+  completed: { bg: 'bg-surface-raised', text: 'text-pos-text-muted' },
+  no_show: { bg: 'bg-pos-danger/20', text: 'text-pos-danger' },
+  cancelled: { bg: 'bg-pos-danger/20', text: 'text-pos-danger' },
 };
 
-type FilterTab = 'active' | 'all';
+const DATE_FILTER_LABELS: Record<DateFilter, string> = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  week: 'This Week',
+  all: 'All',
+};
+
+const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'seated', label: 'Seated' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'no_show', label: 'No Show' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function computeEndTime(isoDatetime: string, durationMinutes: number): string {
+  const start = new Date(isoDatetime);
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+  return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+}
+
+function filterByDate(reservations: ReservationWithCustomer[], filter: DateFilter): ReservationWithCustomer[] {
+  if (filter === 'all') return reservations;
+  const now = new Date();
+  const today = getLocalDateString(now);
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(now.getDate() + 1);
+  const tomorrow = getLocalDateString(tomorrowDate);
+  const weekDate = new Date(now);
+  weekDate.setDate(now.getDate() + 7);
+  const weekEnd = getLocalDateString(weekDate);
+
+  return reservations.filter((r) => {
+    const d = r.reservation_datetime.slice(0, 10);
+    if (filter === 'today') return d === today;
+    if (filter === 'tomorrow') return d === tomorrow;
+    if (filter === 'week') return d >= today && d <= weekEnd;
+    return true;
+  });
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
+  const c = STATUS_COLORS[status];
   return (
-    <View className={`rounded-full px-2.5 py-0.5 ${STATUS_COLORS[status].split(' ')[0]}`}>
-      <Text className={`text-[11px] font-semibold ${STATUS_COLORS[status].split(' ')[1]}`}>
-        {STATUS_LABELS[status]}
-      </Text>
+    <View className={`rounded-full px-2.5 py-0.5 ${c.bg}`}>
+      <Text className={`text-[11px] font-semibold ${c.text}`}>{STATUS_LABELS[status]}</Text>
     </View>
   );
 }
@@ -86,10 +141,7 @@ export default function ReservationsScreen() {
         <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
           Reservations require an internet connection for backend verification.
         </Text>
-        <Button
-          onPress={checkOnline}
-          className="mt-6 rounded-lg bg-brand px-6 py-3"
-        >
+        <Button onPress={checkOnline} className="mt-6 rounded-lg bg-brand px-6 py-3">
           <Text className="text-pos-base font-semibold text-white">Retry</Text>
         </Button>
       </View>
@@ -99,70 +151,146 @@ export default function ReservationsScreen() {
   return <ReservationsContent />;
 }
 
-// ─── Content (only rendered when online) ─────────────────────────────────────
+// ─── Content ──────────────────────────────────────────────────────────────────
 
 function ReservationsContent() {
   const {
-    activeReservations,
     allReservations,
-    isLoading,
     allLoading,
     createReservation,
+    updateReservation,
     updateReservationStatus,
     formatReservationTime,
   } = useReservations();
 
-  const { tables } = useTables();
+  const { tables, floorAreas, getTablesForArea } = useTables();
   const { customers, searchQuery, setSearchQuery } = useCustomers();
 
-  const [filterTab, setFilterTab] = useState<FilterTab>('active');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // Filter state
+  const [dateFilter, setDateFilter] = useState<DateFilter>('today');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // Form state
+  const [showForm, setShowForm] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<ReservationWithCustomer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create form state
+  // Form fields
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestCount, setGuestCount] = useState('2');
-  const [reservationDate, setReservationDate] = useState('');
-  const [reservationTime, setReservationTime] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState('90');
+  const [reservationDateTime, setReservationDateTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(19, 0, 0, 0);
+    return d;
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState('120');
   const [notes, setNotes] = useState('');
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
-  const [showTablePicker, setShowTablePicker] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
 
-  const activeTables = tables.filter((t) => t.is_active && t.status !== 'maintenance');
+  // ── Derived stats ──────────────────────────────────────────────────────────
 
-  const displayedReservations =
-    filterTab === 'active' ? activeReservations : allReservations;
+  const today = getLocalDateString(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const weekEnd = getLocalDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+  const todayCount = allReservations.filter((r) => r.reservation_datetime.slice(0, 10) === today).length;
+  const confirmedCount = allReservations.filter((r) => r.reservation_datetime.slice(0, 10) === today && r.status === RESERVATION_STATUS.CONFIRMED).length;
+  const seatedCount = allReservations.filter((r) => r.status === RESERVATION_STATUS.SEATED).length;
+  const weekCount = allReservations.filter((r) => {
+    const d = r.reservation_datetime.slice(0, 10);
+    return d >= today && d <= weekEnd;
+  }).length;
+
+  // ── Filtered list ──────────────────────────────────────────────────────────
+
+  const displayedReservations = useMemo(() => {
+    let list = filterByDate(allReservations, dateFilter);
+    if (statusFilter !== 'all') {
+      list = list.filter((r) => r.status === statusFilter);
+    }
+    return list;
+  }, [allReservations, dateFilter, statusFilter]);
+
+  // ── Form helpers ───────────────────────────────────────────────────────────
 
   const resetForm = useCallback(() => {
     setGuestName('');
     setGuestPhone('');
     setGuestCount('2');
-    setReservationDate('');
-    setReservationTime('');
-    setDurationMinutes('90');
+    setReservationDateTime(() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(19, 0, 0, 0);
+      return d;
+    });
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setDurationMinutes('120');
     setNotes('');
     setSelectedTableId(null);
     setSelectedCustomerId(null);
     setSearchQuery('');
     setShowCustomerSearch(false);
-    setShowTablePicker(false);
+    setShowTableModal(false);
+    setEditingReservation(null);
   }, [setSearchQuery]);
 
   const handleOpenCreate = () => {
     resetForm();
-    setShowCreateForm(true);
+    setShowForm(true);
   };
 
-  const handleCloseCreate = () => {
-    setShowCreateForm(false);
+  const handleOpenEdit = (reservation: ReservationWithCustomer) => {
+    setEditingReservation(reservation);
+    setGuestName(reservation.resolved_customer_name);
+    setGuestPhone(reservation.customer_phone ?? '');
+    setGuestCount(String(reservation.guest_count));
+    setNotes(reservation.notes ?? '');
+    setSelectedTableId(toIntOrNull(reservation.table_id));
+    setSelectedCustomerId(toIntOrNull(reservation.customer_id));
+    setReservationDateTime(new Date(reservation.reservation_datetime));
+    setDurationMinutes(String(reservation.duration_minutes));
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
     resetForm();
   };
 
   const handleSubmit = async () => {
+    if (editingReservation) {
+      // Edit mode — only update guest_count, table_id, notes
+      const count = parseInt(guestCount, 10);
+      if (isNaN(count) || count < 1) {
+        Alert.alert('Validation', 'Guest count must be at least 1.');
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        await updateReservation(toInt(editingReservation.id), {
+          guest_count: count,
+          table_id: selectedTableId,
+          notes: notes.trim() || null,
+        });
+        handleCloseForm();
+      } catch (err: unknown) {
+        Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update reservation.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // Create mode
     if (!guestName.trim()) {
       Alert.alert('Validation', 'Customer name is required.');
       return;
@@ -171,18 +299,13 @@ function ReservationsContent() {
       Alert.alert('Validation', 'Please select a table.');
       return;
     }
-    if (!reservationDate.trim() || !reservationTime.trim()) {
-      Alert.alert('Validation', 'Please enter date (YYYY-MM-DD) and time (HH:MM).');
-      return;
-    }
     const count = parseInt(guestCount, 10);
     if (isNaN(count) || count < 1) {
       Alert.alert('Validation', 'Guest count must be at least 1.');
       return;
     }
 
-    const isoDatetime = `${reservationDate.trim()}T${reservationTime.trim()}:00.000Z`;
-
+    const isoDatetime = reservationDateTime.toISOString();
     setIsSubmitting(true);
     try {
       await createReservation({
@@ -192,13 +315,12 @@ function ReservationsContent() {
         customer_phone: guestPhone.trim() || null,
         guest_count: count,
         reservation_datetime: isoDatetime,
-        duration_minutes: parseInt(durationMinutes, 10) || 90,
+        duration_minutes: parseInt(durationMinutes, 10) || 120,
         notes: notes.trim() || null,
       });
-      handleCloseCreate();
+      handleCloseForm();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create reservation.';
-      Alert.alert('Error', msg);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create reservation.');
     } finally {
       setIsSubmitting(false);
     }
@@ -216,8 +338,7 @@ function ReservationsContent() {
             try {
               await updateReservationStatus(toInt(reservation.id), status);
             } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : 'Failed to update reservation.';
-              Alert.alert('Error', msg);
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update status.');
             }
           },
         },
@@ -225,15 +346,28 @@ function ReservationsContent() {
     );
   };
 
-  const selectedTableLabel = selectedTableId
-    ? activeTables.find((t) => toInt(t.id) === selectedTableId)?.table_number ?? 'Unknown'
+  const selectedTable = selectedTableId
+    ? tables.find((t) => toInt(t.id) === selectedTableId) ?? null
+    : null;
+  const selectedTableLabel = selectedTable
+    ? `${selectedTable.floor_area_name ? `${selectedTable.floor_area_name} · ` : ''}Table ${selectedTable.table_number}`
     : null;
 
-  const isContentLoading = filterTab === 'active' ? isLoading : allLoading;
+  const isEditMode = editingReservation !== null;
+
+  // Preview end time in form
+  const endTimePreview = useMemo(() => {
+    const dur = parseInt(durationMinutes, 10);
+    if (isNaN(dur)) return null;
+    const totalMin = reservationDateTime.getHours() * 60 + reservationDateTime.getMinutes() + dur;
+    const endH = Math.floor(totalMin / 60) % 24;
+    const endM = totalMin % 60;
+    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  }, [reservationDateTime, durationMinutes]);
 
   return (
     <View className="flex-1 bg-surface">
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View className="border-b border-border bg-surface-card px-5 py-5">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
@@ -242,44 +376,72 @@ function ReservationsContent() {
           </View>
           <Button
             onPress={handleOpenCreate}
-            className="flex-row items-center rounded-lg bg-brand px-5 py-3"
+            className="flex-row items-center rounded-lg bg-brand px-4 py-2.5"
           >
-            <Plus size={18} color="white" />
-            <Text className="ml-2 text-pos-base font-bold text-white">New Reservation</Text>
+            <Plus size={17} color="white" />
+            <Text className="ml-1.5 text-pos-sm font-bold text-white">New</Text>
           </Button>
         </View>
 
-        {/* Filter tabs */}
-        <View className="mt-4 flex-row gap-2">
-          {(['active', 'all'] as FilterTab[]).map((tab) => (
-            <Pressable
-              key={tab}
-              onPress={() => setFilterTab(tab)}
-              className={`rounded-lg px-4 py-2 ${
-                filterTab === tab ? 'bg-brand' : 'bg-surface-raised'
-              }`}
-            >
-              <Text
-                className={`text-pos-sm font-semibold capitalize ${
-                  filterTab === tab ? 'text-white' : 'text-pos-text-muted'
-                }`}
+        {/* Stats strip */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4 -mx-1">
+          <View className="flex-row gap-2 px-1">
+            <StatChip label="Today" value={todayCount} color="text-brand" bg="bg-brand/10" />
+            <StatChip label="Confirmed" value={confirmedCount} color="text-brand" bg="bg-brand/10" />
+            <StatChip label="Seated" value={seatedCount} color="text-status-available" bg="bg-status-available/10" />
+            <StatChip label="This Week" value={weekCount} color="text-pos-text" bg="bg-surface-raised" />
+          </View>
+        </ScrollView>
+
+        {/* Date filter chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3 -mx-1">
+          <View className="flex-row gap-2 px-1">
+            {(Object.keys(DATE_FILTER_LABELS) as DateFilter[]).map((f) => (
+              <Pressable
+                key={f}
+                onPress={() => setDateFilter(f)}
+                className={`rounded-lg px-4 py-1.5 ${dateFilter === f ? 'bg-brand' : 'bg-surface-raised'}`}
               >
-                {tab === 'active' ? 'Active' : 'All'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+                <Text className={`text-pos-sm font-semibold ${dateFilter === f ? 'text-white' : 'text-pos-text-muted'}`}>
+                  {DATE_FILTER_LABELS[f]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Status filter chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2 -mx-1">
+          <View className="flex-row gap-2 px-1">
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.value}
+                onPress={() => setStatusFilter(opt.value)}
+                className={`rounded-full px-3 py-1 ${statusFilter === opt.value ? 'bg-surface-card border border-brand' : 'bg-surface-raised'}`}
+              >
+                <Text className={`text-pos-xs font-semibold ${statusFilter === opt.value ? 'text-brand' : 'text-pos-text-muted'}`}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
       </View>
 
-      {/* List */}
-      {isContentLoading ? (
+      {/* ── List ───────────────────────────────────────────────────────────── */}
+      {allLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={ThemeColors.accent.primary} />
         </View>
       ) : displayedReservations.length === 0 ? (
         <View className="flex-1 items-center justify-center">
-          <CalendarDays size={40} color={ThemeColors.text.muted} />
-          <Text className="mt-4 text-pos-base text-pos-text-muted">No reservations found</Text>
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface-card">
+            <CalendarDays size={32} color={ThemeColors.text.muted} />
+          </View>
+          <Text className="text-pos-base font-semibold text-pos-text">No reservations</Text>
+          <Text className="mt-1 text-pos-sm text-pos-text-muted">
+            {dateFilter !== 'all' ? `No reservations for ${DATE_FILTER_LABELS[dateFilter].toLowerCase()}` : 'No reservations found'}
+          </Text>
         </View>
       ) : (
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
@@ -288,119 +450,134 @@ function ReservationsContent() {
               key={res.id}
               reservation={res}
               tableName={
-                activeTables.find((t) => toInt(t.id) === toInt(res.table_id))?.table_number ?? `#${res.table_id}`
+                tables.find((t) => toInt(t.id) === toIntOrNull(res.table_id))?.table_number ?? `#${res.table_id}`
               }
               formattedTime={formatReservationTime(res.reservation_datetime)}
+              endTime={computeEndTime(res.reservation_datetime, res.duration_minutes)}
               onStatusAction={handleStatusAction}
+              onEdit={() => handleOpenEdit(res)}
             />
           ))}
         </ScrollView>
       )}
 
-      {/* Create Form Panel */}
-      {showCreateForm && (
+      {/* ── Table Picker Modal ────────────────────────────────────────────── */}
+      <TablePickerModal
+        visible={showTableModal}
+        floorAreas={floorAreas}
+        getTablesForArea={getTablesForArea}
+        selectedTableId={selectedTableId}
+        onSelect={(id) => {
+          setSelectedTableId(id);
+          setShowTableModal(false);
+        }}
+        onClose={() => setShowTableModal(false)}
+      />
+
+      {/* ── Create / Edit Form ─────────────────────────────────────────────── */}
+      {showForm && (
         <View className="absolute inset-0 bg-black/50">
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 justify-end"
           >
-            <View className="max-h-[85%] rounded-t-2xl bg-surface-card">
+            <View className="max-h-[88%] rounded-t-2xl bg-surface-card">
               {/* Form header */}
               <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-                <Text className="text-pos-lg font-bold text-pos-text">New Reservation</Text>
-                <IconButton icon={X} onPress={handleCloseCreate} size={22} />
+                <Text className="text-pos-lg font-bold text-pos-text">
+                  {isEditMode ? 'Edit Reservation' : 'New Reservation'}
+                </Text>
+                <IconButton onPress={handleCloseForm}>
+                  <X size={22} color={ThemeColors.text.muted} />
+                </IconButton>
               </View>
 
               <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
-                {/* Customer name */}
-                <View className="mb-4">
-                  <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
-                    Customer Name <Text className="text-pos-danger">*</Text>
-                  </Text>
-                  <TextInput
-                    value={guestName}
-                    onChangeText={(v) => {
-                      setGuestName(v);
-                      setSearchQuery(v);
-                      setShowCustomerSearch(v.length > 0);
-                      setSelectedCustomerId(null);
-                    }}
-                    placeholder="Enter customer name"
-                    placeholderTextColor={ThemeColors.text.faint}
-                    className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
-                  />
-                  {showCustomerSearch && customers.length > 0 && (
-                    <View className="mt-1 rounded-lg border border-border bg-surface-card">
-                      {customers.slice(0, 5).map((c) => (
-                        <Pressable
-                          key={c.id}
-                          onPress={() => {
-                            setGuestName(c.name);
-                            setGuestPhone(c.phone ?? '');
-                            setSelectedCustomerId(toInt(c.id));
-                            setShowCustomerSearch(false);
-                          }}
-                          className="border-b border-border px-4 py-2.5 last:border-0 active:bg-surface-raised"
-                        >
-                          <Text className="text-pos-sm text-pos-text">{c.name}</Text>
-                          {c.phone ? (
-                            <Text className="text-pos-xs text-pos-text-muted">{c.phone}</Text>
-                          ) : null}
-                        </Pressable>
-                      ))}
+
+                {/* Customer name — read-only in edit mode */}
+                {isEditMode ? (
+                  <View className="mb-4">
+                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Customer</Text>
+                    <View className="rounded-lg border border-border bg-surface/50 px-4 py-3">
+                      <Text className="text-pos-base text-pos-text">{guestName}</Text>
                     </View>
-                  )}
-                </View>
+                  </View>
+                ) : (
+                  <View className="mb-4">
+                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
+                      Customer Name <Text className="text-pos-danger">*</Text>
+                    </Text>
+                    <TextInput
+                      value={guestName}
+                      onChangeText={(v) => {
+                        setGuestName(v);
+                        setSearchQuery(v);
+                        setShowCustomerSearch(v.length > 0);
+                        setSelectedCustomerId(null);
+                      }}
+                      placeholder="Enter customer name"
+                      placeholderTextColor={ThemeColors.text.faint}
+                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                    />
+                    {showCustomerSearch && customers.length > 0 && (
+                      <View className="mt-1 rounded-lg border border-border bg-surface-card">
+                        {customers.slice(0, 5).map((c) => (
+                          <Pressable
+                            key={c.id}
+                            onPress={() => {
+                              setGuestName(c.name);
+                              setGuestPhone(c.phone ?? '');
+                              setSelectedCustomerId(toInt(c.id));
+                              setShowCustomerSearch(false);
+                            }}
+                            className="border-b border-border px-4 py-2.5 last:border-0 active:bg-surface-raised"
+                          >
+                            <Text className="text-pos-sm text-pos-text">{c.name}</Text>
+                            {c.phone ? (
+                              <Text className="text-pos-xs text-pos-text-muted">{c.phone}</Text>
+                            ) : null}
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
 
-                {/* Phone */}
-                <View className="mb-4">
-                  <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Phone</Text>
-                  <TextInput
-                    value={guestPhone}
-                    onChangeText={setGuestPhone}
-                    placeholder="e.g. 08123456789"
-                    placeholderTextColor={ThemeColors.text.faint}
-                    keyboardType="phone-pad"
-                    className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
-                  />
-                </View>
+                {/* Phone — create mode only */}
+                {!isEditMode && (
+                  <View className="mb-4">
+                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Phone</Text>
+                    <TextInput
+                      value={guestPhone}
+                      onChangeText={setGuestPhone}
+                      placeholder="e.g. 08123456789"
+                      placeholderTextColor={ThemeColors.text.faint}
+                      keyboardType="phone-pad"
+                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                    />
+                  </View>
+                )}
 
-                {/* Table + Guest count row */}
+                {/* Table + Guest count */}
                 <View className="mb-4 flex-row gap-3">
                   <View className="flex-1">
                     <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
-                      Table <Text className="text-pos-danger">*</Text>
+                      Table {!isEditMode && <Text className="text-pos-danger">*</Text>}
                     </Text>
                     <Pressable
-                      onPress={() => setShowTablePicker((v) => !v)}
-                      className="flex-row items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
+                      onPress={() => setShowTableModal(true)}
+                      className={`flex-row items-center justify-between rounded-lg border px-4 py-3 ${
+                        selectedTableLabel ? 'border-brand bg-brand/5' : 'border-border bg-surface'
+                      }`}
                     >
-                      <Text className={selectedTableLabel ? 'text-pos-base text-pos-text' : 'text-pos-base text-pos-text-faint'}>
-                        {selectedTableLabel ?? 'Select table'}
+                      <Text className={selectedTableLabel ? 'text-pos-sm font-semibold text-brand' : 'text-pos-base text-pos-text-faint'}>
+                        {selectedTableLabel ?? 'Tap to select table…'}
                       </Text>
-                      <ChevronDown size={16} color={ThemeColors.text.muted} />
+                      {selectedTableLabel
+                        ? <Check size={16} color={ThemeColors.accent.primary} />
+                        : <Users size={16} color={ThemeColors.text.muted} />
+                      }
                     </Pressable>
-                    {showTablePicker && (
-                      <View className="mt-1 max-h-40 rounded-lg border border-border bg-surface-card">
-                        <ScrollView>
-                          {activeTables.map((t) => (
-                            <Pressable
-                              key={t.id}
-                              onPress={() => {
-                                setSelectedTableId(toInt(t.id));
-                                setShowTablePicker(false);
-                              }}
-                              className="border-b border-border px-4 py-2.5 last:border-0 active:bg-surface-raised"
-                            >
-                              <Text className="text-pos-sm text-pos-text">
-                                Table {t.table_number}
-                                <Text className="text-pos-text-muted"> · cap {t.capacity}</Text>
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
                   </View>
 
                   <View className="w-24">
@@ -414,44 +591,103 @@ function ReservationsContent() {
                   </View>
                 </View>
 
-                {/* Date + Time row */}
-                <View className="mb-4 flex-row gap-3">
-                  <View className="flex-1">
-                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
-                      Date <Text className="text-pos-danger">*</Text>
-                    </Text>
-                    <TextInput
-                      value={reservationDate}
-                      onChangeText={setReservationDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={ThemeColors.text.faint}
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                {/* Date + Time — create mode only */}
+                {!isEditMode && (
+                  <View className="mb-4 flex-row gap-3">
+                    <View className="flex-1">
+                      <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
+                        Date <Text className="text-pos-danger">*</Text>
+                      </Text>
+                      <Pressable
+                        onPress={() => { setShowTimePicker(false); setShowDatePicker((v) => !v); }}
+                        className="flex-row items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                      >
+                        <CalendarDays size={16} color={ThemeColors.accent.primary} />
+                        <Text className="text-pos-base text-pos-text">
+                          {reservationDateTime.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <View className="w-28">
+                      <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
+                        Time <Text className="text-pos-danger">*</Text>
+                      </Text>
+                      <Pressable
+                        onPress={() => { setShowDatePicker(false); setShowTimePicker((v) => !v); }}
+                        className="flex-row items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                      >
+                        <Clock size={16} color={ThemeColors.accent.primary} />
+                        <Text className="text-pos-base text-pos-text">
+                          {`${String(reservationDateTime.getHours()).padStart(2, '0')}:${String(reservationDateTime.getMinutes()).padStart(2, '0')}`}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {/* Native date/time pickers */}
+                {!isEditMode && showDatePicker && (
+                  <View className="mb-4">
+                    <DateTimePicker
+                      value={reservationDateTime}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      minimumDate={new Date()}
+                      onChange={(_e, date) => {
+                        if (Platform.OS === 'android') setShowDatePicker(false);
+                        if (date) {
+                          setReservationDateTime((prev) => {
+                            const next = new Date(date);
+                            next.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+                            return next;
+                          });
+                        }
+                      }}
                     />
                   </View>
-                  <View className="w-28">
-                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
-                      Time <Text className="text-pos-danger">*</Text>
-                    </Text>
-                    <TextInput
-                      value={reservationTime}
-                      onChangeText={setReservationTime}
-                      placeholder="HH:MM"
-                      placeholderTextColor={ThemeColors.text.faint}
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                )}
+
+                {!isEditMode && showTimePicker && (
+                  <View className="mb-4">
+                    <DateTimePicker
+                      value={reservationDateTime}
+                      mode="time"
+                      is24Hour
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(_e, date) => {
+                        if (Platform.OS === 'android') setShowTimePicker(false);
+                        if (date) {
+                          setReservationDateTime((prev) => {
+                            const next = new Date(prev);
+                            next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+                            return next;
+                          });
+                        }
+                      }}
                     />
                   </View>
-                </View>
+                )}
 
                 {/* Duration */}
-                <View className="mb-4">
-                  <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Duration (minutes)</Text>
-                  <TextInput
-                    value={durationMinutes}
-                    onChangeText={setDurationMinutes}
-                    keyboardType="number-pad"
-                    className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
-                  />
-                </View>
+                {!isEditMode && (
+                  <View className="mb-4">
+                    <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Duration (minutes)</Text>
+                    <TextInput
+                      value={durationMinutes}
+                      onChangeText={setDurationMinutes}
+                      keyboardType="number-pad"
+                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                    />
+                    {endTimePreview && (
+                      <View className="mt-1.5 flex-row items-center gap-1">
+                        <Clock size={12} color={ThemeColors.text.muted} />
+                        <Text className="text-pos-xs text-pos-text-muted">
+                          Ends at {endTimePreview}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
 
                 {/* Notes */}
                 <View className="mb-6">
@@ -470,16 +706,12 @@ function ReservationsContent() {
                 </View>
 
                 {/* Submit */}
-                <Button
-                  onPress={handleSubmit}
-                  disabled={isSubmitting}
-                  className="rounded-lg bg-brand py-4"
-                >
+                <Button onPress={handleSubmit} disabled={isSubmitting} className="rounded-lg bg-brand py-4">
                   {isSubmitting ? (
                     <ActivityIndicator size="small" color="white" />
                   ) : (
                     <Text className="text-center text-pos-base font-bold text-white">
-                      Create Reservation
+                      {isEditMode ? 'Save Changes' : 'Create Reservation'}
                     </Text>
                   )}
                 </Button>
@@ -492,72 +724,243 @@ function ReservationsContent() {
   );
 }
 
+// ─── Table Picker Modal ───────────────────────────────────────────────────────
+
+interface TablePickerModalProps {
+  visible: boolean;
+  floorAreas: { id: number | string; name: string }[];
+  getTablesForArea: (areaId: number) => TableWithOrder[];
+  selectedTableId: number | null;
+  onSelect: (tableId: number) => void;
+  onClose: () => void;
+}
+
+function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTableId, onSelect, onClose }: TablePickerModalProps) {
+  const [activeAreaId, setActiveAreaId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (visible && floorAreas.length > 0 && activeAreaId === null) {
+      setActiveAreaId(toInt(floorAreas[0].id));
+    }
+  }, [visible, floorAreas, activeAreaId]);
+
+  const areaId = activeAreaId ?? (floorAreas.length > 0 ? toInt(floorAreas[0].id) : null);
+  const areaTablesRaw = areaId !== null ? getTablesForArea(areaId) : [];
+  const areaTables = areaTablesRaw.filter((t) => t.status !== TABLE_STATUS.MAINTENANCE);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/50 justify-end">
+        <View className="rounded-t-2xl bg-surface-card" style={{ maxHeight: '70%' }}>
+          {/* Header */}
+          <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+            <Text className="text-pos-lg font-bold text-pos-text">Select Table</Text>
+            <Pressable onPress={onClose} className="p-1">
+              <X size={22} color={ThemeColors.text.muted} />
+            </Pressable>
+          </View>
+
+          {/* Area tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="border-b border-border">
+            <View className="flex-row px-4 py-2 gap-2">
+              {floorAreas.map((area) => {
+                const aid = toInt(area.id);
+                const isActive = areaId === aid;
+                return (
+                  <Pressable
+                    key={area.id}
+                    onPress={() => setActiveAreaId(aid)}
+                    className={`rounded-lg px-4 py-2 ${isActive ? 'bg-brand' : 'bg-surface-raised'}`}
+                  >
+                    <Text className={`text-pos-sm font-semibold ${isActive ? 'text-white' : 'text-pos-text-muted'}`}>
+                      {area.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {/* Table grid */}
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            {areaTables.length === 0 ? (
+              <View className="items-center py-8">
+                <Text className="text-pos-sm text-pos-text-muted">No available tables in this area</Text>
+              </View>
+            ) : (
+              <View className="flex-row flex-wrap gap-3">
+                {areaTables.map((t) => {
+                  const tid = toInt(t.id);
+                  const isSelected = selectedTableId === tid;
+                  const isAvailable = t.status === TABLE_STATUS.AVAILABLE;
+                  const isReserved = t.status === TABLE_STATUS.RESERVED;
+                  const isOccupied = t.status === TABLE_STATUS.OCCUPIED;
+
+                  let borderColor = 'border-border';
+                  let bgColor = 'bg-surface';
+                  let statusDot = 'bg-pos-text-muted';
+                  let statusLabel = t.status as string;
+
+                  if (isSelected) {
+                    borderColor = 'border-brand';
+                    bgColor = 'bg-brand/10';
+                  }
+                  if (isAvailable) {
+                    statusDot = 'bg-status-available';
+                    statusLabel = 'Available';
+                  } else if (isReserved) {
+                    statusDot = 'bg-status-reserved';
+                    statusLabel = 'Reserved';
+                  } else if (isOccupied) {
+                    statusDot = 'bg-status-occupied';
+                    statusLabel = 'Occupied';
+                  }
+
+                  return (
+                    <Pressable
+                      key={t.id}
+                      onPress={() => onSelect(tid)}
+                      className={`rounded-xl border-2 p-3 items-center ${borderColor} ${bgColor}`}
+                      style={{ width: '30%' }}
+                    >
+                      {isSelected && (
+                        <View className="absolute top-1.5 right-1.5">
+                          <Check size={13} color={ThemeColors.accent.primary} />
+                        </View>
+                      )}
+                      <Text className={`text-pos-lg font-bold ${isSelected ? 'text-brand' : 'text-pos-text'}`}>
+                        {t.table_number}
+                      </Text>
+                      <View className="mt-1 flex-row items-center gap-1">
+                        <View className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
+                        <Text className="text-pos-xs text-pos-text-muted">{statusLabel}</Text>
+                      </View>
+                      <Text className="text-pos-xs text-pos-text-muted mt-0.5">cap {t.capacity}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Stat Chip ────────────────────────────────────────────────────────────────
+
+function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+  return (
+    <View className={`rounded-xl px-4 py-2 items-center min-w-[72px] ${bg}`}>
+      <Text className={`text-pos-lg font-bold ${color}`}>{value}</Text>
+      <Text className="text-pos-xs text-pos-text-muted">{label}</Text>
+    </View>
+  );
+}
+
 // ─── Reservation Row ──────────────────────────────────────────────────────────
 
 interface ReservationRowProps {
   reservation: ReservationWithCustomer;
   tableName: string;
   formattedTime: string;
+  endTime: string;
   onStatusAction: (reservation: ReservationWithCustomer, status: ReservationStatus) => void;
+  onEdit: () => void;
 }
 
-function ReservationRow({ reservation, tableName, formattedTime, onStatusAction }: ReservationRowProps) {
+function ReservationRow({ reservation, tableName, formattedTime, endTime, onStatusAction, onEdit }: ReservationRowProps) {
   const status = reservation.status as ReservationStatus;
-  const isActive = status === RESERVATION_STATUS.CONFIRMED || status === RESERVATION_STATUS.SEATED;
+  const isConfirmed = status === RESERVATION_STATUS.CONFIRMED;
+  const isSeated = status === RESERVATION_STATUS.SEATED;
+  const isActive = isConfirmed || isSeated;
 
   return (
-    <View className="mb-3 rounded-xl border border-border bg-surface-card p-4">
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1 mr-3">
-          <Text className="text-pos-base font-semibold text-pos-text">
-            {reservation.resolved_customer_name}
-          </Text>
-          <Text className="mt-0.5 text-pos-sm text-pos-text-muted">
-            Table {tableName} · {reservation.guest_count} guest{reservation.guest_count !== 1 ? 's' : ''}
-          </Text>
-          <Text className="mt-0.5 text-pos-sm text-pos-text-muted">{formattedTime}</Text>
-          {reservation.customer_phone ? (
-            <Text className="mt-0.5 text-pos-xs text-pos-text-muted">{reservation.customer_phone}</Text>
-          ) : null}
-          {reservation.notes ? (
-            <Text className="mt-1 text-pos-xs italic text-pos-text-muted" numberOfLines={2}>
-              {reservation.notes}
-            </Text>
-          ) : null}
-        </View>
-        <StatusBadge status={status} />
-      </View>
+    <View className="mb-3 rounded-xl border border-border bg-surface-card overflow-hidden">
+      {/* Left accent bar */}
+      <View className={`absolute left-0 top-0 bottom-0 w-1 ${
+        isConfirmed ? 'bg-brand' : isSeated ? 'bg-status-available' : 'bg-surface-raised'
+      }`} />
 
-      {isActive && (
-        <View className="mt-3 flex-row gap-2 border-t border-border pt-3">
-          {status === RESERVATION_STATUS.CONFIRMED && (
+      <View className="px-4 pt-4 pb-3 pl-5">
+        {/* Top row: name + status + edit */}
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-2">
+            <Text className="text-pos-base font-bold text-pos-text" numberOfLines={1}>
+              {reservation.resolved_customer_name}
+            </Text>
+            {reservation.customer_phone ? (
+              <Text className="text-pos-xs text-pos-text-muted mt-0.5">{reservation.customer_phone}</Text>
+            ) : null}
+          </View>
+          <View className="flex-row items-center gap-2">
+            <StatusBadge status={status} />
+            {isActive && (
+              <Pressable onPress={onEdit} className="p-1 rounded-lg active:bg-surface-raised">
+                <Pencil size={15} color={ThemeColors.text.muted} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Info row */}
+        <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
+          <View className="flex-row items-center gap-1">
+            <Clock size={12} color={ThemeColors.text.muted} />
+            <Text className="text-pos-xs text-pos-text-muted">
+              {formattedTime} – {endTime}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Users size={12} color={ThemeColors.text.muted} />
+            <Text className="text-pos-xs text-pos-text-muted">
+              Table {tableName} · {reservation.guest_count} guest{reservation.guest_count !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        </View>
+
+        {reservation.notes ? (
+          <Text className="mt-1.5 text-pos-xs italic text-pos-text-muted" numberOfLines={2}>
+            "{reservation.notes}"
+          </Text>
+        ) : null}
+
+        {/* Action buttons — status-aware per API spec */}
+        {isConfirmed && (
+          <View className="mt-3 flex-row gap-2 border-t border-border pt-3">
             <Pressable
               onPress={() => onStatusAction(reservation, RESERVATION_STATUS.SEATED)}
               className="flex-1 rounded-lg bg-status-available/20 py-2"
             >
-              <Text className="text-center text-pos-sm font-semibold text-status-available">
-                Seat
-              </Text>
+              <Text className="text-center text-pos-sm font-semibold text-status-available">Seat</Text>
             </Pressable>
-          )}
-          <Pressable
-            onPress={() => onStatusAction(reservation, RESERVATION_STATUS.NO_SHOW)}
-            className="flex-1 rounded-lg bg-surface-raised py-2"
-          >
-            <Text className="text-center text-pos-sm font-semibold text-pos-text-muted">
-              No Show
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onStatusAction(reservation, RESERVATION_STATUS.CANCELLED)}
-            className="flex-1 rounded-lg bg-pos-danger/10 py-2"
-          >
-            <Text className="text-center text-pos-sm font-semibold text-pos-danger">
-              Cancel
-            </Text>
-          </Pressable>
-        </View>
-      )}
+            <Pressable
+              onPress={() => onStatusAction(reservation, RESERVATION_STATUS.NO_SHOW)}
+              className="flex-1 rounded-lg bg-surface-raised py-2"
+            >
+              <Text className="text-center text-pos-sm font-semibold text-pos-text-muted">No Show</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onStatusAction(reservation, RESERVATION_STATUS.CANCELLED)}
+              className="flex-1 rounded-lg bg-pos-danger/10 py-2"
+            >
+              <Text className="text-center text-pos-sm font-semibold text-pos-danger">Cancel</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {isSeated && (
+          <View className="mt-3 border-t border-border pt-3">
+            <Pressable
+              onPress={() => onStatusAction(reservation, RESERVATION_STATUS.COMPLETED)}
+              className="rounded-lg bg-brand/20 py-2"
+            >
+              <Text className="text-center text-pos-sm font-semibold text-brand">Mark Completed</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </View>
   );
 }

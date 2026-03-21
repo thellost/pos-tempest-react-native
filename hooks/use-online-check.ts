@@ -11,12 +11,16 @@ export function useOnlineCheck() {
   const [isChecking, setIsChecking] = useState(false);
 
   const checkOnline = useCallback(async () => {
+    const url = `${API_URL}/health`;
     setIsChecking(true);
     try {
-      const res = await fetch(`${API_URL}/health`, {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(url, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       setIsOnline(res.ok);
     } catch {
       setIsOnline(false);
