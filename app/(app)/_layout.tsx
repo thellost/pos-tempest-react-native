@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { Button } from '@/components/ui';
 
-import { Redirect, Stack, usePathname } from 'expo-router';
+import { Redirect, router, Stack, usePathname } from 'expo-router';
 
-import { HamburgerButton } from '@/components/navigation/HamburgerButton';
-import { SideDrawer } from '@/components/navigation/SideDrawer';
+import { IconRail } from '@/components/navigation/IconRail';
+import { AppStatusBar } from '@/components/navigation/StatusBar';
+import { MAIN_NAV, SYSTEM_NAV } from '@/constants/navigation';
 import { Brand, ThemeColors } from '@/constants/theme';
 import { AlertTriangle, Ban } from 'lucide-react-native';
 import { useAppTimezone } from '@/hooks/use-app-timezone';
@@ -19,8 +19,6 @@ export default function AppLayout() {
   const { loading: deviceLoading, isRegistered, registration } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
   const pathname = usePathname();
-
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (loading) {
     return (
@@ -139,102 +137,96 @@ export default function AppLayout() {
   }
 
   return (
-    <View className="flex-1 flex-row">
-      {/* Left rail — hamburger button lives here, never overlaps content */}
-      <View className="w-14 items-center border-r border-border bg-surface-card pt-3">
-        <HamburgerButton onPress={() => setDrawerOpen((v) => !v)} />
-      </View>
-
-      {/* Main content area */}
-      <View
-        className="flex-1"
-        onTouchStart={markActivity}
-        onTouchMove={markActivity}
-        onResponderGrant={markActivity}
-        onResponderMove={markActivity}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}>
-          <Stack.Screen
-            name="floor/index"
-            options={{ title: 'Floor View' }}
-          />
-          <Stack.Screen
-            name="order/[tableId]"
-            options={{ title: 'Order' }}
-          />
-          <Stack.Screen
-            name="menu/index"
-            options={{ title: 'Menu' }}
-          />
-          <Stack.Screen
-            name="kitchen/index"
-            options={{ title: 'Kitchen Display' }}
-          />
-          <Stack.Screen
-            name="checkout/[orderId]"
-            options={{ title: 'Checkout' }}
-          />
-          <Stack.Screen
-            name="settings/index"
-            options={{ title: 'Settings' }}
-          />
-          <Stack.Screen
-            name="shifts/index"
-            options={{ title: 'Shifts' }}
-          />
-          <Stack.Screen
-            name="cash/index"
-            options={{ title: 'Cash Management' }}
-          />
-          <Stack.Screen
-            name="inventory/index"
-            options={{ title: 'Inventory' }}
-          />
-          <Stack.Screen
-            name="reservations/index"
-            options={{ title: 'Reservations' }}
-          />
-          <Stack.Screen
-            name="customers/index"
-            options={{ title: 'Customers' }}
-          />
-          <Stack.Screen
-            name="reports/index"
-            options={{ title: 'Reports' }}
-          />
-          <Stack.Screen
-            name="device-setup"
-            options={{ title: 'Device Setup' }}
-          />
-        </Stack>
-
-        {/* Branch / device badge — top-right of content area */}
-        {isRegistered && registration?.branch && (
-          <View className="absolute top-3 right-3 rounded-xl bg-surface-card/90 px-4 py-2">
-            <Text className="text-pos-xs text-pos-text-muted">
-              {registration.device?.device_name} • {registration.branch.name}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Side drawer — renders on top of everything */}
-      <SideDrawer
-        isOpen={drawerOpen}
+    <View className="flex-1">
+      {/* Top status bar — user, clock, shift, orders, device */}
+      <AppStatusBar
         user={user}
-        onClose={() => setDrawerOpen(false)}
-        onSignOut={async () => {
-          setDrawerOpen(false);
-          await signOut();
-        }}
-        onLock={() => {
-          setDrawerOpen(false);
-          lock();
-        }}
+        isShiftOpen={isShiftOpen}
+        activeOrdersCount={0}
+        deviceName={registration?.device?.device_name ?? ''}
+        branchName={registration?.branch?.name ?? ''}
       />
+
+      <View className="flex-1 flex-row">
+        {/* Persistent icon rail */}
+        <IconRail
+          navItems={[...MAIN_NAV, ...SYSTEM_NAV]}
+          currentPath={pathname}
+          onNavigate={(href) => router.push(href as Parameters<typeof router.push>[0])}
+          user={user}
+          userRole={user?.role_name?.toLowerCase() ?? ''}
+          isShiftOpen={isShiftOpen}
+          onLock={lock}
+          onSignOut={signOut}
+        />
+
+        {/* Main content area */}
+        <View
+          className="flex-1"
+          onTouchStart={markActivity}
+          onTouchMove={markActivity}
+          onResponderGrant={markActivity}
+          onResponderMove={markActivity}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'none',
+            }}>
+            <Stack.Screen
+              name="floor/index"
+              options={{ title: 'Floor View' }}
+            />
+            <Stack.Screen
+              name="order/[tableId]"
+              options={{ title: 'Order' }}
+            />
+            <Stack.Screen
+              name="menu/index"
+              options={{ title: 'Menu' }}
+            />
+            <Stack.Screen
+              name="kitchen/index"
+              options={{ title: 'Kitchen Display' }}
+            />
+            <Stack.Screen
+              name="checkout/[orderId]"
+              options={{ title: 'Checkout' }}
+            />
+            <Stack.Screen
+              name="settings/index"
+              options={{ title: 'Settings' }}
+            />
+            <Stack.Screen
+              name="shifts/index"
+              options={{ title: 'Shifts' }}
+            />
+            <Stack.Screen
+              name="cash/index"
+              options={{ title: 'Cash Management' }}
+            />
+            <Stack.Screen
+              name="inventory/index"
+              options={{ title: 'Inventory' }}
+            />
+            <Stack.Screen
+              name="reservations/index"
+              options={{ title: 'Reservations' }}
+            />
+            <Stack.Screen
+              name="customers/index"
+              options={{ title: 'Customers' }}
+            />
+            <Stack.Screen
+              name="reports/index"
+              options={{ title: 'Reports' }}
+            />
+            <Stack.Screen
+              name="device-setup"
+              options={{ title: 'Device Setup' }}
+            />
+          </Stack>
+        </View>
+      </View>
     </View>
   );
 }

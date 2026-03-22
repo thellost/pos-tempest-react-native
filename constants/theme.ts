@@ -1,15 +1,13 @@
 /**
- * Modern Dark SaaS Dashboard UI Color Tokens
- * 
+ * Utility-Industrial POS Color Tokens
+ *
  * Design System:
  * - Dark charcoal / near-black backgrounds
- * - Soft gradients with subtle elevation
- * - Rounded cards with large border-radius
- * - Subtle shadows (not harsh)
- * - Muted color palette with bright accent buttons
- * - High contrast typography
- * - Soft glow highlights
- * 
+ * - Information-dense cockpit layout
+ * - Tight border radii, minimal padding
+ * - Electric Blue accent (#0EA5E9) — distinct from all status colors
+ * - Geist Sans (UI) + Geist Mono (numbers)
+ *
  * All colors are centralized here for easy theming.
  */
 
@@ -18,10 +16,10 @@ export const Colors = {
     text: '#0F172A',
     background: '#F8FAFC',
     backgroundSoft: '#FFFFFF',
-    tint: '#6366F1',
+    tint: '#0EA5E9',
     icon: '#475569',
     tabIconDefault: '#475569',
-    tabIconSelected: '#6366F1',
+    tabIconSelected: '#0EA5E9',
     border: '#CBD5E1',
     muted: '#475569',
     success: '#10B981',
@@ -33,10 +31,10 @@ export const Colors = {
     text: '#E2E8F0',
     background: '#0C0F14',
     backgroundSoft: '#141820',
-    tint: '#6366F1',
+    tint: '#0EA5E9',
     icon: '#94A3B8',
     tabIconDefault: '#64748B',
-    tabIconSelected: '#818CF8',
+    tabIconSelected: '#38BDF8',
     border: '#1E293B',
     muted: '#64748B',
     success: '#10B981',
@@ -65,7 +63,7 @@ export const ThemeColors = {
     subtle: 'rgba(255, 255, 255, 0.04)',
     medium: 'rgba(255, 255, 255, 0.08)',
     strong: 'rgba(255, 255, 255, 0.12)',
-    focus: '#6366F1',
+    focus: '#0EA5E9',
   },
   text: {
     primary: '#F8FAFC',
@@ -77,16 +75,16 @@ export const ThemeColors = {
     inactive: '#9CA3AF',
   },
   accent: {
-    primary: '#6366F1',
-    primaryHover: '#818CF8',
-    primaryPress: '#4F46E5',
-    primaryMuted: 'rgba(99, 102, 241, 0.15)',
-    primaryGlow: 'rgba(99, 102, 241, 0.25)',
-    primarySubtle: 'rgba(99, 102, 241, 0.10)',
-    primaryLight: 'rgba(99, 102, 241, 0.12)',
-    primaryBadge: 'rgba(99, 102, 241, 0.22)',
-    primaryDisabled: 'rgba(99, 102, 241, 0.20)',
-    primaryBorder: 'rgba(99, 102, 241, 0.30)',
+    primary: '#0EA5E9',
+    primaryHover: '#38BDF8',
+    primaryPress: '#0284C7',
+    primaryMuted: 'rgba(14, 165, 233, 0.15)',
+    primaryGlow: 'rgba(14, 165, 233, 0.25)',
+    primarySubtle: 'rgba(14, 165, 233, 0.10)',
+    primaryLight: 'rgba(14, 165, 233, 0.12)',
+    primaryBadge: 'rgba(14, 165, 233, 0.22)',
+    primaryDisabled: 'rgba(14, 165, 233, 0.20)',
+    primaryBorder: 'rgba(14, 165, 233, 0.30)',
   },
   success: {
     DEFAULT: '#10B981',
@@ -126,7 +124,7 @@ export const ThemeColors = {
     food: '#F97316',
     drinks: '#3B82F6',
     desserts: '#EC4899',
-    specials: '#8B5CF6',
+    specials: '#14B8A6',
     default: '#475569',
   },
   status: {
@@ -143,7 +141,7 @@ export const ThemeColors = {
     small: 'rgba(0, 0, 0, 0.1)',
     medium: 'rgba(0, 0, 0, 0.2)',
     large: 'rgba(0, 0, 0, 0.3)',
-    glow: 'rgba(99, 102, 241, 0.15)',
+    glow: 'rgba(14, 165, 233, 0.15)',
   },
 } as const;
 
@@ -166,7 +164,7 @@ export const LightThemeColors = {
     subtle:  'rgba(0, 0, 0, 0.05)',
     medium:  'rgba(0, 0, 0, 0.10)',
     strong:  'rgba(0, 0, 0, 0.15)',
-    focus:   '#6366F1',
+    focus:   '#0EA5E9',
   },
   text: {
     primary:  '#0F172A',
@@ -178,16 +176,16 @@ export const LightThemeColors = {
     inactive: '#9CA3AF',
   },
   accent: {
-    primary:         '#6366F1',
-    primaryHover:    '#818CF8',
-    primaryPress:    '#4F46E5',
-    primaryMuted:    'rgba(99, 102, 241, 0.12)',
-    primaryGlow:     'rgba(99, 102, 241, 0.20)',
-    primarySubtle:   'rgba(99, 102, 241, 0.08)',
-    primaryLight:    'rgba(99, 102, 241, 0.10)',
-    primaryBadge:    'rgba(99, 102, 241, 0.16)',
-    primaryDisabled: 'rgba(99, 102, 241, 0.15)',
-    primaryBorder:   'rgba(99, 102, 241, 0.25)',
+    primary:         '#0EA5E9',
+    primaryHover:    '#38BDF8',
+    primaryPress:    '#0284C7',
+    primaryMuted:    'rgba(14, 165, 233, 0.12)',
+    primaryGlow:     'rgba(14, 165, 233, 0.20)',
+    primarySubtle:   'rgba(14, 165, 233, 0.08)',
+    primaryLight:    'rgba(14, 165, 233, 0.10)',
+    primaryBadge:    'rgba(14, 165, 233, 0.16)',
+    primaryDisabled: 'rgba(14, 165, 233, 0.15)',
+    primaryBorder:   'rgba(14, 165, 233, 0.25)',
   },
   success: {
     DEFAULT: '#10B981',
@@ -227,7 +225,7 @@ export const LightThemeColors = {
     food:     '#F97316',
     drinks:   '#3B82F6',
     desserts: '#EC4899',
-    specials: '#8B5CF6',
+    specials: '#14B8A6',
     default:  '#64748B',
   },
   status: {
@@ -244,7 +242,7 @@ export const LightThemeColors = {
     small:  'rgba(0, 0, 0, 0.06)',
     medium: 'rgba(0, 0, 0, 0.10)',
     large:  'rgba(0, 0, 0, 0.18)',
-    glow:   'rgba(99, 102, 241, 0.12)',
+    glow:   'rgba(14, 165, 233, 0.12)',
   },
 } as const;
 
@@ -260,13 +258,14 @@ export const PaymentColors = {
 
 /** Brand colors (theme-independent) */
 export const Brand = {
-  primary: '#6366F1',
-  primaryHover: '#818CF8',
-  primaryPress: '#4F46E5',
+  primary: '#0EA5E9',
+  primaryHover: '#38BDF8',
+  primaryPress: '#0284C7',
 } as const;
 
 /** Spacing tokens */
 export const Spacing = {
+  '2xs': 2,
   xs: 4,
   sm: 8,
   md: 12,
@@ -279,11 +278,11 @@ export const Spacing = {
 /** Border radius tokens */
 export const BorderRadius = {
   none: 0,
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 20,
-  '2xl': 24,
+  sm: 4,
+  md: 6,
+  lg: 8,
+  xl: 12,
+  '2xl': 16,
   full: 9999,
 } as const;
 

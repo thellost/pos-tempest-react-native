@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
@@ -18,14 +19,27 @@ import '../global.css';
 function ThemedApp() {
   const { themeVars, isThemeChanging } = useAppTheme();
 
+  const [fontsLoaded] = useFonts({
+    Geist: require('@/assets/fonts/Geist-Regular.ttf'),
+    'Geist-Medium': require('@/assets/fonts/Geist-Medium.ttf'),
+    'Geist-SemiBold': require('@/assets/fonts/Geist-SemiBold.ttf'),
+    'Geist-Bold': require('@/assets/fonts/Geist-Bold.ttf'),
+    GeistMono: require('@/assets/fonts/GeistMono-Regular.ttf'),
+    'GeistMono-Bold': require('@/assets/fonts/GeistMono-Bold.ttf'),
+  });
+
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
   }, []);
 
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* themeVars applies CSS custom properties to all children */}
-      <View style={[{ flex: 1 }, themeVars]}>
+      <View style={[{ flex: 1 }, themeVars]} className="font-sans">
         <Modal visible={isThemeChanging} transparent animationType="none" statusBarTranslucent>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#FFFFFF" />

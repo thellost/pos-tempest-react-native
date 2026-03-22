@@ -1,3 +1,4 @@
+/** @deprecated Replaced by IconRail + AppStatusBar in Phase 2 redesign. Safe to delete once verified. */
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui';

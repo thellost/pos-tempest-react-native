@@ -1,3 +1,4 @@
+/** @deprecated Replaced by IconRail in Phase 2 redesign. Safe to delete once verified. */
 import { View } from 'react-native';
 import { IconButton } from '@/components/ui';
 
