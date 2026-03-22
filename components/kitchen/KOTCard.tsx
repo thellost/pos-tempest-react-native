@@ -108,7 +108,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
 
   return (
     <View
-      className="mb-3 overflow-hidden rounded-xl"
+      className="mb-2 overflow-hidden rounded-sm"
       style={{
         backgroundColor: config.bgColor,
         borderWidth: 1,
@@ -125,7 +125,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
       >
         <View className="flex-row items-center gap-2">
           {/* Ticket number */}
-          <Text className="text-pos-xs font-bold text-pos-text-strong">
+          <Text className="font-mono text-pos-xs font-bold text-pos-text-strong">
             {kot.ticket_number}
           </Text>
 
@@ -179,7 +179,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
         <Text className="text-pos-sm font-bold text-pos-text">
           {isTakeaway ? 'Takeaway' : kot.table_number ? `Table ${kot.table_number}` : '—'}
         </Text>
-        <Text className="text-pos-xs text-pos-text-muted">{kot.order_number}</Text>
+        <Text className="font-mono text-pos-xs text-pos-text-muted">{kot.order_number}</Text>
       </View>
 
       {/* ── Items ── */}
@@ -204,8 +204,8 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
               }}
             >
               <View className="flex-row items-start gap-1">
-                <Text className="text-pos-sm font-extrabold text-pos-text-strong">
-                  {qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2)}×
+                <Text className="font-mono text-pos-sm font-extrabold text-pos-text-strong">
+                  {qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2)}x
                 </Text>
                 <Text className="flex-1 text-pos-sm font-semibold text-pos-text">
                   {item.menu_item_name}
@@ -242,7 +242,7 @@ export function KOTCard({ kot, onAdvance }: KOTCardProps) {
         <Pressable
           onPress={handleAdvance}
           disabled={isAdvancing}
-          className="mx-3 mb-3 items-center justify-center rounded-lg py-2"
+          className="mx-3 mb-2 items-center justify-center rounded-sm py-2"
           style={{
             backgroundColor: isAdvancing ? ThemeColors.surfaces.disabled : config.btnColor,
             opacity: isAdvancing ? 0.6 : 1,

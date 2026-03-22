@@ -14,6 +14,8 @@ interface OrderItemRowProps {
   onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
   onRemove: (itemId: number | string) => void;
   onEditModifiers: (itemId: number | string) => void;
+  /** When true, the row is read-only (past round items cannot be edited). */
+  locked?: boolean;
 }
 
 export function OrderItemRow({
@@ -21,6 +23,7 @@ export function OrderItemRow({
   onUpdateQuantity,
   onRemove,
   onEditModifiers,
+  locked = false,
 }: OrderItemRowProps) {
   const itemId = item.id;
   const swipeableRef = useRef<Swipeable | null>(null);
@@ -39,9 +42,11 @@ export function OrderItemRow({
     swipeableRef.current?.close();
   }, []);
 
+  const isDisabled = locked || item.is_voided;
+
   // Auto-execute action when swipe reaches full open (no tap required)
   const handleSwipeableOpen = useCallback((direction: 'left' | 'right') => {
-    if (item.is_voided) return;
+    if (isDisabled) return;
     if (direction === 'right') {
       // Swiped left → delete action
       swipeableRef.current?.close();
@@ -51,30 +56,30 @@ export function OrderItemRow({
       swipeableRef.current?.close();
       onEditModifiers(itemId);
     }
-  }, [item.is_voided, itemId, onRemove, onEditModifiers]);
+  }, [isDisabled, itemId, onRemove, onEditModifiers]);
 
   const rightActions = useMemo(() => (
-    <View className="h-full w-[72px] items-center justify-center bg-pos-danger">
+    <View className="h-full w-[60px] items-center justify-center bg-pos-danger">
       <MaterialIcons name="delete" size={20} color="#fff" />
       <Text className="mt-1 text-[10px] font-semibold text-white">Delete</Text>
     </View>
   ), []);
 
   const leftActions = useMemo(() => (
-    <View className="h-full w-[72px] items-center justify-center bg-amber-500">
+    <View className="h-full w-[60px] items-center justify-center bg-amber-500">
       <MaterialIcons name="edit" size={20} color="#fff" />
       <Text className="mt-1 text-[10px] font-semibold text-white">Edit</Text>
     </View>
   ), []);
 
   return (
-    <View className={item.is_voided ? 'opacity-50' : ''}>
+    <View className={item.is_voided ? 'opacity-50' : locked ? 'opacity-70' : ''}>
       <Swipeable
         ref={(ref) => {
           swipeableRef.current = ref;
         }}
-        renderLeftActions={() => (item.is_voided ? null : leftActions)}
-        renderRightActions={() => (item.is_voided ? null : rightActions)}
+        renderLeftActions={() => (isDisabled ? null : leftActions)}
+        renderRightActions={() => (isDisabled ? null : rightActions)}
         onSwipeableOpen={handleSwipeableOpen}
         overshootLeft={false}
         overshootRight={false}
@@ -82,8 +87,8 @@ export function OrderItemRow({
         rightThreshold={40}
       >
         <Pressable
-          onPress={() => onEditModifiers(itemId)}
-          className="mb-1.5 overflow-hidden rounded-sm bg-surface-card px-2.5 py-2 active:opacity-90"
+          onPress={isDisabled ? undefined : () => onEditModifiers(itemId)}
+          className={`mb-1.5 overflow-hidden rounded-sm bg-surface-card px-2.5 py-2 ${isDisabled ? '' : 'active:opacity-90'}`}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-1">
@@ -105,7 +110,7 @@ export function OrderItemRow({
             </View>
             
           <View className="mt-1.5 flex-row items-center justify-between">
-            {!item.is_voided ? (
+            {!isDisabled ? (
               <View className="flex-row items-center gap-1.5">
                 <IconButton
                   size="sm"
@@ -114,7 +119,7 @@ export function OrderItemRow({
                 >
                   <Text className="text-[11px] text-pos-text">−</Text>
                 </IconButton>
-                <Text className="min-w-[14px] text-center text-[11px] font-semibold text-pos-text">
+                <Text className="min-w-[14px] text-center font-mono text-[11px] font-semibold text-pos-text">
                   {displayQuantity}
                 </Text>
                 <IconButton
@@ -125,23 +130,26 @@ export function OrderItemRow({
                   <Text className="text-[11px] text-pos-text">+</Text>
                 </IconButton>
               </View>
-            ) : null}
+            ) : (
+              <Text className="font-mono text-[11px] font-semibold text-pos-text-muted">
+                ×{displayQuantity}
+              </Text>
+            )}
 
-
-            {!item.is_voided ? (
-              <View className="ml-2 flex-row items-center gap-1.5">
+            <View className="ml-2 flex-row items-center gap-1.5">
+              {!isDisabled ? (
                 <Button
                   onPress={() => onEditModifiers(itemId)}
                   className="h-6 w-6 items-center justify-center rounded-full bg-amber-500/15"
                 >
                   <MaterialIcons name="edit" size={14} color="#F59E0B" />
                 </Button>
+              ) : null}
 
-                <Text className="text-pos-sm font-bold text-accent">
-                  {formatIDR(item.total)}
-                </Text>
-              </View>
-            ) : null}
+              <Text className={`font-mono text-pos-sm font-bold ${locked ? 'text-pos-text-muted' : 'text-accent'}`}>
+                {formatIDR(item.total)}
+              </Text>
+            </View>
           </View>
 
           </View>

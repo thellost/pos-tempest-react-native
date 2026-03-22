@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
@@ -6,7 +7,6 @@ import { router } from 'expo-router';
 import { Banknote } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Button } from '@/components/ui';
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -98,7 +98,7 @@ export default function ShiftsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <View className="rounded-2xl border border-border bg-surface-card p-5">
+      <View className="rounded-sm border border-border bg-surface-card p-5">
         <Text className="text-pos-2xl font-bold text-pos-text">Shift Management</Text>
         <Text className="mt-2 text-pos-sm text-pos-text-muted">
           {user?.name ?? 'User'} · Branch {user?.branch_id ?? '-'}
@@ -107,25 +107,25 @@ export default function ShiftsScreen() {
         {loading && <Text className="mt-3 text-pos-sm text-pos-text-muted">Loading shift state...</Text>}
 
         {error && (
-          <View className="mt-3 rounded-xl bg-pos-danger-muted p-3">
+          <View className="mt-3 rounded-sm bg-pos-danger-muted p-3">
             <Text className="text-pos-sm text-pos-danger">{error}</Text>
           </View>
         )}
       </View>
 
       {activeShift ? (
-        <View className="mt-4 rounded-2xl border border-pos-success/30 bg-pos-success-muted p-5">
+        <View className="mt-4 rounded-sm border border-pos-success/30 bg-pos-success-muted p-5">
           <Text className="text-pos-lg font-semibold text-pos-success">Active Shift</Text>
           <Text className="mt-2 text-pos-sm text-pos-text-muted">
-            Opened: {formatTimestamp(activeShift.opened_at)}
+            Opened: <Text className="font-mono">{formatTimestamp(activeShift.opened_at)}</Text>
           </Text>
           <Text className="mt-1 text-pos-sm text-pos-text-muted">
-            Opening Cash: {formatIDR(activeShift.opening_cash)}
+            Opening Cash: <Text className="font-mono">{formatIDR(activeShift.opening_cash)}</Text>
           </Text>
 
           <Button
-            className="mt-4 items-center justify-center rounded-xl border border-accent bg-accent-muted p-4"
-            onPress={() => router.push('/(app)/cash/index')}>
+            className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
+            onPress={() => router.push('/(app)/cash')}>
             <View className="flex-row items-center justify-center gap-2">
               <Banknote size={16} color={ThemeColors.accent.primary} />
               <Text className="text-pos-base font-semibold text-accent">Manage Cash</Text>
@@ -133,19 +133,19 @@ export default function ShiftsScreen() {
           </Button>
 
           <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Closing Cash Input</Text>
-          <View className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
-            <Text className="text-pos-xl font-bold text-accent">{formatIDR(closingAmount)}</Text>
+          <View className="mt-2 rounded-sm border border-border bg-surface px-4 py-3">
+            <Text className="font-mono text-pos-xl font-bold text-accent">{formatIDR(closingAmount)}</Text>
           </View>
 
           {summary && closingInput.length > 0 && (
-            <View className="mt-3 rounded-xl border border-border bg-surface p-4">
-              <Text className="text-pos-sm text-pos-text-muted">Expected: {formatIDR(summary.expectedCash)}</Text>
-              <Text className="mt-1 text-pos-sm text-pos-text-muted">Actual: {formatIDR(closingAmount)}</Text>
+            <View className="mt-3 rounded-sm border border-border bg-surface p-4">
+              <Text className="text-pos-sm text-pos-text-muted">Expected: <Text className="font-mono">{formatIDR(summary.expectedCash)}</Text></Text>
+              <Text className="mt-1 text-pos-sm text-pos-text-muted">Actual: <Text className="font-mono">{formatIDR(closingAmount)}</Text></Text>
               <Text
                 className={`mt-1 text-pos-sm font-semibold ${
                   previewDifference >= 0 ? 'text-pos-success' : 'text-pos-danger'
                 }`}>
-                Difference: {formatIDR(previewDifference)}
+                Difference: <Text className="font-mono">{formatIDR(previewDifference)}</Text>
               </Text>
             </View>
           )}
@@ -154,7 +154,7 @@ export default function ShiftsScreen() {
             {keypad.map((key) => (
               <Pressable
                 key={`close-${key}`}
-                className="mb-3 h-14 w-[31%] items-center justify-center rounded-xl border border-border bg-surface-card"
+                className="mb-3 h-14 w-[31%] items-center justify-center rounded-sm border border-border bg-surface-card"
                 disabled={submitting}
                 onPress={() => applyKey(key, closingInput, setClosingInput)}>
                 <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
@@ -163,28 +163,28 @@ export default function ShiftsScreen() {
           </View>
 
           <Button
-            className="mt-2 items-center justify-center rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-4"
+            className="mt-2 items-center justify-center rounded-sm border border-pos-danger/30 bg-pos-danger-muted p-4"
             disabled={submitting || closingInput.length === 0}
             onPress={onCloseShift}>
-            <Text className="text-center text-pos-base font-semibold text-pos-warning">
+            <Text className="text-center text-pos-base font-semibold text-pos-danger">
               {submitting ? 'Closing Shift...' : 'Close Shift'}
             </Text>
           </Button>
         </View>
       ) : (
-        <View className="mt-4 rounded-2xl border border-border bg-surface-card p-5">
+        <View className="mt-4 rounded-sm border border-border bg-surface-card p-5">
           <Text className="text-pos-lg font-semibold text-pos-text">Open New Shift</Text>
           <Text className="mt-2 text-pos-sm text-pos-text-muted">Enter opening cash amount</Text>
 
-          <View className="mt-3 rounded-xl border border-border bg-surface px-4 py-3">
-            <Text className="text-pos-xl font-bold text-accent">{formatIDR(openingAmount)}</Text>
+          <View className="mt-3 rounded-sm border border-border bg-surface px-4 py-3">
+            <Text className="font-mono text-pos-xl font-bold text-accent">{formatIDR(openingAmount)}</Text>
           </View>
 
           <View className="mt-4 flex-row flex-wrap justify-between">
             {keypad.map((key) => (
               <Pressable
                 key={`open-${key}`}
-                className="mb-3 h-14 w-[31%] items-center justify-center rounded-xl border border-border bg-surface-card"
+                className="mb-3 h-14 w-[31%] items-center justify-center rounded-sm border border-border bg-surface-card"
                 disabled={submitting}
                 onPress={() => applyKey(key, openingInput, setOpeningInput)}>
                 <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
@@ -193,7 +193,7 @@ export default function ShiftsScreen() {
           </View>
 
           <Button
-            className="items-center justify-center rounded-xl bg-accent p-4"
+            className="items-center justify-center rounded-sm bg-accent p-4"
             disabled={submitting || openingInput.length === 0}
             onPress={onOpenShift}>
             <Text className="text-center text-pos-base font-semibold text-white">
@@ -204,23 +204,23 @@ export default function ShiftsScreen() {
       )}
 
       {lastClosedShift && (
-        <View className="mt-4 rounded-2xl border border-accent/30 bg-accent-muted p-5">
+        <View className="mt-4 rounded-sm border border-accent/30 bg-accent-muted p-5">
           <Text className="text-pos-base font-semibold text-accent">Last Closed Shift Summary</Text>
-          <Text className="mt-2 text-pos-sm text-pos-text-muted">Closed: {formatTimestamp(lastClosedShift.closed_at)}</Text>
+          <Text className="mt-2 text-pos-sm text-pos-text-muted">Closed: <Text className="font-mono">{formatTimestamp(lastClosedShift.closed_at)}</Text></Text>
           <Text className="mt-1 text-pos-sm text-pos-text-muted">
-            Opening: {formatIDR(lastClosedShift.opening_cash)}
+            Opening: <Text className="font-mono">{formatIDR(lastClosedShift.opening_cash)}</Text>
           </Text>
           <Text className="mt-1 text-pos-sm text-pos-text-muted">
-            Closing: {formatIDR(lastClosedShift.closing_cash ?? 0)}
+            Closing: <Text className="font-mono">{formatIDR(lastClosedShift.closing_cash ?? 0)}</Text>
           </Text>
           <Text className="mt-1 text-pos-sm text-pos-text-muted">
-            Expected: {formatIDR(lastClosedShift.expected_cash ?? 0)}
+            Expected: <Text className="font-mono">{formatIDR(lastClosedShift.expected_cash ?? 0)}</Text>
           </Text>
           <Text
             className={`mt-1 text-pos-sm font-semibold ${
               (lastClosedShift.cash_difference ?? 0) >= 0 ? 'text-pos-success' : 'text-pos-danger'
             }`}>
-            Difference: {formatIDR(lastClosedShift.cash_difference ?? 0)}
+            Difference: <Text className="font-mono">{formatIDR(lastClosedShift.cash_difference ?? 0)}</Text>
           </Text>
         </View>
       )}

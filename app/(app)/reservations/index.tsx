@@ -120,7 +120,7 @@ function filterByDate(reservations: ReservationWithCustomer[], filter: DateFilte
 function StatusBadge({ status }: { status: ReservationStatus }) {
   const c = STATUS_COLORS[status];
   return (
-    <View className={`rounded-full px-2.5 py-0.5 ${c.bg}`}>
+    <View className={`rounded px-2.5 py-0.5 ${c.bg}`}>
       <Text className={`text-[11px] font-semibold ${c.text}`}>{STATUS_LABELS[status]}</Text>
     </View>
   );
@@ -154,7 +154,7 @@ export default function ReservationsScreen() {
         <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
           Reservations require an internet connection for backend verification.
         </Text>
-        <Button onPress={checkOnline} className="mt-6 rounded-lg bg-brand px-6 py-3">
+        <Button onPress={checkOnline} className="mt-6 rounded-sm bg-brand px-6 py-3">
           <Text className="text-pos-base font-semibold text-white">Retry</Text>
         </Button>
       </View>
@@ -379,7 +379,7 @@ function ReservationsContent() {
   return (
     <View className="flex-1 bg-surface">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View className="border-b border-border bg-surface-card px-5 py-5">
+      <View className="border-b border-border bg-surface-card px-4 py-3">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
             <CalendarDays size={24} color={ThemeColors.accent.primary} />
@@ -387,7 +387,7 @@ function ReservationsContent() {
           </View>
           <Button
             onPress={handleOpenCreate}
-            className="flex-row items-center rounded-lg bg-brand px-4 py-2.5"
+            className="flex-row items-center rounded-sm bg-brand px-4 py-2.5"
           >
             <Plus size={17} color="white" />
             <Text className="ml-1.5 text-pos-sm font-bold text-white">New</Text>
@@ -411,7 +411,7 @@ function ReservationsContent() {
               <Pressable
                 key={f}
                 onPress={() => setDateFilter(f)}
-                className={`rounded-lg px-4 py-1.5 ${dateFilter === f ? 'bg-brand' : 'bg-surface-raised'}`}
+                className={`rounded-sm px-4 py-1.5 ${dateFilter === f ? 'bg-brand' : 'bg-surface-raised'}`}
               >
                 <Text className={`text-pos-sm font-semibold ${dateFilter === f ? 'text-white' : 'text-pos-text-muted'}`}>
                   {DATE_FILTER_LABELS[f]}
@@ -428,7 +428,7 @@ function ReservationsContent() {
               <Pressable
                 key={opt.value}
                 onPress={() => setStatusFilter(opt.value)}
-                className={`rounded-full px-3 py-1 ${statusFilter === opt.value ? 'bg-surface-card border border-brand' : 'bg-surface-raised'}`}
+                className={`rounded-sm px-3 py-1 ${statusFilter === opt.value ? 'bg-surface-card border border-brand' : 'bg-surface-raised'}`}
               >
                 <Text className={`text-pos-xs font-semibold ${statusFilter === opt.value ? 'text-brand' : 'text-pos-text-muted'}`}>
                   {opt.label}
@@ -492,7 +492,7 @@ function ReservationsContent() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 justify-end"
           >
-            <View className="max-h-[88%] rounded-t-2xl bg-surface-card">
+            <View className="max-h-[88%] rounded-t-xl bg-surface-card">
               {/* Form header */}
               <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
                 <Text className="text-pos-lg font-bold text-pos-text">
@@ -509,7 +509,7 @@ function ReservationsContent() {
                 {isEditMode ? (
                   <View className="mb-4">
                     <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Customer</Text>
-                    <View className="rounded-lg border border-border bg-surface/50 px-4 py-3">
+                    <View className="rounded-sm border border-border bg-surface/50 px-4 py-3">
                       <Text className="text-pos-base text-pos-text">{guestName}</Text>
                     </View>
                   </View>
@@ -528,10 +528,10 @@ function ReservationsContent() {
                       }}
                       placeholder="Enter customer name"
                       placeholderTextColor={ThemeColors.text.faint}
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                      className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                     />
                     {showCustomerSearch && customers.length > 0 && (
-                      <View className="mt-1 rounded-lg border border-border bg-surface-card">
+                      <View className="mt-1 rounded-sm border border-border bg-surface-card">
                         {customers.slice(0, 5).map((c) => (
                           <Pressable
                             key={c.id}
@@ -564,7 +564,7 @@ function ReservationsContent() {
                       placeholder="e.g. 08123456789"
                       placeholderTextColor={ThemeColors.text.faint}
                       keyboardType="phone-pad"
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                      className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                     />
                   </View>
                 )}
@@ -577,7 +577,7 @@ function ReservationsContent() {
                     </Text>
                     <Pressable
                       onPress={() => setShowTableModal(true)}
-                      className={`flex-row items-center justify-between rounded-lg border px-4 py-3 ${
+                      className={`flex-row items-center justify-between rounded-sm border px-4 py-3 ${
                         selectedTableLabel ? 'border-brand bg-brand/5' : 'border-border bg-surface'
                       }`}
                     >
@@ -597,7 +597,7 @@ function ReservationsContent() {
                       value={guestCount}
                       onChangeText={setGuestCount}
                       keyboardType="number-pad"
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                      className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                     />
                   </View>
                 </View>
@@ -611,7 +611,7 @@ function ReservationsContent() {
                       </Text>
                       <Pressable
                         onPress={() => { setShowTimePicker(false); setShowDatePicker((v) => !v); }}
-                        className="flex-row items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                        className="flex-row items-center gap-2 rounded-sm border border-border bg-surface px-4 py-3"
                       >
                         <CalendarDays size={16} color={ThemeColors.accent.primary} />
                         <Text className="text-pos-base text-pos-text">
@@ -625,10 +625,10 @@ function ReservationsContent() {
                       </Text>
                       <Pressable
                         onPress={() => { setShowDatePicker(false); setShowTimePicker((v) => !v); }}
-                        className="flex-row items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                        className="flex-row items-center gap-2 rounded-sm border border-border bg-surface px-4 py-3"
                       >
                         <Clock size={16} color={ThemeColors.accent.primary} />
-                        <Text className="text-pos-base text-pos-text">
+                        <Text className="font-mono text-pos-base text-pos-text">
                           {`${String(reservationDateTime.getHours()).padStart(2, '0')}:${String(reservationDateTime.getMinutes()).padStart(2, '0')}`}
                         </Text>
                       </Pressable>
@@ -687,12 +687,12 @@ function ReservationsContent() {
                       value={durationMinutes}
                       onChangeText={setDurationMinutes}
                       keyboardType="number-pad"
-                      className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                      className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                     />
                     {endTimePreview && (
                       <View className="mt-1.5 flex-row items-center gap-1">
                         <Clock size={12} color={ThemeColors.text.muted} />
-                        <Text className="text-pos-xs text-pos-text-muted">
+                        <Text className="font-mono text-pos-xs text-pos-text-muted">
                           Ends at {endTimePreview}
                         </Text>
                       </View>
@@ -711,13 +711,13 @@ function ReservationsContent() {
                     multiline
                     numberOfLines={3}
                     textAlignVertical="top"
-                    className="rounded-lg border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+                    className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                     style={{ minHeight: 72 }}
                   />
                 </View>
 
                 {/* Submit */}
-                <Button onPress={handleSubmit} disabled={isSubmitting} className="rounded-lg bg-brand py-4">
+                <Button onPress={handleSubmit} disabled={isSubmitting} className="rounded-sm bg-brand py-4">
                   {isSubmitting ? (
                     <ActivityIndicator size="small" color="white" />
                   ) : (
@@ -762,7 +762,7 @@ function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTable
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-end">
-        <View className="rounded-t-2xl bg-surface-card" style={{ maxHeight: '70%' }}>
+        <View className="rounded-t-xl bg-surface-card" style={{ maxHeight: '70%' }}>
           {/* Header */}
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-pos-lg font-bold text-pos-text">Select Table</Text>
@@ -781,7 +781,7 @@ function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTable
                   <Pressable
                     key={area.id}
                     onPress={() => setActiveAreaId(aid)}
-                    className={`rounded-lg px-4 py-2 ${isActive ? 'bg-brand' : 'bg-surface-raised'}`}
+                    className={`rounded-sm px-4 py-2 ${isActive ? 'bg-brand' : 'bg-surface-raised'}`}
                   >
                     <Text className={`text-pos-sm font-semibold ${isActive ? 'text-white' : 'text-pos-text-muted'}`}>
                       {area.name}
@@ -831,7 +831,7 @@ function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTable
                     <Pressable
                       key={t.id}
                       onPress={() => onSelect(tid)}
-                      className={`rounded-xl border-2 p-3 items-center ${borderColor} ${bgColor}`}
+                      className={`rounded-sm border p-3 items-center ${borderColor} ${bgColor}`}
                       style={{ width: '30%' }}
                     >
                       {isSelected && (
@@ -839,14 +839,14 @@ function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTable
                           <Check size={13} color={ThemeColors.accent.primary} />
                         </View>
                       )}
-                      <Text className={`text-pos-lg font-bold ${isSelected ? 'text-brand' : 'text-pos-text'}`}>
+                      <Text className={`font-mono text-pos-lg font-bold ${isSelected ? 'text-brand' : 'text-pos-text'}`}>
                         {t.table_number}
                       </Text>
                       <View className="mt-1 flex-row items-center gap-1">
                         <View className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
                         <Text className="text-pos-xs text-pos-text-muted">{statusLabel}</Text>
                       </View>
-                      <Text className="text-pos-xs text-pos-text-muted mt-0.5">cap {t.capacity}</Text>
+                      <Text className="font-mono text-pos-xs text-pos-text-muted mt-0.5">cap {t.capacity}</Text>
                     </Pressable>
                   );
                 })}
@@ -863,8 +863,8 @@ function TablePickerModal({ visible, floorAreas, getTablesForArea, selectedTable
 
 function StatChip({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <View className={`rounded-xl px-4 py-2 items-center min-w-[72px] ${bg}`}>
-      <Text className={`text-pos-lg font-bold ${color}`}>{value}</Text>
+    <View className={`rounded-sm px-4 py-2 items-center min-w-[72px] ${bg}`}>
+      <Text className={`font-mono text-pos-lg font-bold ${color}`}>{value}</Text>
       <Text className="text-pos-xs text-pos-text-muted">{label}</Text>
     </View>
   );
@@ -888,13 +888,13 @@ function ReservationRow({ reservation, tableName, formattedTime, endTime, onStat
   const isActive = isConfirmed || isSeated;
 
   return (
-    <View className="mb-3 rounded-xl border border-border bg-surface-card overflow-hidden">
+    <View className="mb-2 rounded-sm border border-border bg-surface-card overflow-hidden">
       {/* Left accent bar */}
       <View className={`absolute left-0 top-0 bottom-0 w-1 ${
         isConfirmed ? 'bg-brand' : isSeated ? 'bg-status-available' : 'bg-surface-raised'
       }`} />
 
-      <View className="px-4 pt-4 pb-3 pl-5">
+      <View className="px-4 pt-3 pb-2 pl-5">
         {/* Top row: name + status + edit */}
         <View className="flex-row items-start justify-between">
           <View className="flex-1 mr-2">
@@ -908,7 +908,7 @@ function ReservationRow({ reservation, tableName, formattedTime, endTime, onStat
           <View className="flex-row items-center gap-2">
             <StatusBadge status={status} />
             {isActive && (
-              <Pressable onPress={onEdit} className="p-1 rounded-lg active:bg-surface-raised">
+              <Pressable onPress={onEdit} className="p-1 rounded-sm active:bg-surface-raised">
                 <Pencil size={15} color={ThemeColors.text.muted} />
               </Pressable>
             )}
@@ -919,14 +919,14 @@ function ReservationRow({ reservation, tableName, formattedTime, endTime, onStat
         <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
           <View className="flex-row items-center gap-1">
             <Clock size={12} color={ThemeColors.text.muted} />
-            <Text className="text-pos-xs text-pos-text-muted">
+            <Text className="font-mono text-pos-xs text-pos-text-muted">
               {formattedTime} – {endTime}
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
             <Users size={12} color={ThemeColors.text.muted} />
             <Text className="text-pos-xs text-pos-text-muted">
-              Table {tableName} · {reservation.guest_count} guest{reservation.guest_count !== 1 ? 's' : ''}
+              Table <Text className="font-mono">{tableName}</Text> · <Text className="font-mono">{reservation.guest_count}</Text> guest{reservation.guest_count !== 1 ? 's' : ''}
             </Text>
           </View>
         </View>
@@ -942,19 +942,19 @@ function ReservationRow({ reservation, tableName, formattedTime, endTime, onStat
           <View className="mt-3 flex-row gap-2 border-t border-border pt-3">
             <Pressable
               onPress={() => onStatusAction(reservation, RESERVATION_STATUS.SEATED)}
-              className="flex-1 rounded-lg bg-status-available/20 py-2"
+              className="flex-1 rounded-sm bg-status-available/20 py-2"
             >
               <Text className="text-center text-pos-sm font-semibold text-status-available">Seat</Text>
             </Pressable>
             <Pressable
               onPress={() => onStatusAction(reservation, RESERVATION_STATUS.NO_SHOW)}
-              className="flex-1 rounded-lg bg-surface-raised py-2"
+              className="flex-1 rounded-sm bg-surface-raised py-2"
             >
               <Text className="text-center text-pos-sm font-semibold text-pos-text-muted">No Show</Text>
             </Pressable>
             <Pressable
               onPress={() => onStatusAction(reservation, RESERVATION_STATUS.CANCELLED)}
-              className="flex-1 rounded-lg bg-pos-danger/10 py-2"
+              className="flex-1 rounded-sm bg-pos-danger/10 py-2"
             >
               <Text className="text-center text-pos-sm font-semibold text-pos-danger">Cancel</Text>
             </Pressable>
@@ -965,7 +965,7 @@ function ReservationRow({ reservation, tableName, formattedTime, endTime, onStat
           <View className="mt-3 border-t border-border pt-3">
             <Pressable
               onPress={() => onStatusAction(reservation, RESERVATION_STATUS.COMPLETED)}
-              className="rounded-lg bg-brand/20 py-2"
+              className="rounded-sm bg-brand/20 py-2"
             >
               <Text className="text-center text-pos-sm font-semibold text-brand">Mark Completed</Text>
             </Pressable>

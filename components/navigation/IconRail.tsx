@@ -1,6 +1,6 @@
+import { Lock, LogOut } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Lock, LogOut } from 'lucide-react-native';
 
 import type { NavItem } from '@/constants/navigation';
 import { ThemeColors } from '@/constants/theme';
@@ -51,9 +51,11 @@ export function IconRail({
       {/* Nav items */}
       <View className="flex-1 pt-1">
         {visibleItems.map((item) => {
+          // usePathname() strips route groups, e.g. "/(app)/floor" → "/floor"
+          const bare = item.href.replace(/\/\([^)]+\)/g, '');
           const isActive =
-            currentPath === item.href ||
-            currentPath.startsWith(item.href + '/');
+            currentPath === bare ||
+            currentPath.startsWith(bare + '/');
 
           return (
             <Pressable
@@ -63,16 +65,29 @@ export function IconRail({
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
               {isActive && (
-                <View className="absolute left-0 h-6 w-0.5 rounded-r-full bg-accent" />
+                <View className="absolute left-0 h-8 w-[3px] rounded-r-full bg-accent" />
               )}
-              <item.icon
-                size={20}
-                color={
+              <View
+                className="items-center justify-center rounded-lg"
+                style={
                   isActive
-                    ? ThemeColors.accent.primary
-                    : ThemeColors.text.muted
+                    ? {
+                        width: 36,
+                        height: 36,
+                      }
+                    : undefined
                 }
-              />
+              >
+                <item.icon
+                  size={isActive ? 22 : 20}
+                  color={
+                    isActive
+                      ? ThemeColors.accent.primary
+                      : ThemeColors.text.muted
+                  }
+                  strokeWidth={isActive ? 2.2 : 1.8}
+                />
+              </View>
             </Pressable>
           );
         })}

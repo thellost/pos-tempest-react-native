@@ -8,8 +8,8 @@ interface IconButtonProps extends Omit<ButtonProps, 'className'> {
 
 const SIZE_CLASS = {
   sm: 'h-5 w-5 items-center justify-center rounded-sm',
-  md: 'h-8 w-8 items-center justify-center rounded-lg',
-  lg: 'h-10 w-10 items-center justify-center rounded-lg',
+  md: 'h-8 w-8 items-center justify-center rounded-sm',
+  lg: 'h-10 w-10 items-center justify-center rounded-sm',
 } as const;
 
 export function IconButton({ size = 'md', className, ...rest }: IconButtonProps) {

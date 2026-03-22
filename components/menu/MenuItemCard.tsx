@@ -46,7 +46,7 @@ function MenuItemCardComponent({
   return (
     <View
       className={`overflow-hidden rounded-sm border border-border bg-surface-card ${!isAvailable ? 'opacity-50' : ''}`}
-      style={{ minHeight: 100 }}
+      style={{ minHeight: 96 }}
     >
       <View className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accentColor }} />
 
@@ -64,7 +64,7 @@ function MenuItemCardComponent({
             {item.name}
           </Text>
 
-          <Text className="mt-1 text-[12px] font-semibold text-pos-text">
+          <Text className="mt-1 font-mono text-[12px] font-semibold text-pos-text">
             {formatIDR(item.price)}
             {isWeightBased && `/${item.unit_of_measure}`}
           </Text>

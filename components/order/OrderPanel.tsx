@@ -178,6 +178,7 @@ export const OrderPanel = memo(function OrderPanel({
                 onUpdateQuantity={onUpdateQuantity}
                 onEditModifiers={onEditModifiers}
                 onRemove={onRemoveItem}
+                locked={round < currentRound}
               />
             ))}
           </Fragment>
@@ -241,7 +242,7 @@ export const OrderPanel = memo(function OrderPanel({
       <View className="border-b border-border bg-surface-card px-4 py-3">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-pos-lg font-bold text-pos-text">
+            <Text className="font-mono text-pos-lg font-bold text-pos-text">
               {order?.order_number ?? 'New Order'}
             </Text>
           </View>
@@ -316,7 +317,7 @@ export const OrderPanel = memo(function OrderPanel({
         showsVerticalScrollIndicator={false}
       >
         {activeItems.length === 0 && pendingRoundItems.length === 0 ? (
-          <View className="items-center justify-center py-12">
+          <View className="items-center justify-center py-8">
             <View className="mb-3 h-12 w-12 items-center justify-center rounded-full bg-surface-card">
               <UtensilsCrossed size={24} color={ThemeColors.text.muted} />
             </View>
@@ -337,7 +338,7 @@ export const OrderPanel = memo(function OrderPanel({
           <View className="border-t border-border py-2">
             <View className="flex-row justify-between">
               <Text className="text-pos-xs font-semibold text-pos-text-muted">Total</Text>
-              <Text className="text-pos-lg font-bold text-accent">
+              <Text className="font-mono text-pos-lg font-bold text-accent">
                 {formatIDR(allItemsTotal)}
               </Text>
             </View>

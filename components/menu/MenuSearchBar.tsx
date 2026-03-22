@@ -25,7 +25,7 @@ export function MenuSearchBar({
   }, [onChangeText]);
 
   return (
-    <View className={`flex-row items-center rounded-lg bg-surface-elevated px-3 py-2 mx-4 my-2 ${className ?? ''}`}>
+    <View className={`flex-row items-center rounded-sm bg-surface-elevated px-3 py-2 mx-4 my-2 ${className ?? ''}`}>
       <MaterialIcons name="search" size={18} color="#64748B" />
       <TextInput
         ref={inputRef}

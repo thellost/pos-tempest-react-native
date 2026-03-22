@@ -16,7 +16,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
     <View className="rounded-sm bg-surface-card p-2">
       <View className="flex-row justify-between py-0.5">
         <Text className="text-pos-xs text-pos-text-muted">Subtotal</Text>
-        <Text className="text-pos-xs font-medium text-pos-text">
+        <Text className="font-mono text-pos-xs font-medium text-pos-text">
           {formatIDR(order.subtotal)}
         </Text>
       </View>
@@ -24,7 +24,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
       {showDiscount && (
         <View className="flex-row justify-between py-0.5">
           <Text className="text-pos-xs text-pos-text-muted">Discount</Text>
-          <Text className="text-pos-xs font-semibold text-pos-success">
+          <Text className="font-mono text-pos-xs font-semibold text-pos-success">
             −{formatIDR(order.discount_amount)}
           </Text>
         </View>
@@ -32,7 +32,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
 
       <View className="flex-row justify-between py-0.5">
         <Text className="text-pos-xs text-pos-text-muted">Tax (11%)</Text>
-        <Text className="text-pos-xs font-medium text-pos-text">
+        <Text className="font-mono text-pos-xs font-medium text-pos-text">
           {formatIDR(order.tax_amount)}
         </Text>
       </View>
@@ -40,7 +40,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
       {showServiceCharge && (
         <View className="flex-row justify-between py-0.5">
           <Text className="text-pos-xs text-pos-text-muted">Service</Text>
-          <Text className="text-pos-xs font-medium text-pos-text">
+          <Text className="font-mono text-pos-xs font-medium text-pos-text">
             {formatIDR(order.service_charge)}
           </Text>
         </View>
@@ -49,7 +49,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
       {showRounding && (
         <View className="flex-row justify-between py-0.5">
           <Text className="text-pos-xs text-pos-text-muted">Rounding</Text>
-          <Text className="text-pos-xs font-medium text-pos-text">
+          <Text className="font-mono text-pos-xs font-medium text-pos-text">
             {order.rounding_amount > 0 ? '+' : ''}{formatIDR(order.rounding_amount)}
           </Text>
         </View>
@@ -57,7 +57,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
 
       <View className="mt-1.5 flex-row items-center justify-between border-t border-border pt-1.5">
         <Text className="text-pos-sm font-semibold text-pos-text-muted">Total</Text>
-        <Text className="text-pos-lg font-bold text-accent">
+        <Text className="font-mono text-pos-base font-bold text-accent">
           {formatIDR(order.total)}
         </Text>
       </View>

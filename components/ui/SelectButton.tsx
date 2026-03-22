@@ -21,7 +21,7 @@ export function SelectButton({
   return (
     <Button
       className={clsx(
-        'items-center justify-center rounded-xl border px-4 py-2',
+        'items-center justify-center rounded-sm border px-3 py-1.5',
         selected
           ? (selectedClassName ?? DEFAULT_SELECTED)
           : (unselectedClassName ?? DEFAULT_UNSELECTED),

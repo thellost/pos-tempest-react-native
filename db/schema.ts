@@ -102,6 +102,10 @@ export const appSchema = new Schema({
 		button_color: column.text,
 		created_at: column.text,
 		updated_at: column.text,
+	}, {
+		indexes: {
+			by_parent_sort: ['parent_id', 'sort_order'],
+		},
 	}),
 	menu_items: new Table({
 		category_id: column.integer,
@@ -122,6 +126,11 @@ export const appSchema = new Schema({
 		created_at: column.text,
 		updated_at: column.text,
 		branch_id: column.text,
+	}, {
+		indexes: {
+			by_sort: ['sort_order'],
+			by_category: ['category_id'],
+		},
 	}),
 	modifier_groups: new Table({
 		name: column.text,
@@ -142,11 +151,19 @@ export const appSchema = new Schema({
 		is_active: column.integer,
 		created_at: column.text,
 		updated_at: column.text,
+	}, {
+		indexes: {
+			by_group: ['modifier_group_id'],
+		},
 	}),
 	menu_item_modifier_groups: new Table({
 		menu_item_id: column.integer,
 		modifier_group_id: column.integer,
 		sort_order: column.integer,
+	}, {
+		indexes: {
+			by_menu_item: ['menu_item_id', 'modifier_group_id'],
+		},
 	}),
 	inventories: new Table({
 		branch_id: column.integer,
@@ -154,6 +171,10 @@ export const appSchema = new Schema({
 		stock_quantity: column.real,
 		low_stock_threshold: column.real,
 		updated_at: column.text,
+	}, {
+		indexes: {
+			by_branch_item: ['branch_id', 'menu_item_id'],
+		},
 	}),
 	inventory_movements: new Table({
 		inventory_id: column.integer,
@@ -190,6 +211,11 @@ export const appSchema = new Schema({
 		void_reason: column.text,
 		created_at: column.text,
 		updated_at: column.text,
+	}, {
+		indexes: {
+			by_table_status: ['table_id', 'status'],
+			by_branch_shift: ['branch_id', 'shift_id'],
+		},
 	}),
 	order_items: new Table({
 		order_id: column.integer,
@@ -208,6 +234,10 @@ export const appSchema = new Schema({
 		void_reason: column.text,
 		round_number: column.integer,
 		created_at: column.text,
+	}, {
+		indexes: {
+			by_order: ['order_id'],
+		},
 	}),
 	order_item_modifiers: new Table({
 		order_item_id: column.integer,
@@ -226,6 +256,10 @@ export const appSchema = new Schema({
 		started_at: column.text,
 		completed_at: column.text,
 		created_at: column.text,
+	}, {
+		indexes: {
+			by_status_priority: ['status', 'priority'],
+		},
 	}),
 	kot_items: new Table({
 		kot_id: column.integer,
@@ -233,6 +267,10 @@ export const appSchema = new Schema({
 		quantity: column.real,
 		status: column.text,
 		notes: column.text,
+	}, {
+		indexes: {
+			by_kot: ['kot_id'],
+		},
 	}),
 	payments: new Table({
 		order_id: column.integer,

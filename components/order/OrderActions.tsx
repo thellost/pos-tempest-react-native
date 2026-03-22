@@ -94,7 +94,7 @@ export function OrderActions({
   if (isActiveOrder && hasPendingRound) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
-        <View className="flex-row gap-1.5">
+        <View className="flex-row gap-1">
           <DangerButton onPress={handleCancelRound} className="flex-1">
             <Text className="text-pos-xs font-semibold text-pos-danger">
               Cancel Round
@@ -108,7 +108,7 @@ export function OrderActions({
           </SecondaryButton>
         </View>
 
-        <PrimaryButton onPress={handleConfirmRound} className="mt-1.5">
+        <PrimaryButton onPress={handleConfirmRound} className="mt-1">
           <Text className="text-pos-sm font-bold text-white">
             Confirm Round
           </Text>
@@ -121,7 +121,7 @@ export function OrderActions({
   if (isActiveOrder) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
-        <View className="flex-row gap-1.5">
+        <View className="flex-row gap-1">
           {hasItems ? (
             <DangerButton onPress={handleCancelOrder} className="flex-1">
               <Text className="text-pos-xs font-semibold text-pos-danger">
@@ -157,7 +157,7 @@ export function OrderActions({
           )}
         </View>
 
-        <View className="mt-1.5 flex-row gap-1.5">
+        <View className="mt-1 flex-row gap-1">
           <SecondaryButton onPress={onPrintBill} className="flex-1">
             <Text className="text-pos-xs font-semibold text-pos-text-muted">
               Print Bill

@@ -16,7 +16,7 @@ export function Button({
   disabled,
   children,
   pressOpacity = 0.7,
-  pressScale = 0.98,
+  pressScale = 0.97,
   onPress,
   ...rest
 }: ButtonProps) {

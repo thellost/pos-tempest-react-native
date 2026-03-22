@@ -316,11 +316,21 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
     router.replace('/(app)/floor');
   }, [router]);
 
-  // Guard: redirect if order already completed
+  // Guard: redirect if order was already completed BEFORE we opened checkout
+  const wasAlreadyCompleted = useRef(false);
   useEffect(() => {
-    if (order && order.status === ORDER_STATUS.COMPLETED) {
+    if (!order) return;
+    // Only flag if the order was completed on first load (not by us)
+    if (order.status === ORDER_STATUS.COMPLETED && !lastReceipt && !isProcessing) {
+      wasAlreadyCompleted.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id]);
+
+  useEffect(() => {
+    if (wasAlreadyCompleted.current && order?.status === ORDER_STATUS.COMPLETED) {
       Alert.alert('Already Completed', 'This order has already been completed.', [
-        { text: 'Go Back', onPress: () => router.back() },
+        { text: 'Go to Floor', onPress: () => router.replace('/(app)/floor') },
       ]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

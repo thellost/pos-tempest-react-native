@@ -38,7 +38,7 @@ export default function InventoryScreen() {
         </Text>
         <Button
           onPress={checkOnline}
-          className="mt-6 rounded-lg bg-brand px-6 py-3"
+          className="mt-6 rounded-sm bg-brand px-6 py-3"
         >
           <Text className="text-pos-base font-semibold text-white">Retry</Text>
         </Button>

@@ -209,6 +209,10 @@ export default function AppLayout() {
               options={{ title: 'Inventory' }}
             />
             <Stack.Screen
+              name="daily-orders/index"
+              options={{ title: 'Daily Orders' }}
+            />
+            <Stack.Screen
               name="reservations/index"
               options={{ title: 'Reservations' }}
             />

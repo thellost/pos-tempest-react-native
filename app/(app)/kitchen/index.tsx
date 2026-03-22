@@ -18,16 +18,16 @@ interface ColumnHeaderProps {
 function ColumnHeader({ label, count, accentColor }: ColumnHeaderProps) {
   return (
     <View
-      className="flex-row items-center justify-between border-b border-border px-4 py-3"
+      className="flex-row items-center justify-between border-b border-border px-3 py-2"
       style={{ borderLeftWidth: 3, borderLeftColor: accentColor }}
     >
       <Text className="text-pos-base font-bold text-pos-text">{label}</Text>
       <View
-        className="min-w-[28px] items-center justify-center rounded-full px-2 py-0.5"
+        className="min-w-[28px] items-center justify-center rounded px-2 py-0.5"
         style={{ backgroundColor: accentColor + '33' }}
       >
         <Text
-          className="text-pos-xs font-bold"
+          className="font-mono text-pos-xs font-bold"
           style={{ color: accentColor }}
         >
           {count}
@@ -62,7 +62,7 @@ function KDSColumn({
       <ColumnHeader label={label} count={kots.length} accentColor={accentColor} />
 
       <ScrollView
-        contentContainerStyle={{ padding: 12 }}
+        contentContainerStyle={{ padding: 8 }}
         showsVerticalScrollIndicator={false}
       >
         {kots.length === 0 ? (
@@ -116,15 +116,15 @@ export default function KitchenScreen() {
   return (
     <View className="flex-1 flex-col bg-surface">
       {/* ── Top bar ── */}
-      <View className="border-b border-border bg-surface-card px-5 py-3 flex-row items-center justify-between">
+      <View className="border-b border-border bg-surface-card px-4 py-2 flex-row items-center justify-between">
         <View className="flex-row items-center gap-3">
           <View className="flex-row items-center gap-2">
             <ChefHat size={22} color={ThemeColors.text.primary} />
             <Text className="text-pos-2xl font-bold text-pos-text">Kitchen Display</Text>
           </View>
           {totalActive > 0 && (
-            <View className="rounded-full bg-brand px-3 py-0.5">
-              <Text className="text-pos-xs font-bold text-white">
+            <View className="rounded px-3 py-0.5 bg-brand">
+              <Text className="font-mono text-pos-xs font-bold text-white">
                 {totalActive} active
               </Text>
             </View>

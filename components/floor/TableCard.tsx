@@ -2,8 +2,6 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { TABLE_STATUS } from '@/constants/enums';
-import { Shadows } from '@/constants/theme';
-import { useAppTheme } from '@/hooks/use-app-theme';
 import type { TableWithOrder } from '@/hooks/use-tables';
 
 interface TableCardProps {
@@ -16,33 +14,32 @@ interface TableCardProps {
 }
 
 export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reservationName, reservationTime }: TableCardProps) {
-  const { isDark } = useAppTheme();
   const isOccupied = table.status === TABLE_STATUS.OCCUPIED;
   const isAvailable = table.status === TABLE_STATUS.AVAILABLE;
   const isReserved = table.status === TABLE_STATUS.RESERVED;
   const isMaintenance = table.status === TABLE_STATUS.MAINTENANCE;
 
-  const statusBgColor = isAvailable 
-    ? 'bg-status-available-muted border-status-available/30' 
-    : isOccupied 
+  const statusBgColor = isAvailable
+    ? 'bg-status-available-muted border-status-available/30'
+    : isOccupied
     ? 'bg-status-occupied-muted border-status-occupied/30'
-    : isReserved 
+    : isReserved
     ? 'bg-status-reserved-muted border-status-reserved/30'
     : 'bg-status-maintenance-muted border-status-maintenance/30';
 
-  const badgeBgColor = isAvailable 
-    ? 'bg-status-available' 
-    : isOccupied 
+  const badgeBgColor = isAvailable
+    ? 'bg-status-available'
+    : isOccupied
     ? 'bg-status-occupied'
-    : isReserved 
+    : isReserved
     ? 'bg-status-reserved'
     : 'bg-status-maintenance';
 
-  const statusText = isAvailable 
-    ? 'Available' 
-    : isOccupied 
+  const statusText = isAvailable
+    ? 'Available'
+    : isOccupied
     ? 'Occupied'
-    : isReserved 
+    : isReserved
     ? 'Reserved'
     : 'Maintenance';
 
@@ -52,82 +49,63 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
       onLongPress={onLongPress}
       delayLongPress={400}
       disabled={isMaintenance}
-      className={`min-h-[130px] overflow-hidden rounded-2xl border-2 p-5 ${statusBgColor} ${
+      className={`overflow-hidden rounded-sm border px-3 py-2 ${statusBgColor} ${
         isMaintenance ? 'opacity-50' : ''
       }`}
-      style={isDark ? { ...Shadows.md, elevation: 3 } : undefined}
     >
-      <View className="mb-4 flex-row items-center justify-between">
-        <Text className="text-pos-2xl font-bold text-pos-text">
-          {table.table_number}
-        </Text>
-        <View className={`rounded-full px-3 py-1.5 ${badgeBgColor}`}>
-          <Text className="text-pos-xs font-semibold text-white">
+      {/* Row 1: Table number [capacity] + status badge */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-1.5">
+          <Text className="font-mono text-pos-lg font-bold text-pos-text">
+            {table.table_number}
+          </Text>
+          <Text className="font-mono text-pos-xs text-pos-text-faint">
+            [{table.capacity}]
+          </Text>
+        </View>
+        <View className={`rounded px-2 py-0.5 ${badgeBgColor}`}>
+          <Text className="text-pos-xs font-bold text-white">
             {statusText}
           </Text>
         </View>
       </View>
 
-      <View className="mb-3 flex-row items-center">
-        <Text className="text-pos-sm text-pos-text-muted">
-          {`Capacity: ${table.capacity} ${table.capacity === 1 ? 'person' : 'people'}`}
-        </Text>
-      </View>
-
-      <View className="min-h-[40px] border-t border-border pt-3">
+      {/* Row 2: Order info / reservation / action */}
+      <View className="mt-1">
         {isOccupied && table.active_order_id ? (
           <View className="flex-row items-center justify-between">
-            <View className="flex-1">
-              <Text className="text-pos-xs text-pos-text-muted">
-                {table.active_order_number}
-              </Text>
-            </View>
+            <Text className="font-mono text-pos-xs text-pos-text-muted" numberOfLines={1}>
+              {table.active_order_number}
+            </Text>
             {elapsedMinutes > 0 && (
-              <View className={`rounded-full px-2 py-0.5 ${
-                elapsedMinutes > 90
-                  ? 'bg-red-500/20'
-                  : elapsedMinutes > 60
-                  ? 'bg-amber-500/20'
-                  : 'bg-transparent'
-              }`}>
-                <Text
-                  className={`text-pos-sm font-bold ${
-                    elapsedMinutes > 90
-                      ? 'text-pos-danger'
-                      : elapsedMinutes > 60
-                      ? 'text-pos-warning'
-                      : 'text-pos-text'
-                  }`}
-                >
-                  {elapsedMinutes >= 60
-                    ? `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`
-                    : `${elapsedMinutes}m`}
-                </Text>
-              </View>
+              <Text
+                className={`font-mono text-pos-xs font-bold ${
+                  elapsedMinutes > 90
+                    ? 'text-pos-danger'
+                    : elapsedMinutes > 60
+                    ? 'text-pos-warning'
+                    : 'text-pos-text-muted'
+                }`}
+              >
+                {elapsedMinutes >= 60
+                  ? `${Math.floor(elapsedMinutes / 60)}h${elapsedMinutes % 60}m`
+                  : `${elapsedMinutes}m`}
+              </Text>
             )}
           </View>
         ) : isReserved ? (
-          <View>
-            {reservationName ? (
-              <Text className="text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
-                {reservationName}
-              </Text>
-            ) : null}
+          <View className="flex-row items-center justify-between">
+            <Text className="text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
+              {reservationName || 'Reserved'}
+            </Text>
             {reservationTime ? (
-              <Text className="text-pos-xs text-pos-text-muted">{reservationTime}</Text>
+              <Text className="font-mono text-pos-xs text-pos-text-muted">{reservationTime}</Text>
             ) : null}
-            {!reservationName && (
-              <Text className="text-pos-xs text-pos-warning">Hold to manage</Text>
-            )}
           </View>
         ) : isMaintenance ? (
-          <Text className="text-pos-xs text-pos-text-faint">
-            Under maintenance
-          </Text>
+          <Text className="text-pos-xs text-pos-text-faint">Maintenance</Text>
         ) : (
-          <Text className="text-pos-sm font-medium text-pos-success">
-            + New Order
-          </Text>
+          <Text className="text-pos-xs font-medium text-pos-success">+ New Order</Text>
         )}
       </View>
     </Pressable>

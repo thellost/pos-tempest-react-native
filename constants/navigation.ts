@@ -3,6 +3,7 @@ import {
   Banknote,
   CalendarDays,
   ChefHat,
+  ClipboardList,
   DollarSign,
   LayoutGrid,
   Package,
@@ -20,6 +21,7 @@ export interface NavItem {
 
 export const MAIN_NAV: NavItem[] = [
   { label: 'Tables & Orders', icon: LayoutGrid,   href: '/(app)/floor' },
+  { label: 'Daily Orders',   icon: ClipboardList, href: '/(app)/daily-orders' },
   { label: 'Reservations',    icon: CalendarDays,  href: '/(app)/reservations' },
   { label: 'Kitchen Display', icon: ChefHat,       href: '/(app)/kitchen' },
   { label: 'Inventory',       icon: Package,       href: '/(app)/inventory' },

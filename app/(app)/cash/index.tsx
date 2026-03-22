@@ -47,52 +47,52 @@ export default function CashScreen() {
   return (
     <View className="flex-1 bg-surface">
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View className="rounded-2xl border border-border bg-surface-card p-5">
+        <View className="rounded-sm border border-border bg-surface-card p-5">
           <Text className="text-pos-2xl font-bold text-pos-text">Cash Management</Text>
           <Text className="mt-2 text-pos-sm text-pos-text-muted">
-            Shift opened: {formatTimestamp(activeShift.opened_at)}
+            Shift opened: <Text className="font-mono">{formatTimestamp(activeShift.opened_at)}</Text>
           </Text>
           <Text className="mt-1 text-pos-sm text-pos-text-muted">
-            Opening cash: {formatIDR(activeShift.opening_cash)}
+            Opening cash: <Text className="font-mono">{formatIDR(activeShift.opening_cash)}</Text>
           </Text>
         </View>
 
         {summary && (
-          <View className="mt-4 rounded-2xl border border-border bg-surface-card p-5">
+          <View className="mt-4 rounded-sm border border-border bg-surface-card p-5">
             <Text className="text-pos-base font-semibold text-pos-text">Cash Summary</Text>
-            <View className="mt-3 rounded-xl border border-border bg-surface p-4">
+            <View className="mt-3 rounded-sm border border-border bg-surface p-4">
               <Text className="text-pos-sm text-pos-text-muted">
-                Cash received: {formatIDR(summary.cashReceived)}
+                Cash received: <Text className="font-mono">{formatIDR(summary.cashReceived)}</Text>
               </Text>
               <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                Change given: {formatIDR(summary.changeGiven)}
+                Change given: <Text className="font-mono">{formatIDR(summary.changeGiven)}</Text>
               </Text>
               <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                Net sales: {formatIDR(summary.netCashSales)}
+                Net sales: <Text className="font-mono">{formatIDR(summary.netCashSales)}</Text>
               </Text>
               {(summary.totalCashIn > 0 || summary.totalCashOut > 0) && (
                 <View className="mt-2 border-t border-border pt-2">
                   {summary.totalCashIn > 0 && (
                     <Text className="text-pos-sm text-pos-success">
-                      + Cash In: {formatIDR(summary.totalCashIn)}
+                      + Cash In: <Text className="font-mono">{formatIDR(summary.totalCashIn)}</Text>
                     </Text>
                   )}
                   {summary.totalCashOut > 0 && (
                     <Text className="text-pos-sm text-pos-danger">
-                      - Cash Out: {formatIDR(summary.totalCashOut)}
+                      - Cash Out: <Text className="font-mono">{formatIDR(summary.totalCashOut)}</Text>
                     </Text>
                   )}
                 </View>
               )}
               <Text className="mt-2 text-pos-base font-bold text-pos-text">
-                Expected cash now: {formatIDR(summary.expectedCash)}
+                Expected cash now: <Text className="font-mono">{formatIDR(summary.expectedCash)}</Text>
               </Text>
             </View>
           </View>
         )}
 
         <Button
-          className="mt-4 items-center justify-center rounded-xl border border-accent bg-accent-muted p-4"
+          className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
           onPress={() => setShowCashTxModal(true)}>
           <Text className="text-center text-pos-base font-semibold text-accent">Cash In / Out</Text>
         </Button>

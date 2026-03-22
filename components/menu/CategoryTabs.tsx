@@ -116,14 +116,14 @@ export function CategoryTabs({
   return (
     <View className="bg-surface-soft">
       <View 
-        className="flex-row gap-2 px-4 py-3"
+        className="flex-row gap-1.5 px-4 py-2"
         style={{ marginLeft: 8 }}
       >
         {renderedCategoryTabs}
       </View>
 
       {subCategories.length > 0 && (
-        <View className="flex-row gap-2 border-t border-border px-4 py-2">
+        <View className="flex-row gap-1.5 border-t border-border px-4 py-2">
           <Pressable
             onPress={() => onSelectSubCategory(null)}
             className={`items-center justify-center px-3 py-2 rounded-sm active:opacity-70 ${selectedSubCategoryId === null ? 'bg-brand' : 'bg-surface-elevated'}`}
