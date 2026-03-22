@@ -2,6 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useMemo } from 'react';
 
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
+import { getElapsedMinutes } from '@/utils/date';
 import { useAuth } from './use-auth';
 
 export interface TakeawayOrder {
@@ -44,12 +45,8 @@ export function useTakeaway() {
 
   const activeTakeawayCount = useMemo(() => takeawayOrders.length, [takeawayOrders]);
 
-  const getOrderElapsedMinutes = (orderCreatedAt: string | null): number => {
-    if (!orderCreatedAt) return 0;
-    const created = new Date(orderCreatedAt);
-    const now = new Date();
-    return Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
-  };
+  const getOrderElapsedMinutes = (orderCreatedAt: string | null): number =>
+    getElapsedMinutes(orderCreatedAt);
 
   return {
     takeawayOrders,

@@ -5,6 +5,7 @@ import { ORDER_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { DiningTable, FloorArea } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { toInt } from '@/utils/coerce';
+import { getElapsedMinutes } from '@/utils/date';
 import { useAuth } from './use-auth';
 import { useDevice } from './use-device';
 
@@ -182,13 +183,8 @@ export function useTables() {
     return tablesData.length;
   }, [tablesData]);
 
-  // Calculate elapsed time since order was created (in minutes)
-  const getOrderElapsedMinutes = (orderCreatedAt: string | null): number => {
-    if (!orderCreatedAt) return 0;
-    const created = new Date(orderCreatedAt);
-    const now = new Date();
-    return Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
-  };
+  const getOrderElapsedMinutes = (orderCreatedAt: string | null): number =>
+    getElapsedMinutes(orderCreatedAt);
 
   return {
     floorAreas,

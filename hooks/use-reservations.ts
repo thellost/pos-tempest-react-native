@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import type { ReservationStatus } from '@/constants/enums';
 import { RESERVATION_STATUS } from '@/constants/enums';
 import { toIntOrNull } from '@/utils/coerce';
+import { getAppTimezone } from '@/utils/timezone';
 import type { Reservation } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { useAuth } from './use-auth';
@@ -258,6 +259,7 @@ export function useReservations() {
   const formatReservationTime = useCallback((isoDatetime: string): string => {
     const date = new Date(isoDatetime);
     return date.toLocaleString('id-ID', {
+      timeZone: getAppTimezone(),
       day: '2-digit',
       month: 'short',
       year: 'numeric',

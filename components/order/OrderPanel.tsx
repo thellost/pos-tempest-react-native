@@ -8,6 +8,7 @@ import type { OrderItemDisplay } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { Order } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
+import { formatTime } from '@/utils/date';
 import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
@@ -92,11 +93,7 @@ export const OrderPanel = memo(function OrderPanel({
   const sentAtFormatted: string | null = currentRoundSentAt
     ? (() => {
         try {
-          return new Date(currentRoundSentAt).toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Jakarta',
-          });
+          return formatTime(currentRoundSentAt);
         } catch {
           return null;
         }

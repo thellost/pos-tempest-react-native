@@ -8,11 +8,13 @@ import { HamburgerButton } from '@/components/navigation/HamburgerButton';
 import { SideDrawer } from '@/components/navigation/SideDrawer';
 import { Brand, ThemeColors } from '@/constants/theme';
 import { AlertTriangle, Ban } from 'lucide-react-native';
+import { useAppTimezone } from '@/hooks/use-app-timezone';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
 
 export default function AppLayout() {
+  useAppTimezone();
   const { loading, profileLoading, isAuthenticated, isLocked, markActivity, user, signOut, lock, refreshProfile } = useAuth();
   const { loading: deviceLoading, isRegistered, registration } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();

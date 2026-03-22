@@ -30,6 +30,13 @@ import { useReservations, type ReservationWithCustomer } from '@/hooks/use-reser
 import { useTables, type TableWithOrder } from '@/hooks/use-tables';
 import { useCustomers } from '@/hooks/use-customers';
 import { toInt, toIntOrNull } from '@/utils/coerce';
+import {
+  getAppDateString,
+  isoToPickerDate,
+  nowAppLocalDate,
+  pickerDateToISO,
+} from '@/utils/date';
+import { getAppTimezone } from '@/utils/timezone';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,26 +79,32 @@ const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getLocalDateString(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+/** YYYY-MM-DD of a reservation ISO string, in Jakarta timezone. */
+function reservationDateInJakarta(isoDatetime: string): string {
+  return getAppDateString(new Date(isoDatetime));
 }
 
 function computeEndTime(isoDatetime: string, durationMinutes: number): string {
   const start = new Date(isoDatetime);
   const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-  return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: getAppTimezone(),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(end);
 }
 
 function filterByDate(reservations: ReservationWithCustomer[], filter: DateFilter): ReservationWithCustomer[] {
   if (filter === 'all') return reservations;
   const now = new Date();
-  const today = getLocalDateString(now);
+  const today = getAppDateString(now);
   const tomorrowDate = new Date(now);
   tomorrowDate.setDate(now.getDate() + 1);
-  const tomorrow = getLocalDateString(tomorrowDate);
+  const tomorrow = getAppDateString(tomorrowDate);
   const weekDate = new Date(now);
   weekDate.setDate(now.getDate() + 7);
-  const weekEnd = getLocalDateString(weekDate);
+  const weekEnd = getAppDateString(weekDate);
 
   return reservations.filter((r) => {
     const d = r.reservation_datetime.slice(0, 10);
@@ -180,7 +193,7 @@ function ReservationsContent() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestCount, setGuestCount] = useState('2');
   const [reservationDateTime, setReservationDateTime] = useState<Date>(() => {
-    const d = new Date();
+    const d = nowAppLocalDate();
     d.setDate(d.getDate() + 1);
     d.setHours(19, 0, 0, 0);
     return d;
@@ -196,16 +209,14 @@ function ReservationsContent() {
 
   // ── Derived stats ──────────────────────────────────────────────────────────
 
-  const today = getLocalDateString(new Date());
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const weekEnd = getLocalDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const today = getAppDateString();
+  const weekEnd = getAppDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
 
-  const todayCount = allReservations.filter((r) => r.reservation_datetime.slice(0, 10) === today).length;
-  const confirmedCount = allReservations.filter((r) => r.reservation_datetime.slice(0, 10) === today && r.status === RESERVATION_STATUS.CONFIRMED).length;
+  const todayCount = allReservations.filter((r) => reservationDateInJakarta(r.reservation_datetime) === today).length;
+  const confirmedCount = allReservations.filter((r) => reservationDateInJakarta(r.reservation_datetime) === today && r.status === RESERVATION_STATUS.CONFIRMED).length;
   const seatedCount = allReservations.filter((r) => r.status === RESERVATION_STATUS.SEATED).length;
   const weekCount = allReservations.filter((r) => {
-    const d = r.reservation_datetime.slice(0, 10);
+    const d = reservationDateInJakarta(r.reservation_datetime);
     return d >= today && d <= weekEnd;
   }).length;
 
@@ -226,7 +237,7 @@ function ReservationsContent() {
     setGuestPhone('');
     setGuestCount('2');
     setReservationDateTime(() => {
-      const d = new Date();
+      const d = nowAppLocalDate();
       d.setDate(d.getDate() + 1);
       d.setHours(19, 0, 0, 0);
       return d;
@@ -256,7 +267,7 @@ function ReservationsContent() {
     setNotes(reservation.notes ?? '');
     setSelectedTableId(toIntOrNull(reservation.table_id));
     setSelectedCustomerId(toIntOrNull(reservation.customer_id));
-    setReservationDateTime(new Date(reservation.reservation_datetime));
+    setReservationDateTime(isoToPickerDate(reservation.reservation_datetime));
     setDurationMinutes(String(reservation.duration_minutes));
     setShowForm(true);
   };
@@ -305,7 +316,7 @@ function ReservationsContent() {
       return;
     }
 
-    const isoDatetime = reservationDateTime.toISOString();
+    const isoDatetime = pickerDateToISO(reservationDateTime);
     setIsSubmitting(true);
     try {
       await createReservation({
@@ -632,7 +643,7 @@ function ReservationsContent() {
                       value={reservationDateTime}
                       mode="date"
                       display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                      minimumDate={new Date()}
+                      minimumDate={nowAppLocalDate()}
                       onChange={(_e, date) => {
                         if (Platform.OS === 'android') setShowDatePicker(false);
                         if (date) {

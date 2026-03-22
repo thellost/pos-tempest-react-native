@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 
 import type { BillData } from '@/services/receipt.service';
 import { formatIDR } from '@/utils/currency';
+import { formatDate } from '@/utils/date';
 
 interface ReceiptPreviewProps {
   bill: BillData | null;
@@ -14,14 +15,7 @@ const SEP_LIGHT  = '────────────────────
 
 function formatDateTime(isoString: string): string {
   try {
-    return new Date(isoString).toLocaleString('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      day:    '2-digit',
-      month:  '2-digit',
-      year:   '2-digit',
-      hour:   '2-digit',
-      minute: '2-digit',
-    });
+    return formatDate(isoString);
   } catch {
     return isoString;
   }

@@ -5,6 +5,7 @@
 
 import { getOrCreateDeviceId } from '@/lib/device';
 import { powersync } from '@/db/provider';
+import { nowAppLocalDate } from '@/utils/date';
 
 /**
  * Gets a 6-character short device ID from the full UUID.
@@ -25,7 +26,7 @@ async function getShortDeviceId(): Promise<string> {
  * @example generateOrderNumber() // "ORD-260223-A1B2C3-001"
  */
 export async function generateOrderNumber(): Promise<string> {
-  const today = new Date();
+  const today = nowAppLocalDate();
   const year = String(today.getFullYear()).slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
@@ -49,7 +50,7 @@ export async function generateOrderNumber(): Promise<string> {
  * @example generateTicketNumber() // "KOT-260223-A1B2C3-001"
  */
 export async function generateTicketNumber(): Promise<string> {
-  const today = new Date();
+  const today = nowAppLocalDate();
   const year = String(today.getFullYear()).slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 
 import { ORDER_TYPE } from '@/constants/enums';
 import type { KOTWithItems } from '@/services/kitchen.service';
+import { formatDate } from '@/utils/date';
 
 interface KOTTicketPreviewProps {
   kot: KOTWithItems | null;
@@ -15,14 +16,7 @@ function formatQty(qty: number): string {
 
 function formatDateTime(isoString: string): string {
   try {
-    return new Date(isoString).toLocaleString('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDate(isoString);
   } catch {
     return isoString;
   }
