@@ -1,6 +1,7 @@
 import type { KotStatus } from '@/constants/enums';
 import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { addBreadcrumb } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { generateTicketNumber } from '@/utils/order-number';
 import { toInt } from '@/utils/coerce';
@@ -171,6 +172,7 @@ export async function createKOT(
     [ORDER_STATUS.PREPARING, now, orderId]
   );
 
+  addBreadcrumb('kitchen', 'KOT sent', { orderId, ticketNumber, roundNumber, itemCount: orderItems.length });
   console.log(
     '[KitchenService] Created KOT:',
     ticketNumber,
@@ -240,6 +242,7 @@ export async function updateKOTStatus(
     );
   }
 
+  addBreadcrumb('kitchen', 'KOT status updated', { kotId, status });
   console.log('[KitchenService] KOT', kotId, '->', status);
 
   if (status === KOT_STATUS.READY || status === KOT_STATUS.SERVED) {

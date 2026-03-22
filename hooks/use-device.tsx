@@ -19,6 +19,7 @@ import {
   setDeviceName as setStoredDeviceName,
   type DeviceInfo,
 } from '@/lib/device';
+import { addBreadcrumb, captureError, setDeviceContext } from '@/lib/sentry';
 import { setAuditDeviceContext } from '@/services/audit.service';
 import {
   getDeviceRegistration,
@@ -113,6 +114,16 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
         regResult.device ? `${regResult.device.device_name} (${id})` : null,
       );
 
+      // Publish device identity to Sentry so every event is tagged with device/branch
+      if (regResult.device) {
+        setDeviceContext({
+          id: regResult.device.id,
+          name: regResult.device.device_name,
+          uid: id,
+          branch_id: regResult.device.branch_id,
+        });
+      }
+
       // Update last seen if registered
       if (regResult.registered) {
         await updateDeviceLastSeen(id);
@@ -120,7 +131,7 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
 
       console.log('[DeviceHook] Initialized device:', id, 'Registered:', regResult.registered);
     } catch (err) {
-      console.error('[DeviceHook] Error initializing device:', err);
+      captureError(err, { module: 'device', operation: 'initializeDevice', level: 'error' });
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to initialize device');
       }
@@ -150,10 +161,10 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       // Refresh registration status
       const regResult = await getDeviceRegistration(deviceId);
       setRegistration(regResult);
-
+      addBreadcrumb('device', 'Device registered', { deviceId, branchId, deviceName });
       console.log('[DeviceHook] Device registered:', device);
     } catch (err) {
-      console.error('[DeviceHook] Error registering device:', err);
+      captureError(err, { module: 'device', operation: 'registerDevice', level: 'error' });
       setError(err instanceof Error ? err.message : 'Failed to register device');
       throw err;
     } finally {
@@ -174,7 +185,7 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       const regResult = await getDeviceRegistration(deviceId);
       setRegistration(regResult);
     } catch (err) {
-      console.error('[DeviceHook] Error updating device name:', err);
+      captureError(err, { module: 'device', operation: 'updateDeviceName', level: 'error' });
       throw err;
     }
   }, [deviceId]);
@@ -199,7 +210,7 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       // Re-initialize to get new device ID
       await initializeDevice();
     } catch (err) {
-      console.error('[DeviceHook] Error clearing device:', err);
+      captureError(err, { module: 'device', operation: 'clearDevice', level: 'error' });
       throw err;
     }
   }, [initializeDevice]);

@@ -9,6 +9,7 @@ import { AUDIT_ACTION } from '@/constants/enums';
 import type { PowerSyncDatabase } from '@powersync/react-native';
 import bcrypt from 'bcryptjs';
 
+import { captureError } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 
 // ============================================================================
@@ -147,8 +148,8 @@ export class DbRateLimiter {
         isLocked: false,
       };
     } catch (error) {
-      // On error, fail safe and allow (log for monitoring)
-      console.error('[DbRateLimiter] Error checking rate limit:', error);
+      // On error, fail safe and allow (capture for monitoring)
+      captureError(error, { module: 'auth', operation: 'rateLimitCheck', level: 'warning' });
       return {
         allowed: true,
         remainingAttempts: this.maxAttempts,
@@ -172,7 +173,7 @@ export class DbRateLimiter {
         [new Date().toISOString(), userId],
       );
     } catch (error) {
-      console.error('[DbRateLimiter] Error recording attempt:', error);
+      captureError(error, { module: 'auth', operation: 'rateLimitRecordAttempt', level: 'warning' });
     }
   }
 
@@ -182,14 +183,14 @@ export class DbRateLimiter {
   async reset(userId: number, db: PowerSyncDatabase): Promise<void> {
     try {
       await db.execute(
-        `UPDATE ${this.tableName} 
+        `UPDATE ${this.tableName}
          SET ${this.attemptsColumn} = 0,
              ${this.timestampColumn} = ?
          WHERE id = ?`,
         [new Date().toISOString(), userId],
       );
     } catch (error) {
-      console.error('[DbRateLimiter] Error resetting attempts:', error);
+      captureError(error, { module: 'auth', operation: 'rateLimitReset', level: 'warning' });
     }
   }
 }

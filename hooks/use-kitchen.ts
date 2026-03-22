@@ -2,6 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useCallback } from 'react';
 
 import type { KotStatus } from '@/constants/enums';
+import { captureError } from '@/lib/sentry';
 import { KOT_STATUS } from '@/constants/enums';
 import { updateKOTStatus } from '@/services/kitchen.service';
 
@@ -63,8 +64,13 @@ export function useKitchen() {
         [KOT_STATUS.READY]: KOT_STATUS.SERVED,
       };
       const nextStatus = next[currentStatus];
-      if (nextStatus) {
-        await updateKOTStatus(kotId, nextStatus);
+      try {
+        if (nextStatus) {
+          await updateKOTStatus(kotId, nextStatus);
+        }
+      } catch (err) {
+        captureError(err, { module: 'kitchen', operation: 'advanceKOT', level: 'error', extras: { kotId } });
+        throw err;
       }
     },
     []

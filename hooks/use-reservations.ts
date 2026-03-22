@@ -3,10 +3,12 @@ import { useCallback } from 'react';
 
 import type { ReservationStatus } from '@/constants/enums';
 import { RESERVATION_STATUS } from '@/constants/enums';
+import type { Reservation } from '@/db/models';
+import { api } from '@/lib/api';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { toIntOrNull } from '@/utils/coerce';
 import { getAppTimezone } from '@/utils/timezone';
-import type { Reservation } from '@/db/models';
-import { powersync } from '@/db/provider';
+
 import { useAuth } from './use-auth';
 
 /**
@@ -19,7 +21,6 @@ export interface ReservationWithCustomer extends Omit<Reservation, 'id'> {
 
 /**
  * Input required to create a new reservation.
- * Table must belong to the device's branch (enforced by the hook).
  */
 export interface CreateReservationInput {
   table_id: number;
@@ -36,7 +37,11 @@ export interface CreateReservationInput {
 /**
  * Hook for reservation management scoped to the device's branch.
  *
- * Only tables belonging to the authenticated user's branch are queried.
+ * Reads are served from the local PowerSync cache (offline-capable).
+ * Writes go through the REST API for backend validation (online-only):
+ *   - availability conflict checking on create/update
+ *   - status transition enforcement
+ *   - table status side-effects handled server-side
  */
 export function useReservations() {
   const { user } = useAuth();
@@ -52,7 +57,7 @@ export function useReservations() {
      WHERE r.branch_id = ?
        AND r.status IN (?, ?)
      ORDER BY r.reservation_datetime ASC`,
-    [branchId, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.SEATED]
+    [branchId, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.SEATED],
   );
 
   // All reservations for the branch (for history view)
@@ -65,7 +70,7 @@ export function useReservations() {
      WHERE r.branch_id = ?
      ORDER BY r.reservation_datetime DESC
      LIMIT 100`,
-    [branchId]
+    [branchId],
   );
 
   /**
@@ -78,11 +83,13 @@ export function useReservations() {
         return id === tableId;
       });
     },
-    [activeReservations]
+    [activeReservations],
   );
 
   /**
-   * Creates a new reservation. Enforces branchId from the authenticated user.
+   * Creates a reservation via the API.
+   * Backend validates table availability and sets created_by from the JWT.
+   * PowerSync syncs the new record back to the local cache automatically.
    */
   const createReservation = useCallback(
     async (input: CreateReservationInput): Promise<ReservationWithCustomer> => {
@@ -91,166 +98,95 @@ export function useReservations() {
       if (!input.reservation_datetime) throw new Error('Reservation date/time is required.');
       if (input.guest_count < 1) throw new Error('Guest count must be at least 1.');
 
-      const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-        `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM reservations`
-      );
-      const newId = ((maxIdRow?.max_id ?? 0) + 1).toString();
-      const now = new Date().toISOString();
+      try {
+        const data = await api.post<Reservation & { resolved_customer_name?: string }>(
+          '/api/v1/reservations',
+          {
+            branch_id: branchId,
+            table_id: input.table_id,
+            customer_id: input.customer_id ?? null,
+            customer_name: input.customer_name.trim(),
+            customer_phone: input.customer_phone?.trim() ?? null,
+            guest_count: input.guest_count,
+            reservation_datetime: input.reservation_datetime,
+            duration_minutes: input.duration_minutes ?? 90,
+            notes: input.notes?.trim() ?? null,
+          },
+        );
 
-      await powersync.execute(
-        `INSERT INTO reservations (
-          id, branch_id, table_id, customer_id, customer_name, customer_phone,
-          guest_count, reservation_datetime, duration_minutes, status,
-          notes, created_by, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          newId,
-          branchId,
-          input.table_id,
-          input.customer_id ?? null,
-          input.customer_name.trim(),
-          input.customer_phone?.trim() ?? null,
-          input.guest_count,
-          input.reservation_datetime,
-          input.duration_minutes ?? 90,
-          RESERVATION_STATUS.CONFIRMED,
-          input.notes?.trim() ?? null,
-          user.id,
-          now,
-          now,
-        ]
-      );
-
-      // Update table status to reserved
-      await powersync.execute(
-        `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
-        ['reserved', now, input.table_id]
-      );
-
-      const created = await powersync.getOptional<ReservationWithCustomer>(
-        `SELECT r.*, COALESCE(c.name, r.customer_name) AS resolved_customer_name
-         FROM reservations r
-         LEFT JOIN customers c ON c.id = r.customer_id
-         WHERE r.id = ?`,
-        [newId]
-      );
-      if (!created) throw new Error('Failed to retrieve created reservation.');
-      return created;
+        addBreadcrumb('reservation', 'Reservation created', { tableId: input.table_id, time: input.reservation_datetime, partySize: input.guest_count });
+        return {
+          ...data,
+          id: Number(data.id),
+          resolved_customer_name: data.resolved_customer_name ?? data.customer_name,
+        };
+      } catch (err) {
+        captureError(err, { module: 'reservation', operation: 'createReservation', level: 'error' });
+        throw err;
+      }
     },
-    [user, branchId]
+    [user, branchId],
   );
 
   /**
-   * Updates the status of a reservation.
-   * When marking as SEATED, the table status is set to OCCUPIED (order creation handles that too).
-   * When marking as COMPLETED / NO_SHOW / CANCELLED, the table is freed back to AVAILABLE
-   * (only if no other active reservation claims it).
+   * Updates reservation status via the API.
+   * Backend enforces valid transitions and handles table status side-effects:
+   *   seated    → table becomes occupied
+   *   completed / cancelled → table becomes available
    */
   const updateReservationStatus = useCallback(
     async (reservationId: number, status: ReservationStatus): Promise<void> => {
-      const now = new Date().toISOString();
-
-      // Fetch the reservation to get the table_id
-      const reservation = await powersync.getOptional<Reservation>(
-        `SELECT * FROM reservations WHERE id = ?`,
-        [reservationId]
-      );
-      if (!reservation) throw new Error('Reservation not found.');
-
-      await powersync.execute(
-        `UPDATE reservations SET status = ?, updated_at = ? WHERE id = ?`,
-        [status, now, reservationId]
-      );
-
-      const tableId = typeof reservation.table_id === 'string'
-        ? parseInt(reservation.table_id as string, 10)
-        : reservation.table_id;
-
-      if (tableId) {
-        const terminalStatuses: ReservationStatus[] = [
-          RESERVATION_STATUS.COMPLETED,
-          RESERVATION_STATUS.NO_SHOW,
-          RESERVATION_STATUS.CANCELLED,
-        ];
-
-        if (terminalStatuses.includes(status)) {
-          // Check if any other confirmed reservation still holds this table
-          const otherActive = await powersync.getOptional<{ id: number }>(
-            `SELECT id FROM reservations
-             WHERE table_id = ? AND id != ? AND status IN (?, ?)
-             LIMIT 1`,
-            [tableId, reservationId, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.SEATED]
-          );
-
-          if (!otherActive) {
-            // Free the table only if no active order is using it
-            const activeOrder = await powersync.getOptional<{ id: number }>(
-              `SELECT id FROM orders
-               WHERE table_id = ? AND status NOT IN ('completed','cancelled','served')
-               LIMIT 1`,
-              [tableId]
-            );
-            if (!activeOrder) {
-              await powersync.execute(
-                `UPDATE tables SET status = 'available', updated_at = ? WHERE id = ?`,
-                [now, tableId]
-              );
-            }
-          }
-        }
+      try {
+        await api.patch(`/api/v1/reservations/${reservationId}/status`, { status });
+      } catch (err) {
+        captureError(err, {
+          module: 'reservation',
+          operation: 'updateReservationStatus',
+          level: 'error',
+          extras: { reservationId, status },
+        });
+        throw err;
       }
     },
-    []
+    [],
   );
 
   /**
-   * Updates editable fields of a reservation (guest_count, table_id, notes).
-   * Corresponds to PUT /api/v1/reservations/:id.
+   * Updates editable fields of a reservation via the API.
+   * Backend re-checks table availability if table_id changes.
    */
   const updateReservation = useCallback(
-    async (reservationId: number, payload: {
-      guest_count?: number;
-      table_id?: number | null;
-      notes?: string | null;
-    }): Promise<void> => {
-      const now = new Date().toISOString();
-      const parts: string[] = [];
-      const values: unknown[] = [];
-
-      if (payload.guest_count !== undefined) {
-        parts.push('guest_count = ?');
-        values.push(payload.guest_count);
+    async (
+      reservationId: number,
+      payload: {
+        guest_count?: number;
+        table_id?: number | null;
+        notes?: string | null;
+      },
+    ): Promise<void> => {
+      try {
+        await api.put(`/api/v1/reservations/${reservationId}`, payload);
+      } catch (err) {
+        captureError(err, {
+          module: 'reservation',
+          operation: 'updateReservation',
+          level: 'error',
+          extras: { reservationId },
+        });
+        throw err;
       }
-      if (payload.table_id !== undefined) {
-        parts.push('table_id = ?');
-        values.push(payload.table_id);
-      }
-      if (payload.notes !== undefined) {
-        parts.push('notes = ?');
-        values.push(payload.notes);
-      }
-      if (parts.length === 0) return;
-
-      parts.push('updated_at = ?');
-      values.push(now);
-      values.push(reservationId);
-
-      await powersync.execute(
-        `UPDATE reservations SET ${parts.join(', ')} WHERE id = ?`,
-        values
-      );
     },
-    []
+    [],
   );
 
   /**
-   * Deletes a reservation (hard delete — not recommended; prefer updateReservationStatus to CANCELLED).
+   * Cancels a reservation (prefer over hard delete).
    */
   const deleteReservation = useCallback(
     async (reservationId: number): Promise<void> => {
       await updateReservationStatus(reservationId, RESERVATION_STATUS.CANCELLED);
     },
-    [updateReservationStatus]
+    [updateReservationStatus],
   );
 
   /**

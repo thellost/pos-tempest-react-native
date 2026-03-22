@@ -2,6 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useCallback, useState } from 'react';
 
 import type { Customer } from '@/db/models';
+import { captureError } from '@/lib/sentry';
 import { powersync } from '@/db/provider';
 
 /**
@@ -113,7 +114,7 @@ export function useCustomers() {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create customer.';
         setCreateError(message);
-        console.error('[useCustomers] createCustomer error:', err);
+        captureError(err, { module: 'customer', operation: 'createCustomer', level: 'error' });
         throw new Error(message);
       } finally {
         setIsCreating(false);

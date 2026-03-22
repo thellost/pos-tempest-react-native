@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { addBreadcrumb } from '@/lib/sentry';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.zidan.id';
 
 /**
  * Checks whether the backend API is reachable by hitting the /health endpoint.
@@ -22,8 +24,10 @@ export function useOnlineCheck() {
       });
       clearTimeout(timer);
       setIsOnline(res.ok);
+      addBreadcrumb('network', res.ok ? 'API health check passed' : 'API health check failed', { url, status: res.status }, res.ok ? 'info' : 'warning');
     } catch {
       setIsOnline(false);
+      addBreadcrumb('network', 'API health check unreachable', { url }, 'warning');
     } finally {
       setIsChecking(false);
     }

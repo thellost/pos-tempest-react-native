@@ -1,6 +1,7 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { addBreadcrumb } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 
 export type ShiftRecord = {
@@ -249,6 +250,7 @@ export async function openShift(userId: number, branchId: number, openingCash: n
     newValues: { opening_cash: openingCash, opened_at: openedAt, device_id: deviceId },
     description: `Shift opened by user ${userId} on device ${deviceId}`,
   });
+  addBreadcrumb('shift', 'Shift opened', { shiftId: localShiftId, userId, openingCash });
 
   const inserted = await getShiftById(localShiftIdText);
   if (inserted) {
@@ -307,6 +309,7 @@ export async function closeShift(shiftId: number, closingCash: number): Promise<
     },
     description: `Shift closed: ${shiftId}`,
   });
+  addBreadcrumb('shift', 'Shift closed', { shiftId, closingCash, expectedCash, cashDifference });
 
   const closedShift = await getShiftById(shiftId);
 

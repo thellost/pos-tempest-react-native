@@ -44,3 +44,5 @@ app-example
 .env
 .claude/settings.local.json
 .claude
+
+.env.local

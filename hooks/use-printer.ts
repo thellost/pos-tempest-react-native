@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { captureError } from '@/lib/sentry';
 import {
     type PaperWidth,
     type PrinterConfig,
@@ -31,7 +32,7 @@ export function usePrinter() {
       const s = await getPrinterSettings();
       setSettings(s);
     } catch (error) {
-      console.error('[usePrinter] Failed to load settings:', error);
+      captureError(error, { module: 'printer', operation: 'load', level: 'warning' });
     } finally {
       setIsLoading(false);
     }

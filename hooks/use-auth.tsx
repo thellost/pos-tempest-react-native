@@ -1,4 +1,4 @@
- import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -16,6 +16,7 @@ import {
   validateSession,
   verifyPin,
 } from '@/lib/security';
+import { addBreadcrumb, captureError, clearUserContext, setUserContext } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import { setAuditUserContext } from '@/services/audit.service';
 
@@ -158,6 +159,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setAuditUserContext(profile?.id ?? null, profile?.branch_id ?? null);
+      if (profile) {
+        setUserContext(profile);
+      } else {
+        clearUserContext();
+      }
       setUser(profile);
     } finally {
       setProfileLoading(false);
@@ -165,6 +171,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [session?.user?.id]);
 
   const lock = useCallback(() => {
+    addBreadcrumb('auth', 'Screen locked (idle)');
     setIsLocked(true);
   }, []);
 
@@ -205,10 +212,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
             metadata: { email: sanitizedEmail, reason: 'Too many login attempts' },
             timestamp: Date.now(),
           });
+          addBreadcrumb('auth', 'Account locked (rate limit)', { email: sanitizedEmail }, 'warning');
           throw new Error(`Too many login attempts. Please try again in ${minutes} minutes.`);
         }
       }
 
+      addBreadcrumb('auth', 'Login attempt', { email: sanitizedEmail });
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: sanitizedEmail,
@@ -230,7 +239,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             metadata: { email: sanitizedEmail, error: error.message },
             timestamp: Date.now(),
           });
-
+          addBreadcrumb('auth', 'Login failed', { email: sanitizedEmail }, 'warning');
           throw new Error(getSafeErrorMessage(error));
         }
 
@@ -258,7 +267,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           userId: data.session.user.id,
           timestamp: Date.now(),
         });
-
+        addBreadcrumb('auth', 'Login success', { email: sanitizedEmail });
         markActivity();
         setIsLocked(false);
       } catch (error) {
@@ -270,7 +279,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(async () => {
     const userId = session?.user?.id;
-    
+    addBreadcrumb('auth', 'Logout', { userId });
     const { error } = await supabase.auth.signOut();
 
     logAuditEvent({
@@ -280,6 +289,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     setAuditUserContext(null, null);
+    clearUserContext();
 
     if (error) {
       throw error;
@@ -328,6 +338,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         };
       }
 
+      addBreadcrumb('auth', 'PIN unlock attempt');
       try {
         // Fetch user with PIN from database
         const userWithPin = await powersync.getOptional<{
@@ -451,7 +462,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         
         setIsLocked(false);
         markActivity();
-
+        addBreadcrumb('auth', 'PIN unlock success');
         logAuditEvent({
           type: AuditEventType.PIN_UNLOCK_SUCCESS,
           userId: authUserId,
@@ -465,13 +476,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
           resetInMs: 0,
         };
       } catch (error) {
+        captureError(error, { module: 'auth', operation: 'unlockWithPin', level: 'error' });
         logAuditEvent({
           type: AuditEventType.PIN_UNLOCK_FAILED,
           userId: authUserId,
           metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
           timestamp: Date.now(),
         });
-        
+
         return {
           success: false,
           isLocked: isPinLocked,
@@ -497,7 +509,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           console.warn('[AuthProvider] Stale refresh token — clearing session');
           supabase.auth.signOut();
         } else {
-          console.error('[AuthProvider] getSession error:', error.message);
+          captureError(error, { module: 'auth', operation: 'getSession' });
         }
         setSession(null);
         setLoading(false);
@@ -550,6 +562,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           metadata: { reason: sessionValidation.reason },
           timestamp: Date.now(),
         });
+        addBreadcrumb('auth', 'Session expired', { reason: sessionValidation.reason ?? 'unknown' }, 'warning');
         signOut();
         return;
       }
@@ -566,6 +579,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             metadata: { reason: 'Maximum session duration exceeded' },
             timestamp: Date.now(),
           });
+          addBreadcrumb('auth', 'Session expired', { reason: 'Maximum session duration exceeded' }, 'warning');
           signOut();
           return;
         }

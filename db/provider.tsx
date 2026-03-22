@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { powerSyncConnector } from '@/db/connector';
 import { appSchema } from '@/db/schema';
+import { addBreadcrumb } from '@/lib/sentry';
 
 export const powersync = new PowerSyncDatabase({
 	database: new OPSqliteOpenFactory({
@@ -42,11 +43,25 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		let dispose: (() => void) | undefined;
+
 		initializePowerSync()
-			.then(() => setReady(true))
+			.then(() => {
+				setReady(true);
+				dispose = powersync.registerListener({
+					statusChanged: (status) => {
+						addBreadcrumb('sync', `PowerSync ${status.connected ? 'connected' : 'disconnected'}`, {
+							connected: status.connected,
+							lastSyncedAt: status.lastSyncedAt,
+						});
+					},
+				});
+			})
 			.catch((e: unknown) => {
 				setError(e instanceof Error ? e.message : 'PowerSync initialization failed');
 			});
+
+		return () => { dispose?.(); };
 	}, []);
 
 	if (error) {

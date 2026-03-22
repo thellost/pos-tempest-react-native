@@ -1,5 +1,6 @@
 import { MOVEMENT_TYPE } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 
 interface OrderItemForDeduction {
   menu_item_id: number;
@@ -26,6 +27,7 @@ export async function deductStockForItems(
   userId: number,
   orderId: number
 ): Promise<void> {
+  try {
   const now = new Date().toISOString();
 
   for (const item of items) {
@@ -86,5 +88,10 @@ export async function deductStockForItems(
     }
   }
 
+  addBreadcrumb('inventory', 'Stock deducted for order', { orderId, itemCount: items.length });
   console.log('[InventoryService] Stock deducted for order:', orderId);
+  } catch (error) {
+    captureError(error, { module: 'inventory', operation: 'deductStockForItems', level: 'error', extras: { orderId } });
+    throw error;
+  }
 }

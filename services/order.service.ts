@@ -1,6 +1,7 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { deductStockForItems } from '@/services/inventory.service';
 import { generateOrderNumber } from '@/utils/order-number';
@@ -127,6 +128,7 @@ export async function createOrder(
     description: `Order created: ${orderNumber}`,
   });
 
+  addBreadcrumb('order', 'Order created', { orderId: newId, orderNumber, tableId, orderType });
   console.log('[OrderService] Created order:', orderNumber);
   return order;
 }
@@ -159,6 +161,7 @@ export async function confirmOrder(orderId: number, cashierId: number): Promise<
     description: `Order confirmed: ${orderId}`,
   });
 
+  addBreadcrumb('order', 'Order confirmed', { orderId });
   console.log('[OrderService] Confirmed order:', orderId);
 }
 
@@ -218,6 +221,7 @@ export async function addItemToOrder(
 
       if (incomingIds.length === existingIds.length && incomingIds.every((id, i) => id === existingIds[i])) {
         await updateItemQuantity(toInt(candidate.id), toInt(candidate.quantity) + quantity);
+        addBreadcrumb('order', 'Item quantity increased', { orderId, menuItemId: menuItem.id, itemName: menuItem.name, qty: quantity });
         console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
         return;
       }
@@ -273,6 +277,7 @@ export async function addItemToOrder(
 
   // Recalculate order totals
   await calculateOrderTotals(orderId);
+  addBreadcrumb('order', 'Item added to order', { orderId, menuItemId: menuItem.id, itemName: menuItem.name, qty: quantity, roundNumber });
 
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
@@ -319,6 +324,7 @@ export async function removeItemFromOrder(orderItemId: number): Promise<void> {
   // Recalculate order totals
   await calculateOrderTotals(orderItem.order_id);
 
+  addBreadcrumb('order', 'Item removed from order', { orderId: orderItem.order_id, orderItemId, itemName: orderItem.menu_item_name });
   void insertAuditLog({
     action: AUDIT_ACTION.DELETE,
     tableName: 'order_items',
@@ -599,6 +605,7 @@ export async function voidOrder(orderId: number, voidedBy: number, reason: strin
     );
   }
 
+  addBreadcrumb('order', 'Order voided', { orderId, reason }, 'warning');
   console.log('[OrderService] Voided order:', orderId);
 }
 
@@ -683,7 +690,12 @@ export async function getOrderTotals(orderId: number): Promise<OrderTotals | nul
   );
 
   if (!order) {
-    console.error('[OrderService] getOrderTotals: order not found:', orderId);
+    captureError(new Error(`Order ${orderId} not found`), {
+      module: 'order',
+      operation: 'getOrderTotals',
+      level: 'warning',
+      extras: { orderId },
+    });
     return null;
   }
 
@@ -716,7 +728,7 @@ export async function getActiveOrdersForTable(tableId: number): Promise<Order[]>
 
     return orders;
   } catch (error) {
-    console.error('[OrderService] getActiveOrdersForTable error:', error);
+    captureError(error, { module: 'order', operation: 'getActiveOrdersForTable', extras: { tableId } });
     throw new Error('Failed to fetch active orders for table');
   }
 }

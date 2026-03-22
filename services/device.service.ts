@@ -9,6 +9,7 @@
 import { AUDIT_ACTION, DEVICE_STATUS } from '@/constants/enums';
 import type { Branch, Device } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { captureError } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 
 /**
@@ -161,7 +162,7 @@ export async function getDeviceRegistration(
       branch: branch || null,
     };
   } catch (error) {
-    console.error('[DeviceService] Error getting device registration:', error);
+    captureError(error, { module: 'device', operation: 'getDeviceRegistration', level: 'error' });
     return { registered: false, device: null, branch: null };
   }
 }

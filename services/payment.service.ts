@@ -1,6 +1,7 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { applyDiscount as calcDiscountAmount } from '@/services/calculator.service';
 import { calculateOrderTotals } from '@/services/order.service';
@@ -26,6 +27,7 @@ export async function applyOrderDiscount(
   discountId: number,
   appliedBy: number,
 ): Promise<void> {
+  try {
   const now = new Date().toISOString();
 
   const discount = await powersync.getOptional<Discount>(
@@ -112,7 +114,12 @@ export async function applyOrderDiscount(
     description: `Discount applied: ${discount.name} (${discountAmount}) to order ${orderId}`,
   });
 
+  addBreadcrumb('payment', 'Discount applied', { orderId, discountName: discount.name, discountAmount, discountType: discount.discount_type });
   console.log('[PaymentService] Applied discount:', discount.name, 'amount:', discountAmount);
+  } catch (error) {
+    captureError(error, { module: 'payment', operation: 'applyOrderDiscount', level: 'error', extras: { orderId, discountId } });
+    throw error;
+  }
 }
 
 /**
@@ -212,6 +219,7 @@ export async function processPayment(
   changeAmount: number = 0,
   referenceNumber: string | null = null,
 ): Promise<Payment> {
+  try {
   const now = new Date().toISOString();
 
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
@@ -271,8 +279,13 @@ export async function processPayment(
     description: `Payment: ${method} ${amount} for order ${orderId}`,
   });
 
+  addBreadcrumb('payment', 'Payment processed', { orderId, method, amount, changeAmount });
   console.log('[PaymentService] Processed payment:', method, amount);
   return payment;
+  } catch (error) {
+    captureError(error, { module: 'payment', operation: 'processPayment', level: 'error', extras: { orderId, method, amount } });
+    throw error;
+  }
 }
 
 // ── Order completion ────────────────────────────────────────────────────────
@@ -286,6 +299,7 @@ export async function processPayment(
  * @param orderId - The order to complete
  */
 export async function completeOrder(orderId: number): Promise<void> {
+  try {
   const now = new Date().toISOString();
 
   const order = await powersync.getOptional<Order>(
@@ -334,5 +348,10 @@ export async function completeOrder(orderId: number): Promise<void> {
     description: `Order completed: ${orderId}`,
   });
 
+  addBreadcrumb('payment', 'Order completed', { orderId });
   console.log('[PaymentService] Completed order:', orderId);
+  } catch (error) {
+    captureError(error, { module: 'payment', operation: 'completeOrder', level: 'error', extras: { orderId } });
+    throw error;
+  }
 }

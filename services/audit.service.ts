@@ -24,6 +24,7 @@ import * as Crypto from 'expo-crypto';
 
 import type { AuditAction } from '@/constants/enums';
 import { powersync } from '@/db/provider';
+import { captureError } from '@/lib/sentry';
 
 // ── Module-level context ──────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export async function insertAuditLog(params: AuditLogParams): Promise<void> {
       ],
     );
   } catch (error) {
-    // Log but never re-throw — audit failures must not disrupt business operations.
-    console.error('[AuditService] Failed to write audit log:', error);
+    // Capture but never re-throw — audit failures must not disrupt business operations.
+    captureError(error, { module: 'audit', operation: 'insertAuditLog', level: 'warning' });
   }
 }

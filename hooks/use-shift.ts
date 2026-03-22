@@ -2,6 +2,7 @@ import type { CashTransactionReason, CashTransactionType } from '@/constants/enu
 import { ROLE_TYPE } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
+import { captureError } from '@/lib/sentry';
 import {
     addCashTransaction as addCashTxService,
     closeShift as closeShiftService,
@@ -77,6 +78,7 @@ export function useShift(): UseShiftReturn {
         setCashTransactions([]);
       }
     } catch (err) {
+      captureError(err, { module: 'shift', operation: 'refresh', level: 'warning' });
       setError(err instanceof Error ? err.message : 'Failed to load shift data');
     } finally {
       setLoading(false);
@@ -100,6 +102,7 @@ export function useShift(): UseShiftReturn {
 
         return shift;
       } catch (err) {
+        captureError(err, { module: 'shift', operation: 'openShift', level: 'error' });
         const message = err instanceof Error ? err.message : 'Failed to open shift';
         setError(message);
         throw new Error(message);
@@ -123,6 +126,7 @@ export function useShift(): UseShiftReturn {
         setCashTransactions([]);
         return closed;
       } catch (err) {
+        captureError(err, { module: 'shift', operation: 'closeShift', level: 'error' });
         const message = err instanceof Error ? err.message : 'Failed to close shift';
         setError(message);
         throw new Error(message);
@@ -158,6 +162,7 @@ export function useShift(): UseShiftReturn {
 
         return tx;
       } catch (err) {
+        captureError(err, { module: 'shift', operation: 'addCashTransaction', level: 'error' });
         const message = err instanceof Error ? err.message : 'Failed to add cash transaction';
         setError(message);
         throw new Error(message);

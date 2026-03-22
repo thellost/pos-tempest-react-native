@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toInt, toIntOrNull } from '@/utils/coerce';
 import { Alert } from 'react-native';
 
+import { captureError } from '@/lib/sentry';
+
 import type { CartItem } from '@/components/order/types';
 import { generateLocalId } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
@@ -187,7 +189,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         }
         lastLoadedOrderIdRef.current = orderId;
       } catch (error) {
-        console.error('[useOrder] Error loading order:', error);
+        captureError(error, { module: 'order', operation: 'loadOrder', level: 'warning', extras: { orderId } });
       } finally {
         setIsLoading(false);
       }
@@ -212,7 +214,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         setRoundSentAt(sentMap);
       }
     } catch (error) {
-      console.error('[useOrder] Error reloading order:', error);
+      captureError(error, { module: 'order', operation: 'reloadOrder', level: 'warning', extras: { orderId: currentOrderId } });
     }
   }, [currentOrderId]);
 
@@ -292,7 +294,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
           await addItemToOrder(orderIdNum, menuItem, 1, modifiers, notes, weight);
           await reload();
         } catch (error) {
-          console.error('[useOrder] Error adding item to order:', error);
+          captureError(error, { module: 'order', operation: 'addItemToOrder', level: 'error' });
         }
       }
     } else {
@@ -382,7 +384,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       await updateItemQuantity(itemId as number, qty);
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error updating quantity:', error);
+      captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
     }
   }, [cartItems, pendingRoundItems, reload]);
 
@@ -408,7 +410,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       await removeItemFromOrder(itemId as number);
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error removing item:', error);
+      captureError(error, { module: 'order', operation: 'removeItem', level: 'error' });
     }
   }, [cartItems, pendingRoundItems, reload]);
 
@@ -418,7 +420,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       await updateItemNotes(itemId, notes);
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error updating notes:', error);
+      captureError(error, { module: 'order', operation: 'updateNotes', level: 'error' });
     }
   }, [reload]);
 
@@ -492,7 +494,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       // Note: weight/unit price update would need the menu item price
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error editing modifiers:', error);
+      captureError(error, { module: 'order', operation: 'editModifiers', level: 'error' });
     }
   }, [cartItems, pendingRoundItems, reload]);
 
@@ -540,7 +542,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       }
       setCartItems([]);
     } catch (error) {
-      console.error('[useOrder] Error confirming order:', error);
+      captureError(error, { module: 'order', operation: 'confirmOrder', level: 'error' });
       throw error;
     }
   }, [user, cartItems, tableId, orderType, guestCount, menuItems, isShiftOpen, shiftId]);
@@ -586,7 +588,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       setPendingRoundItems([]);
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error confirming round:', error);
+      captureError(error, { module: 'order', operation: 'confirmRound', level: 'error' });
       throw error;
     }
   }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen, user]);
@@ -617,7 +619,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       setLastKOT(null);
       setLastBill(null);
     } catch (error) {
-      console.error('[useOrder] Error cancelling order:', error);
+      captureError(error, { module: 'order', operation: 'cancelOrder', level: 'error' });
       throw error;
     }
   }, [order, user, isShiftOpen]);
@@ -651,7 +653,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
       await reload();
     } catch (error) {
-      console.error('[useOrder] Error sending to kitchen:', error);
+      captureError(error, { module: 'order', operation: 'sendToKitchen', level: 'error', extras: { orderId: toInt(order?.id) } });
       Alert.alert(
         'Kitchen Error',
         error instanceof Error ? error.message : 'Failed to send to kitchen.'
@@ -675,7 +677,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       const bill = await getBillData(orderIdNum, false);
       setLastBill(bill);
     } catch (error) {
-      console.error('[useOrder] Error generating bill:', error);
+      captureError(error, { module: 'order', operation: 'printBill', level: 'warning', extras: { orderId: toInt(order?.id) } });
       Alert.alert(
         'Print Error',
         error instanceof Error ? error.message : 'Failed to generate bill.',

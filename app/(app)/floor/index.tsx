@@ -1,8 +1,8 @@
+import { Button } from '@/components/ui';
 import { router } from 'expo-router';
+import { Armchair, MapPin, ShoppingBag } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { Button } from '@/components/ui';
-import { Armchair, MapPin, ShoppingBag } from 'lucide-react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
 import { ReservationModal } from '@/components/floor/ReservationModal';
@@ -118,7 +118,10 @@ export default function FloorScreen() {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`, {
+
+      //default to api.zidan.id if EXPO_PUBLIC_API_URL is not defined, to prevent app from crashing when user tries to long press a table while offline
+      const url = `${process.env.EXPO_PUBLIC_API_URL || 'https://api.zidan.id'}/health`;
+      const res = await fetch(url, {
         method: 'GET',
         signal: controller.signal,
       });

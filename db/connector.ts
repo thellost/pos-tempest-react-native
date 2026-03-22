@@ -1,5 +1,6 @@
 import type { PowerSyncBackendConnector } from '@powersync/react-native';
 
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
 function getPowerSyncEndpoint() {
@@ -131,6 +132,7 @@ export const powerSyncConnector: PowerSyncBackendConnector = {
 		let token = session.access_token;
 
 		if (expiresAt < Date.now() + 60_000) {
+			addBreadcrumb('sync', 'PowerSync credential refresh');
 			const { data } = await supabase.auth.refreshSession();
 			if (!data.session) {
 				return null;
@@ -149,7 +151,12 @@ export const powerSyncConnector: PowerSyncBackendConnector = {
 		}
 
 		for (const op of batch.crud as unknown as CrudOp[]) {
-			await applyCrudOperation(op);
+			try {
+				await applyCrudOperation(op);
+			} catch (error) {
+				captureError(error, { module: 'powersync', operation: 'uploadData', level: 'error', extras: { table: op.table, opType: op.op, recordId: op.id } });
+				throw error;
+			}
 		}
 
 		await batch.complete();

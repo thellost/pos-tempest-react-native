@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { addBreadcrumb } from '@/lib/sentry';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PrinterType = 'kitchen' | 'cashier';
@@ -225,10 +227,12 @@ export async function sendToPrinter(
   const cfg = type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
 
   if (!cfg) {
+    addBreadcrumb('print', 'Print skipped — no printer configured', { type }, 'warning');
     console.warn(`[Printer] No ${type} printer configured — skipping print`);
     return;
   }
 
+  addBreadcrumb('print', 'Print started', { type, address: cfg.address });
   // TODO: replace with Bluetooth library call
   // e.g.: await RNBluetoothEscposPrinter.printText(data, {});
   console.log(
