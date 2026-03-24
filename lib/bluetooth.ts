@@ -14,6 +14,8 @@ import {
   PrinterAddPulseDrawerType,
   PrinterAddPulseTimeType,
 } from 'react-native-esc-pos-printer';
+import BluetoothClassic from 'react-native-bluetooth-classic';
+import { Linking, PermissionsAndroid, Platform } from 'react-native';
 
 import { addBreadcrumb, captureError } from '@/lib/sentry';
 
@@ -27,6 +29,50 @@ export interface DiscoveredPrinter {
 }
 
 export type ScanStatus = 'idle' | 'scanning' | 'done' | 'error';
+
+// ── Bonded devices (paired in system BT settings, any brand) ─────────────────
+
+/**
+ * Returns all Bluetooth devices already paired in Android system settings.
+ * Works for any brand (Rongta, Epson, etc.) — no active scanning, no PIN prompts.
+ * Converts MAC addresses to Epson ePOS SDK target format: "BT:AA:BB:CC:DD:EE:FF"
+ */
+export async function getBondedPrinters(): Promise<{ printers: DiscoveredPrinter[]; error?: string }> {
+  // Android 12+ requires BLUETOOTH_CONNECT at runtime
+  if (Platform.OS === 'android' && Platform.Version >= 31) {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+    );
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      // Permanently denied — send user to app settings
+      Linking.openSettings();
+      return { printers: [], error: 'Bluetooth permission is blocked. Enable it in app settings.' };
+    }
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+      return { printers: [], error: 'Bluetooth permission denied.' };
+    }
+  }
+
+  try {
+    const devices = await BluetoothClassic.getBondedDevices();
+    return {
+      printers: devices.map((d) => ({
+        target: `BT:${d.address}`,
+        name: d.name ?? d.address,
+      })),
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Failed to load paired devices';
+    return { printers: [], error: msg };
+  }
+}
+
+/**
+ * Opens the system Bluetooth settings screen.
+ */
+export function openBluetoothSettings(): void {
+  BluetoothClassic.openBluetoothSettings();
+}
 
 // ── Timeouts ──────────────────────────────────────────────────────────────────
 
@@ -67,8 +113,12 @@ export function scanBluetoothPrinters(
   });
 
   const removeStatus = PrintersDiscovery.onStatusChange((status: string) => {
-    if (status === 'inactive') onStatus?.('done');
-    else if (status === 'discovering') onStatus?.('scanning');
+    if (status === 'inactive') {
+      onStatus?.('done');
+      addBreadcrumb('print', 'Bluetooth scan done', { found: found.length });
+    } else if (status === 'discovering') {
+      onStatus?.('scanning');
+    }
   });
 
   const removeError = PrintersDiscovery.onError((err) => {
@@ -79,6 +129,7 @@ export function scanBluetoothPrinters(
   });
 
   onStatus?.('scanning');
+  addBreadcrumb('print', 'Bluetooth scan started', { timeoutMs });
 
   PrintersDiscovery.start({
     timeout: timeoutMs,
@@ -86,7 +137,9 @@ export function scanBluetoothPrinters(
     filterOption: { portType: DiscoveryPortType.PORTTYPE_BLUETOOTH },
   }).catch((err: Error) => {
     onStatus?.('error');
-    onError?.(err?.message ?? 'Failed to start Bluetooth scan');
+    const msg = err?.message ?? 'Failed to start Bluetooth scan';
+    onError?.(msg);
+    captureError(err, { module: 'bluetooth', operation: 'scanBluetoothPrinters', extras: { msg } });
   });
 
   return () => {
@@ -161,6 +214,7 @@ export async function openCashDrawerViaBluetooth(
   address: string,
   name: string,
 ): Promise<void> {
+  addBreadcrumb('print', 'Cash drawer pulse sending', { address, name });
   await runPrinterJob(address, name, async (printer) => {
     await printer.addPulse({
       drawer: PrinterAddPulseDrawerType.DRAWER_2PIN,
@@ -190,8 +244,11 @@ export async function pingBluetoothPrinter(
   try {
     await printer.connect(PING_TIMEOUT_MS);
     await printer.getStatus();
+    addBreadcrumb('print', 'Bluetooth ping success', { address });
     return true;
-  } catch {
+  } catch (err) {
+    addBreadcrumb('print', 'Bluetooth ping failed', { address }, 'warning');
+    captureError(err, { module: 'bluetooth', operation: 'pingBluetoothPrinter', extras: { address, name }, level: 'warning' });
     return false;
   } finally {
     await printer.disconnect().catch(() => {});

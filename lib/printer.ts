@@ -7,7 +7,7 @@ import {
 } from 'react-native-esc-pos-printer';
 import type { TrueFalseParam } from 'react-native-esc-pos-printer';
 
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { runPrinterJob, openCashDrawerViaBluetooth } from '@/lib/bluetooth';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -381,7 +381,22 @@ export async function printKOT(
     addBreadcrumb('print', 'KOT print skipped — no printer configured', { type }, 'warning');
     return;
   }
-  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildKOTJob(p, params));
+  try {
+    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildKOTJob(p, params));
+    addBreadcrumb('print', 'KOT printed', {
+      type,
+      address: cfg.address,
+      ticketNumber: params.ticketNumber,
+      orderNumber: params.orderNumber,
+    });
+  } catch (err) {
+    captureError(err, {
+      module: 'printer',
+      operation: 'printKOT',
+      extras: { type, address: cfg.address, ticketNumber: params.ticketNumber, orderNumber: params.orderNumber },
+    });
+    throw err;
+  }
 }
 
 /**
@@ -396,7 +411,22 @@ export async function printBill(
     addBreadcrumb('print', 'Bill print skipped — no printer configured', { type }, 'warning');
     return;
   }
-  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildBillJob(p, params));
+  try {
+    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildBillJob(p, params));
+    addBreadcrumb('print', 'Bill printed', {
+      type,
+      address: cfg.address,
+      orderNumber: params.orderNumber,
+      total: params.total,
+    });
+  } catch (err) {
+    captureError(err, {
+      module: 'printer',
+      operation: 'printBill',
+      extras: { type, address: cfg.address, orderNumber: params.orderNumber },
+    });
+    throw err;
+  }
 }
 
 /**
@@ -414,11 +444,21 @@ export async function sendToPrinter(
     return;
   }
 
-  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, async (printer) => {
-    await printer.addText(data);
-    await printer.addFeedLine(3);
-    await printer.addCut(PrinterAddCutType.CUT_FEED);
-  });
+  try {
+    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, async (printer) => {
+      await printer.addText(data);
+      await printer.addFeedLine(3);
+      await printer.addCut(PrinterAddCutType.CUT_FEED);
+    });
+    addBreadcrumb('print', 'Raw print sent', { type, address: cfg.address });
+  } catch (err) {
+    captureError(err, {
+      module: 'printer',
+      operation: 'sendToPrinter',
+      extras: { type, address: cfg.address },
+    });
+    throw err;
+  }
 }
 
 /**
@@ -427,8 +467,18 @@ export async function sendToPrinter(
 export async function openCashDrawer(): Promise<void> {
   const cfg = await getConfig('cashier');
   if (!cfg) {
-    console.warn('[Printer] No cashier printer configured — cannot open cash drawer');
+    addBreadcrumb('print', 'Cash drawer open skipped — no cashier printer configured', {}, 'warning');
     return;
   }
-  await openCashDrawerViaBluetooth(cfg.address, cfg.name ?? cfg.address);
+  try {
+    await openCashDrawerViaBluetooth(cfg.address, cfg.name ?? cfg.address);
+    addBreadcrumb('print', 'Cash drawer opened', { address: cfg.address });
+  } catch (err) {
+    captureError(err, {
+      module: 'printer',
+      operation: 'openCashDrawer',
+      extras: { address: cfg.address },
+    });
+    throw err;
+  }
 }

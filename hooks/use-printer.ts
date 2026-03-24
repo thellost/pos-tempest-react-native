@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { captureError } from '@/lib/sentry';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 import {
     type PaperWidth,
     type PrinterConfig,
@@ -45,12 +45,19 @@ export function usePrinter() {
   /** Pair or replace a printer. Pass null to clear. */
   const updatePrinter = useCallback(
     async (type: PrinterType, config: PrinterConfig | null) => {
-      if (config) {
-        await setPrinter(type, config);
-      } else {
-        await clearPrinter(type);
+      try {
+        if (config) {
+          await setPrinter(type, config);
+          addBreadcrumb('print', 'Printer configured', { type, address: config.address, name: config.name });
+        } else {
+          await clearPrinter(type);
+          addBreadcrumb('print', 'Printer cleared', { type });
+        }
+        await load();
+      } catch (error) {
+        captureError(error, { module: 'printer', operation: 'updatePrinter', extras: { type } });
+        throw error;
       }
-      await load();
     },
     [load],
   );
@@ -58,8 +65,14 @@ export function usePrinter() {
   /** Change paper width (58mm / 80mm). */
   const updatePaperWidth = useCallback(
     async (width: PaperWidth) => {
-      await setPaperWidth(width);
-      await load();
+      try {
+        await setPaperWidth(width);
+        addBreadcrumb('print', 'Paper width changed', { width });
+        await load();
+      } catch (error) {
+        captureError(error, { module: 'printer', operation: 'updatePaperWidth', extras: { width } });
+        throw error;
+      }
     },
     [load],
   );

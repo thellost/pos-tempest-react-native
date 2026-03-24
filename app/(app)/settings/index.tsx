@@ -8,7 +8,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { type PrinterType, usePrinter } from '@/hooks/use-printer';
 import {
-    scanBluetoothPrinters,
+    getBondedPrinters,
+    openBluetoothSettings,
     type DiscoveredPrinter,
     type ScanStatus,
 } from '@/lib/bluetooth';
@@ -19,13 +20,11 @@ import {
     reactivateDevice,
     updateDeviceName,
 } from '@/services/device.service';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     FlatList,
-    Linking,
-    Platform,
     Pressable,
     ScrollView,
     Text,
@@ -93,9 +92,6 @@ export default function SettingsScreen() {
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
-  const stopScanRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => () => { stopScanRef.current?.(); }, []);
 
   const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
   const isManager = user?.role_name === ROLE_TYPE.MANAGER;
@@ -190,21 +186,21 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleStartScan = () => {
-    stopScanRef.current?.();
+  const handleStartScan = async () => {
     setDiscoveredPrinters([]);
     setScanStatus('scanning');
-    stopScanRef.current = scanBluetoothPrinters(
-      setDiscoveredPrinters,
-      setScanStatus,
-      (msg) => Alert.alert('Scan Error', msg),
-    );
+    const { printers, error } = await getBondedPrinters();
+    if (error) {
+      Alert.alert('Bluetooth Error', error);
+      setScanStatus('error');
+    } else {
+      setDiscoveredPrinters(printers);
+      setScanStatus('done');
+    }
   };
 
   const handleSelectPrinter = async (printer: DiscoveredPrinter) => {
     if (!editingPrinterType) return;
-    stopScanRef.current?.();
-    stopScanRef.current = null;
     try {
       await updatePrinter(editingPrinterType, {
         address: printer.target,
@@ -222,8 +218,6 @@ export default function SettingsScreen() {
   };
 
   const handleCancelEdit = () => {
-    stopScanRef.current?.();
-    stopScanRef.current = null;
     setEditingPrinterType(null);
     setPrinterAddress('');
     setPrinterName('');
@@ -338,13 +332,7 @@ export default function SettingsScreen() {
                     Open Bluetooth Settings, pair the printer there, then come back to scan.
                   </Text>
                   <Pressable
-                    onPress={() => {
-                      if (Platform.OS === 'android') {
-                        Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => {});
-                      } else {
-                        Linking.openURL('App-Prefs:Bluetooth').catch(() => {});
-                      }
-                    }}
+                    onPress={() => openBluetoothSettings()}
                     style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                   >
                     <Text className="mt-1.5 text-pos-xs font-semibold text-brand">
