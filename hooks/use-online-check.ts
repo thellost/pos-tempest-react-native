@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, startSpan } from '@/lib/sentry';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.zidan.id';
 
@@ -16,15 +16,17 @@ export function useOnlineCheck() {
     const url = `${API_URL}/health`;
     setIsChecking(true);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
+      await startSpan({ name: 'GET /health', op: 'http.client' }, async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        setIsOnline(res.ok);
+        addBreadcrumb('network', res.ok ? 'API health check passed' : 'API health check failed', { url, status: res.status }, res.ok ? 'info' : 'warning');
       });
-      clearTimeout(timer);
-      setIsOnline(res.ok);
-      addBreadcrumb('network', res.ok ? 'API health check passed' : 'API health check failed', { url, status: res.status }, res.ok ? 'info' : 'warning');
     } catch {
       setIsOnline(false);
       addBreadcrumb('network', 'API health check unreachable', { url }, 'warning');

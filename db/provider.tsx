@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { powerSyncConnector } from '@/db/connector';
 import { appSchema } from '@/db/schema';
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, captureMessage } from '@/lib/sentry';
 
 export const powersync = new PowerSyncDatabase({
 	database: new OPSqliteOpenFactory({
@@ -48,12 +48,30 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 		initializePowerSync()
 			.then(() => {
 				setReady(true);
+				let connectedSince: number | null = null;
 				dispose = powersync.registerListener({
 					statusChanged: (status) => {
 						addBreadcrumb('sync', `PowerSync ${status.connected ? 'connected' : 'disconnected'}`, {
 							connected: status.connected,
 							lastSyncedAt: status.lastSyncedAt,
 						});
+
+						if (status.connected) {
+							if (connectedSince === null) connectedSince = Date.now();
+						} else {
+							connectedSince = null;
+						}
+
+						if (status.connected && status.lastSyncedAt && connectedSince !== null) {
+							const minutesConnected = (Date.now() - connectedSince) / 60_000;
+							const minutesStale = (Date.now() - new Date(status.lastSyncedAt).getTime()) / 60_000;
+							if (minutesConnected > 5 && minutesStale > 5) {
+								captureMessage('PowerSync stale — no sync for 5+ minutes while online', 'warning', {
+									lastSyncedAt: status.lastSyncedAt,
+									minutesStale: Math.round(minutesStale),
+								});
+							}
+						}
 					},
 				});
 			})

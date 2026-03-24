@@ -68,6 +68,9 @@ export function useDailyOrders() {
 
   const { start, end } = useMemo(() => getTodayBoundaries(), []);
 
+  // Debug: log query boundaries to help diagnose timestamp issues
+  console.log('[DailyOrders] boundaries:', { start, end, branchId });
+
   const { data: orders = [], isLoading } = useQuery<DailyOrderRow>(
     `SELECT
       o.id,
@@ -88,11 +91,14 @@ export function useDailyOrders() {
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN users u ON u.id = o.cashier_id
     WHERE o.branch_id = ?
-      AND o.created_at >= ?
-      AND o.created_at < ?
+      AND REPLACE(o.created_at, ' ', 'T') >= ?
+      AND REPLACE(o.created_at, ' ', 'T') < ?
     ORDER BY o.created_at DESC`,
     [branchId ?? 0, start, end],
   );
+
+  // Debug: log raw order count after query
+  console.log('[DailyOrders] raw orders count:', orders.length, orders.map(o => ({ id: o.id, status: o.status, created_at: o.created_at })));
 
   const filteredOrders = useMemo(() => {
     let result = orders;

@@ -19,7 +19,7 @@ import {
   setDeviceName as setStoredDeviceName,
   type DeviceInfo,
 } from '@/lib/device';
-import { addBreadcrumb, captureError, setDeviceContext } from '@/lib/sentry';
+import { addBreadcrumb, captureError, captureMessage, setDeviceContext } from '@/lib/sentry';
 import { setAuditDeviceContext } from '@/services/audit.service';
 import {
   getDeviceRegistration,
@@ -113,6 +113,14 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
         regResult.device?.id ?? null,
         regResult.device ? `${regResult.device.device_name} (${id})` : null,
       );
+
+      // Warn Sentry if a registered device has been remotely deactivated
+      if (regResult.device && !regResult.registered) {
+        captureMessage('Device deactivated remotely', 'warning', {
+          deviceId: id,
+          deviceName: regResult.device.device_name,
+        });
+      }
 
       // Publish device identity to Sentry so every event is tagged with device/branch
       if (regResult.device) {

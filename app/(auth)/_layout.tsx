@@ -1,3 +1,4 @@
+import { AppErrorBoundary } from '@/components/ErrorBoundary';
 import { Brand } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Redirect, Stack, useSegments } from 'expo-router';
@@ -39,24 +40,26 @@ export default function AuthLayout() {
 
   // Not authenticated - show auth screens
   return (
-    <Stack 
-      screenOptions={{ 
-        headerShown: false,
-        animation: 'fade',
-        gestureEnabled: false, // Prevent swipe back on auth screens
-      }}>
-      <Stack.Screen 
-        name="login" 
-        options={{ 
-          title: 'Login',
-        }} 
-      />
-      <Stack.Screen 
-        name="pin" 
-        options={{ 
-          title: 'Unlock',
-        }} 
-      />
-    </Stack>
+    <AppErrorBoundary>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+          gestureEnabled: false, // Prevent swipe back on auth screens
+        }}>
+        <Stack.Screen
+          name="login"
+          options={{
+            title: 'Login',
+          }}
+        />
+        <Stack.Screen
+          name="pin"
+          options={{
+            title: 'Unlock',
+          }}
+        />
+      </Stack>
+    </AppErrorBoundary>
   );
 }

@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Printer,
+  TextAlignType,
+  CommonParams,
+  PrinterAddCutType,
+} from 'react-native-esc-pos-printer';
+import type { TrueFalseParam } from 'react-native-esc-pos-printer';
 
 import { addBreadcrumb } from '@/lib/sentry';
+import { runPrinterJob, openCashDrawerViaBluetooth } from '@/lib/bluetooth';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,14 +76,15 @@ export async function setPaperWidth(width: PaperWidth): Promise<void> {
   await savePrinterSettings({ paperWidth: width });
 }
 
-// ── ESC/POS formatters ────────────────────────────────────────────────────────
-// These produce the raw text that would be sent to a thermal printer.
-// When the Bluetooth library is wired in, pass the output of these functions
-// to the printer's write() method.
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function charWidth(paperWidth: PaperWidth): number {
   return paperWidth === '80mm' ? 42 : 32;
 }
+
+const idr = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
+
+// ── ESC/POS text formatters (used by ReceiptPreview) ─────────────────────────
 
 function pad(text: string, total: number, right = false): string {
   if (right) return text.slice(0, total).padStart(total);
@@ -88,7 +97,7 @@ function center(text: string, w: number): string {
 }
 
 /**
- * Formats a KOT (Kitchen Order Ticket) for ESC/POS printing.
+ * Returns a plain-text ESC/POS string for a KOT — used by ReceiptPreview.
  */
 export function formatKOT(params: {
   ticketNumber: string;
@@ -132,7 +141,7 @@ export function formatKOT(params: {
 }
 
 /**
- * Formats a customer-facing bill or receipt for ESC/POS printing.
+ * Returns a plain-text ESC/POS string for a bill — used by ReceiptPreview.
  */
 export function formatBill(params: {
   branchName: string;
@@ -161,7 +170,6 @@ export function formatBill(params: {
   const w = charWidth(params.paperWidth);
   const H = '═'.repeat(w);
   const L = '─'.repeat(w);
-  const idr = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
   const row = (label: string, value: string) =>
     `${pad(label, w - value.length)}${value}`;
 
@@ -186,13 +194,10 @@ export function formatBill(params: {
     for (const mod of item.modifiers) lines.push(`   ${mod}`);
   }
 
-  lines.push(
-    L,
-    row('Subtotal', idr(params.subtotal)),
-  );
+  lines.push(L, row('Subtotal', idr(params.subtotal)));
   if (params.discountAmount > 0) lines.push(row('Diskon', `-${idr(params.discountAmount)}`));
-  if (params.taxAmount > 0) lines.push(row('Pajak (11%)', idr(params.taxAmount)));
-  if (params.serviceCharge > 0) lines.push(row('Servis', idr(params.serviceCharge)));
+  if (params.taxAmount > 0)      lines.push(row('Pajak (11%)', idr(params.taxAmount)));
+  if (params.serviceCharge > 0)  lines.push(row('Servis', idr(params.serviceCharge)));
   if (params.roundingAmount !== 0) lines.push(row('Pembulatan', idr(params.roundingAmount)));
 
   lines.push(H, row('TOTAL', idr(params.total)), H);
@@ -210,42 +215,220 @@ export function formatBill(params: {
   return lines.join('\n');
 }
 
-// ── Simulated print ───────────────────────────────────────────────────────────
+// ── Print job builders ────────────────────────────────────────────────────────
+// These build the actual hardware print job using the ePOS SDK formatting API
+// instead of raw text strings.
+
+async function buildKOTJob(
+  printer: Printer,
+  params: Parameters<typeof formatKOT>[0],
+): Promise<void> {
+  const w = charWidth(params.paperWidth);
+  const H = '═'.repeat(w) + '\n';
+  const L = '─'.repeat(w) + '\n';
+
+  // ── Header ──
+  await printer.addText(H);
+  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
+  await printer.addTextSize({ width: 1, height: 2 });
+  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
+  await printer.addText('KITCHEN ORDER TICKET\n');
+  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+  await printer.addTextSize({ width: 1, height: 1 });
+  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
+  await printer.addText(H);
+
+  // ── Meta ──
+  await printer.addText(`KOT   : ${params.ticketNumber}\n`);
+  await printer.addText(`Order : ${params.orderNumber}\n`);
+  await printer.addText(`Round : ${params.roundNumber}\n`);
+  await printer.addText(`Table : ${params.tableLabel}\n`);
+  await printer.addText(`Time  : ${params.time}\n`);
+  await printer.addText(`Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}\n`);
+  await printer.addText(L);
+
+  // ── Items ──
+  for (const item of params.items) {
+    await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
+    await printer.addText(`${item.quantity}x ${item.name}\n`);
+    await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+    for (const mod of item.modifiers) {
+      await printer.addText(`   \u2022 ${mod}\n`);
+    }
+    if (item.notes) {
+      await printer.addText(`   * ${item.notes}\n`);
+    }
+  }
+
+  await printer.addText(H);
+  await printer.addFeedLine(3);
+  await printer.addCut(PrinterAddCutType.CUT_FEED);
+}
+
+async function buildBillJob(
+  printer: Printer,
+  params: Parameters<typeof formatBill>[0],
+): Promise<void> {
+  const w = charWidth(params.paperWidth);
+  const H = '═'.repeat(w) + '\n';
+  const L = '─'.repeat(w) + '\n';
+
+  // ── Branch header ──
+  await printer.addText(H);
+  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
+  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
+  await printer.addTextSize({ width: 1, height: 2 });
+  await printer.addText(`${params.branchName.toUpperCase()}\n`);
+  await printer.addTextSize({ width: 1, height: 1 });
+  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+  if (params.branchAddress) await printer.addText(`${params.branchAddress}\n`);
+  if (params.branchPhone)   await printer.addText(`${params.branchPhone}\n`);
+  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
+  await printer.addText(H);
+
+  // ── Order meta ──
+  await printer.addText(`Order : ${params.orderNumber}\n`);
+  await printer.addText(`Table : ${params.tableLabel}\n`);
+  await printer.addText(`Staff : ${params.cashierName}\n`);
+  await printer.addText(`Time  : ${params.printedAt}\n`);
+  await printer.addText(L);
+
+  // ── Items ──
+  for (const item of params.items) {
+    await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
+    await Printer.addTextLine(printer, {
+      left: `${item.quantity}x ${item.name}`,
+      right: idr(item.total),
+    });
+    await printer.addText('\n');
+    await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+    for (const mod of item.modifiers) {
+      await printer.addText(`   ${mod}\n`);
+    }
+  }
+
+  await printer.addText(L);
+
+  // ── Totals ──
+  await Printer.addTextLine(printer, { left: 'Subtotal', right: idr(params.subtotal) });
+  await printer.addText('\n');
+  if (params.discountAmount > 0) {
+    await Printer.addTextLine(printer, { left: 'Diskon', right: `-${idr(params.discountAmount)}` });
+    await printer.addText('\n');
+  }
+  if (params.taxAmount > 0) {
+    await Printer.addTextLine(printer, { left: 'Pajak (11%)', right: idr(params.taxAmount) });
+    await printer.addText('\n');
+  }
+  if (params.serviceCharge > 0) {
+    await Printer.addTextLine(printer, { left: 'Servis', right: idr(params.serviceCharge) });
+    await printer.addText('\n');
+  }
+  if (params.roundingAmount !== 0) {
+    await Printer.addTextLine(printer, { left: 'Pembulatan', right: idr(params.roundingAmount) });
+    await printer.addText('\n');
+  }
+
+  // ── Grand total ──
+  await printer.addText(H);
+  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
+  await printer.addTextSize({ width: 1, height: 2 });
+  await Printer.addTextLine(printer, { left: 'TOTAL', right: idr(params.total) });
+  await printer.addText('\n');
+  await printer.addTextSize({ width: 1, height: 1 });
+  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+  await printer.addText(H);
+
+  // ── Payments ──
+  if (params.payments && params.payments.length > 0) {
+    await printer.addText(L);
+    for (const p of params.payments) {
+      await Printer.addTextLine(printer, { left: `Bayar (${p.method})`, right: idr(p.amount) });
+      await printer.addText('\n');
+      if (p.changeAmount > 0) {
+        await Printer.addTextLine(printer, { left: 'Kembalian', right: idr(p.changeAmount) });
+        await printer.addText('\n');
+      }
+    }
+    await printer.addText(L);
+  }
+
+  // ── Footer ──
+  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
+  await printer.addText('\nTerima kasih!\nSampai jumpa kembali\n');
+  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
+  await printer.addText(H);
+  await printer.addFeedLine(3);
+  await printer.addCut(PrinterAddCutType.CUT_FEED);
+}
+
+// ── Public print functions ────────────────────────────────────────────────────
+
+async function getConfig(type: PrinterType): Promise<PrinterConfig | null> {
+  const settings = await getPrinterSettings();
+  return type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
+}
 
 /**
- * Sends formatted ESC/POS data to the configured printer.
- *
- * Currently SIMULATED — replace the body with a Bluetooth library call when
- * hardware is available:
- *   e.g. await RNBluetoothEscposPrinter.printText(data, {});
+ * Prints a Kitchen Order Ticket to the configured printer.
+ */
+export async function printKOT(
+  type: PrinterType,
+  params: Parameters<typeof formatKOT>[0],
+): Promise<void> {
+  const cfg = await getConfig(type);
+  if (!cfg) {
+    addBreadcrumb('print', 'KOT print skipped — no printer configured', { type }, 'warning');
+    return;
+  }
+  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildKOTJob(p, params));
+}
+
+/**
+ * Prints a customer bill to the configured printer.
+ */
+export async function printBill(
+  type: PrinterType,
+  params: Parameters<typeof formatBill>[0],
+): Promise<void> {
+  const cfg = await getConfig(type);
+  if (!cfg) {
+    addBreadcrumb('print', 'Bill print skipped — no printer configured', { type }, 'warning');
+    return;
+  }
+  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildBillJob(p, params));
+}
+
+/**
+ * Sends a raw text string to the configured printer.
+ * Use for simple test prints; prefer printKOT / printBill for real jobs.
  */
 export async function sendToPrinter(
   type: PrinterType,
   data: string,
 ): Promise<void> {
-  const settings = await getPrinterSettings();
-  const cfg = type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
-
+  const cfg = await getConfig(type);
   if (!cfg) {
     addBreadcrumb('print', 'Print skipped — no printer configured', { type }, 'warning');
     console.warn(`[Printer] No ${type} printer configured — skipping print`);
     return;
   }
 
-  addBreadcrumb('print', 'Print started', { type, address: cfg.address });
-  // TODO: replace with Bluetooth library call
-  // e.g.: await RNBluetoothEscposPrinter.printText(data, {});
-  console.log(
-    `[Printer] Simulating ${type} print to ${cfg.address}:\n${data}`,
-  );
+  await runPrinterJob(cfg.address, cfg.name ?? cfg.address, async (printer) => {
+    await printer.addText(data);
+    await printer.addFeedLine(3);
+    await printer.addCut(PrinterAddCutType.CUT_FEED);
+  });
 }
 
 /**
- * Opens the cash drawer via an ESC/POS kick command.
- * Requires a paired cashier printer.
+ * Opens the cash drawer via an ESC/POS kick command sent to the cashier printer.
  */
 export async function openCashDrawer(): Promise<void> {
-  // TODO: replace with Bluetooth library command
-  // e.g.: await RNBluetoothEscposPrinter.openDrawer(0, 250, 250);
-  console.log('[Printer] Cash drawer open command (simulated)');
+  const cfg = await getConfig('cashier');
+  if (!cfg) {
+    console.warn('[Printer] No cashier printer configured — cannot open cash drawer');
+    return;
+  }
+  await openCashDrawerViaBluetooth(cfg.address, cfg.name ?? cfg.address);
 }

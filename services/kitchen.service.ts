@@ -1,7 +1,7 @@
 import type { KotStatus } from '@/constants/enums';
 import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { generateTicketNumber } from '@/utils/order-number';
 import { toInt } from '@/utils/coerce';
@@ -50,6 +50,7 @@ export async function createKOT(
   orderId: number,
   roundNumber: number
 ): Promise<KOTWithItems> {
+  return startSpan({ name: 'kitchen.sendKOT', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
 
   // Fetch order + table info for the ticket header
@@ -202,6 +203,7 @@ export async function createKOT(
     created_at: now,
     items: itemDetails,
   };
+  }); // end kitchen.sendKOT span
 }
 
 // ─── updateKOTStatus ──────────────────────────────────────────────────────────

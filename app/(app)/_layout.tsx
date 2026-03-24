@@ -1,5 +1,6 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 import { Button } from '@/components/ui';
+import { AppErrorBoundary } from '@/components/ErrorBoundary';
 
 import { Redirect, router, Stack, usePathname } from 'expo-router';
 
@@ -137,6 +138,7 @@ export default function AppLayout() {
   }
 
   return (
+    <AppErrorBoundary>
     <View className="flex-1">
       {/* Top status bar — user, clock, shift, orders, device */}
       <AppStatusBar
@@ -221,10 +223,6 @@ export default function AppLayout() {
               options={{ title: 'Customers' }}
             />
             <Stack.Screen
-              name="reports/index"
-              options={{ title: 'Reports' }}
-            />
-            <Stack.Screen
               name="device-setup"
               options={{ title: 'Device Setup' }}
             />
@@ -232,5 +230,6 @@ export default function AppLayout() {
         </View>
       </View>
     </View>
+    </AppErrorBoundary>
   );
 }

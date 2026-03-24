@@ -1,7 +1,7 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
-import { addBreadcrumb } from '@/lib/sentry';
+import { addBreadcrumb, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 
 export type ShiftRecord = {
@@ -205,6 +205,7 @@ export async function getShiftCashSummary(shiftId: number, openingCash: number):
 }
 
 export async function openShift(userId: number, branchId: number, openingCash: number, deviceId: number | null = null): Promise<ShiftRecord> {
+  return startSpan({ name: 'shift.open', op: 'db.powersync' }, async () => {
   if (!Number.isFinite(openingCash) || openingCash < 0) {
     throw new Error('Opening cash must be a valid positive amount');
   }
@@ -263,9 +264,11 @@ export async function openShift(userId: number, branchId: number, openingCash: n
   }
 
   return activeShift;
+  }); // end shift.open span
 }
 
 export async function closeShift(shiftId: number, closingCash: number): Promise<ShiftRecord> {
+  return startSpan({ name: 'shift.close', op: 'db.powersync' }, async () => {
   if (!Number.isFinite(closingCash) || closingCash < 0) {
     throw new Error('Closing cash must be a valid positive amount');
   }
@@ -311,6 +314,15 @@ export async function closeShift(shiftId: number, closingCash: number): Promise<
   });
   addBreadcrumb('shift', 'Shift closed', { shiftId, closingCash, expectedCash, cashDifference });
 
+  if (cashDifference !== 0) {
+    captureMessage('Shift closing balance mismatch', 'warning', {
+      shiftId,
+      closingCash,
+      expectedCash,
+      cashDifference,
+    });
+  }
+
   const closedShift = await getShiftById(shiftId);
 
   if (!closedShift) {
@@ -318,6 +330,7 @@ export async function closeShift(shiftId: number, closingCash: number): Promise<
   }
 
   return closedShift;
+  }); // end shift.close span
 }
 
 // ---------------------------------------------------------------------------

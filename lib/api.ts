@@ -1,3 +1,4 @@
+import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.zidan.id';
@@ -25,30 +26,43 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    });
+  return startSpan({ name: `${method} ${path}`, op: 'http.client' }, async () => {
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
 
-    const json = await res.json();
+      const json = await res.json();
 
-    if (!json.success) {
-      throw new ApiError(
-        json.error?.code ?? 'UNKNOWN',
-        json.error?.message ?? 'Request failed',
-      );
+      if (!json.success) {
+        addBreadcrumb('network', `API error: ${method} ${path}`, {
+          status: res.status,
+          code: json.error?.code,
+          message: json.error?.message,
+        }, 'warning');
+        throw new ApiError(
+          json.error?.code ?? 'UNKNOWN',
+          json.error?.message ?? 'Request failed',
+        );
+      }
+
+      return json.data as T;
+    } catch (err) {
+      // Only capture unexpected errors (network failures, timeouts) — ApiError is a known business error
+      if (!(err instanceof ApiError)) {
+        captureError(err, { module: 'api', operation: `${method} ${path}`, level: 'error' });
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
     }
-
-    return json.data as T;
-  } finally {
-    clearTimeout(timer);
-  }
+  });
 }
 
 export const api = {

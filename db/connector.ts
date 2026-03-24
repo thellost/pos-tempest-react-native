@@ -1,6 +1,6 @@
 import type { PowerSyncBackendConnector } from '@powersync/react-native';
 
-import { addBreadcrumb, captureError } from '@/lib/sentry';
+import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
 function getPowerSyncEndpoint() {
@@ -113,37 +113,43 @@ async function applyCrudOperation(op: CrudOp) {
 
 export const powerSyncConnector: PowerSyncBackendConnector = {
 	fetchCredentials: async () => {
-		const endpoint = getPowerSyncEndpoint();
+		try {
+			const endpoint = getPowerSyncEndpoint();
 
-		if (!endpoint) {
-			throw new Error('PowerSync endpoint not configured');
-		}
+			if (!endpoint) {
+				throw new Error('PowerSync endpoint not configured');
+			}
 
-		const { data: { session } } = await supabase.auth.getSession();
+			const { data: { session } } = await supabase.auth.getSession();
 
-		if (!session) {
-			return null;
-		}
-
-		// If the token is expired or about to expire within 60s, force a refresh.
-		// getSession() returns the cached session and won't refresh an already-expired token,
-		// so we need to explicitly call refreshSession() when PowerSync detects expiry.
-		const expiresAt = (session.expires_at ?? 0) * 1000;
-		let token = session.access_token;
-
-		if (expiresAt < Date.now() + 60_000) {
-			addBreadcrumb('sync', 'PowerSync credential refresh');
-			const { data } = await supabase.auth.refreshSession();
-			if (!data.session) {
+			if (!session) {
 				return null;
 			}
-			token = data.session.access_token;
-		}
 
-		return { endpoint, token };
+			// If the token is expired or about to expire within 60s, force a refresh.
+			// getSession() returns the cached session and won't refresh an already-expired token,
+			// so we need to explicitly call refreshSession() when PowerSync detects expiry.
+			const expiresAt = (session.expires_at ?? 0) * 1000;
+			let token = session.access_token;
+
+			if (expiresAt < Date.now() + 60_000) {
+				addBreadcrumb('sync', 'PowerSync credential refresh');
+				const { data } = await supabase.auth.refreshSession();
+				if (!data.session) {
+					return null;
+				}
+				token = data.session.access_token;
+			}
+
+			return { endpoint, token };
+		} catch (error) {
+			captureError(error, { module: 'powersync', operation: 'fetchCredentials', level: 'error' });
+			throw error;
+		}
 	},
 
 	uploadData: async (database) => {
+		return startSpan({ name: 'sync.upload', op: 'db.powersync' }, async () => {
 		const batch = await database.getCrudBatch(100);
 
 		if (!batch) {
@@ -160,5 +166,6 @@ export const powerSyncConnector: PowerSyncBackendConnector = {
 		}
 
 		await batch.complete();
+		}); // end sync.upload span
 	},
 };

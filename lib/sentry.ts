@@ -77,6 +77,23 @@ export function clearUserContext(): void {
   Sentry.setUser(null);
 }
 
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+export function captureMessage(
+  message: string,
+  level: Sentry.SeverityLevel = 'info',
+  extras?: Record<string, unknown>,
+): void {
+  Sentry.withScope((scope) => {
+    if (extras) scope.setExtras(extras);
+    Sentry.captureMessage(message, level);
+  });
+}
+
+// ── Performance Spans ─────────────────────────────────────────────────────────
+
+export { startSpan } from '@sentry/react-native';
+
 // ── Device Context ────────────────────────────────────────────────────────────
 
 export function setDeviceContext(device: {

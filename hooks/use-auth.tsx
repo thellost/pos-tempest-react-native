@@ -16,7 +16,7 @@ import {
   validateSession,
   verifyPin,
 } from '@/lib/security';
-import { addBreadcrumb, captureError, clearUserContext, setUserContext } from '@/lib/sentry';
+import { addBreadcrumb, captureError, clearUserContext, setUserContext, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import { setAuditUserContext } from '@/services/audit.service';
 
@@ -181,6 +181,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
+      return startSpan({ name: 'auth.login', op: 'function' }, async () => {
       // Input validation
       if (!email || !password) {
         throw new Error('Email and password are required');
@@ -273,6 +274,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } catch (error) {
         throw error;
       }
+      }); // end auth.login span
     },
     [markActivity],
   );

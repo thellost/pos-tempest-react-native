@@ -33,42 +33,11 @@ export default function DailyOrdersScreen() {
   } = useDailyOrders();
 
   const handleOrderPress = (order: (typeof orders)[number]) => {
-    const isTakeaway = order.order_type === 'takeaway';
-
-    if (order.status === 'completed' || order.status === 'cancelled') {
-      // For completed/cancelled orders, navigate to checkout for receipt view
-      // or just open the order in read-only mode
-      if (isTakeaway) {
-        router.push({
-          pathname: '/(app)/order/takeaway',
-          params: { orderId: String(order.id) },
-        });
-      } else {
-        router.push({
-          pathname: '/(app)/order/[tableId]',
-          params: {
-            tableId: String(order.table_id ?? 0),
-            orderId: String(order.id),
-          },
-        });
-      }
-      return;
-    }
-
-    if (isTakeaway) {
-      router.push({
-        pathname: '/(app)/order/takeaway',
-        params: { orderId: String(order.id) },
-      });
-    } else {
-      router.push({
-        pathname: '/(app)/order/[tableId]',
-        params: {
-          tableId: String(order.table_id ?? 0),
-          orderId: String(order.id),
-        },
-      });
-    }
+    // Always open in view-only mode — no editing from Order History
+    router.push({
+      pathname: '/(app)/checkout/[orderId]',
+      params: { orderId: String(order.id), viewOnly: '1' },
+    });
   };
 
   if (isLoading) {
@@ -86,7 +55,7 @@ export default function DailyOrdersScreen() {
       <View className="border-b border-border bg-surface-card px-4 py-3">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-pos-2xl font-bold text-pos-text">Daily Orders</Text>
+            <Text className="text-pos-2xl font-bold text-pos-text">Order History</Text>
             <Text className="text-pos-xs text-pos-text-faint">{getAppDateString()}</Text>
           </View>
         </View>
@@ -141,39 +110,28 @@ export default function DailyOrdersScreen() {
       </View>
 
       {/* Status filter tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="border-b border-border bg-surface-card"
-        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
-      >
-        {STATUS_TABS.map((tab) => {
-          const isActive = statusFilter === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => setStatusFilter(tab.key)}
-              className="rounded-lg px-4 py-2"
-              style={{
-                backgroundColor: isActive
-                  ? ThemeColors.accent.primary
-                  : ThemeColors.surfaces.raised,
-              }}
-            >
-              <Text
-                className="text-pos-xs font-bold"
-                style={{
-                  color: isActive
-                    ? ThemeColors.text.strong
-                    : ThemeColors.text.muted,
-                }}
+      <View className="border-b border-border bg-surface-card" style={{ height: 44 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
+        >
+          {STATUS_TABS.map((tab) => {
+            const isActive = statusFilter === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setStatusFilter(tab.key)}
+                className={`rounded-lg px-4 py-2 ${isActive ? 'bg-brand' : 'bg-surface-raised'}`}
               >
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text className={`text-pos-xs font-bold ${isActive ? 'text-white' : 'text-pos-text-muted'}`}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Order list */}
       <ScrollView

@@ -785,21 +785,78 @@ Notes: No onions please
 
 ### Step 12 — Inventory Management
 
-**Goal:** Track stock levels, show low-stock alerts, auto-deduct on order completion.
+**Goal:** Track stock levels for raw ingredients, manage suppliers and purchase orders, show low-stock alerts. Stock deduction on sale and stock increase on purchase receipt are handled **server-side automatically** — the app only reads synced data and calls the adjustment/PO APIs.
+
+> **Architecture note:** The `inventory` table tracks **raw ingredient / supply items** (e.g., "Rice 25kg bag", "Chicken Breast"), not menu items directly. Menu items are linked to inventory items via a recipe/ingredients list (`menu_item_ingredients`). `sale_out` and `purchase_in` movements are created server-side; the mobile app only calls `POST /api/v1/inventory/adjust` for manual corrections (waste, count corrections, transfers).
 
 **Actions:**
-- Create `src/services/inventory.service.ts`:
-  - `deductStock(branchId, menuItemId, quantity)` — creates `inventory_movements` with type `sale_out`
-  - `addStock(branchId, menuItemId, quantity, userId, reason)` — for manual adjustments or purchase receiving
-  - `getLowStockItems(branchId)` — items below threshold
-  - `getStockMovements(inventoryId)` — full audit trail
-- Create `src/hooks/use-inventory.ts` — live query of stock levels, low-stock alerts
-- Create `app/(app)/inventory/index.tsx` — list of items with current stock, color-coded (red if below threshold). Tap item → view movement history, adjust stock manually
-- Auto-deduct stock when order status → `completed`
-- Show "Low Stock" badge on menu items in the order screen when stock is low
-- Mark item as `is_available = false` when stock reaches 0
 
-**Verification:** Ikan Gurame stock at 15kg → complete order with 0.4kg → stock shows 14.6kg. Manually adjust → movement logged.
+#### A. Service layer — `src/services/inventory.service.ts`
+
+API calls (all require admin or manager role):
+
+- `getInventory(branchId, filters?)` → `GET /api/v1/inventory?branch_id=&low_stock_only=&page=`
+- `getLowStockItems(branchId)` → `GET /api/v1/inventory/low-stock?branch_id=`
+- `adjustStock(inventoryId, quantityChange, movementType, reason?)` → `POST /api/v1/inventory/adjust`
+  - `movement_type` must be one of: `adjustment` | `waste` | `transfer` (never `sale_out` or `purchase_in` — those are server-only)
+  - `quantity_change` is positive (add) or negative (remove); server returns `400` if result would go below 0
+- `updateThreshold(inventoryId, threshold)` → `PATCH /api/v1/inventory/:id/threshold`
+- `getMovements(inventoryId, page?)` → `GET /api/v1/inventory/:id/movements`
+
+Supplier calls:
+
+- `getSuppliers()` → `GET /api/v1/suppliers`
+- `createSupplier(data)` → `POST /api/v1/suppliers` — fields: `name` (required), `contact_person`, `phone`, `email`, `address`
+- `updateSupplier(id, data)` → `PUT /api/v1/suppliers/:id`
+
+Purchase Order calls:
+
+- `getPurchases(filters?)` → `GET /api/v1/purchases?supplier_id=&branch_id=&status=&date_from=&date_to=`
+- `getPurchase(id)` → `GET /api/v1/purchases/:id` (returns purchase with nested items)
+- `createPurchase(data)` → `POST /api/v1/purchases`
+  - Required: `supplier_id`, `branch_id`, `items[]` (each with `menu_item_id`, `quantity`, `unit_of_measure`, `cost_per_unit`)
+  - `unit_of_measure` enum: `piece` | `kg` | `gram` | `ons` | `liter` | `ml` | `portion`
+- `receivePurchase(id, notes?)` → `POST /api/v1/purchases/:id/receive` — auto-creates `purchase_in` movements and increases stock
+- `cancelPurchase(id)` → `PATCH /api/v1/purchases/:id/cancel` — fails if already received
+
+#### B. Hooks — `src/hooks/use-inventory.ts`
+
+- Live PowerSync query for stock levels and `is_low_stock` flag (synced from server)
+- Separate hook `use-purchases.ts` for PO list and `use-suppliers.ts` for supplier list
+
+#### C. Screens
+
+**`app/(app)/inventory/index.tsx`** — 3-tab layout:
+
+1. **Stock** tab: list of inventory items with current `stock_quantity`, `unit_of_measure`, and color-coded low-stock indicator (`is_low_stock = true` → red badge). Tap item → detail sheet showing:
+   - Current stock, threshold (editable inline → calls `updateThreshold`)
+   - Movement history (paginated): each row shows `movement_type`, `quantity_change`, `quantity_before → quantity_after`, `user_name`, `created_at`
+   - "Adjust Stock" button → modal with: quantity input, `movement_type` picker (`adjustment` / `waste` / `transfer`), optional reason field
+
+2. **Purchases** tab: list of purchase orders with `purchase_number`, `supplier_name`, `total_amount`, `status` badge (`ordered` / `partial_received` / `received` / `cancelled`). Status color: `ordered` = yellow, `received` = green, `cancelled` = gray. Actions:
+   - "New PO" FAB → create PO screen: select supplier, branch, add line items (inventory item + qty + unit + cost), optional notes + tax
+   - Tap PO → detail view with nested items. If status is `ordered`: show "Receive" and "Cancel" action buttons
+   - Receive: confirmation modal with optional notes → calls `receivePurchase` → stock increases automatically
+
+3. **Suppliers** tab: list of suppliers with name, contact person, phone. "Add Supplier" FAB → form modal
+
+#### D. Cross-module integration
+
+- **Menu order screen:** show `is_low_stock` badge on menu item cards that have ingredients with low stock. Read from synced `inventory` data — no API call needed
+- **`is_available = false` blocking:** when `stock_quantity` reaches 0, the server sets this flag; the mobile app reads it from synced data and grays out the item (already handled in menu grid component from Step 6)
+- **Do NOT** implement client-side `sale_out` deduction — this is handled automatically by the server when an order reaches `completed` status based on the menu item's ingredients/recipe
+
+**Movement type reference:**
+
+| Type | Source | Who creates it |
+|------|--------|----------------|
+| `sale_out` | Order completed | Server (automatic) |
+| `purchase_in` | Purchase received | Server (via `/purchases/:id/receive`) |
+| `adjustment` | Manual count correction | App → `POST /inventory/adjust` |
+| `waste` | Spoilage write-off | App → `POST /inventory/adjust` |
+| `transfer` | Branch-to-branch transfer | App → `POST /inventory/adjust` |
+
+**Verification:** Rice inventory at 50kg, threshold 10kg → receive PO with 20kg → stock shows 70kg, `purchase_in` movement logged. Waste 5kg → stock shows 65kg, `waste` movement logged. Complete order that uses 0.5kg Rice → server deducts → stock shows 64.5kg, `sale_out` movement visible in history. Lower threshold to 5kg → `is_low_stock` false.
 
 ---
 

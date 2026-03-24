@@ -1,6 +1,6 @@
 import { useQuery } from '@powersync/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Receipt, ShoppingBag, Tag, X } from 'lucide-react-native';
+import { ChevronLeft, FileText, Receipt, ShoppingBag, Tag, X } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 import { toInt } from '@/utils/coerce';
 import type React from 'react';
@@ -20,6 +20,7 @@ import { DiscountSelector } from '@/components/payment/DiscountSelector';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import type { PendingPayment } from '@/components/payment/SplitPayment';
 import { SplitPayment } from '@/components/payment/SplitPayment';
+import { KOTTicketPreview } from '@/components/kitchen/KOTTicketPreview';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import type { PaymentMethodType } from '@/constants/enums';
 import { ORDER_STATUS, PAYMENT_METHOD_TYPE } from '@/constants/enums';
@@ -34,8 +35,11 @@ import {
     processPayment,
     removeOrderDiscount,
 } from '@/services/payment.service';
+import { calculateOrderTotals } from '@/services/order.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
+import type { KOTWithItems } from '@/services/kitchen.service';
+import { getKOTsForOrder } from '@/services/kitchen.service';
 
 import { formatIDR } from '@/utils/currency';
 
@@ -64,7 +68,7 @@ function toNum(v: number | string | null | undefined): number {
 // ── Root (validates params) ───────────────────────────────────────────────────
 
 export default function CheckoutScreen() {
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
+  const { orderId, viewOnly } = useLocalSearchParams<{ orderId: string; viewOnly?: string }>();
 
   if (!orderId || Array.isArray(orderId)) {
     return (
@@ -74,16 +78,17 @@ export default function CheckoutScreen() {
     );
   }
 
-  return <CheckoutContent orderIdStr={orderId} />;
+  return <CheckoutContent orderIdStr={orderId} viewOnly={viewOnly === '1'} />;
 }
 
 // ── Main content ─────────────────────────────────────────────────────────────
 
 interface CheckoutContentProps {
   orderIdStr: string;
+  viewOnly?: boolean;
 }
 
-function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
+function CheckoutContent({ orderIdStr, viewOnly = false }: CheckoutContentProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { activeShift } = useShift();
@@ -139,6 +144,9 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<BillData | null>(null);
+  const [lastKOT, setLastKOT] = useState<KOTWithItems | null>(null);
+  const [kots, setKots] = useState<KOTWithItems[]>([]);
+  const [kotIndex, setKotIndex] = useState(0);
 
   // ── Discount state ────────────────────────────────────────────────────────────
   const [showDiscountPicker, setShowDiscountPicker] = useState(false);
@@ -146,6 +154,14 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
   const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);
   const [discountsLoading, setDiscountsLoading] = useState(false);
   const discountsLoadedRef = useRef(false);
+
+  // Recalculate totals on mount so tax/service charge reflect the current branch rates
+  useEffect(() => {
+    if (!orderId) return;
+    calculateOrderTotals(orderId).catch((err) =>
+      console.error('[Checkout] Error recalculating totals:', err),
+    );
+  }, [orderId]);
 
   // Load applied discount on mount
   useEffect(() => {
@@ -313,14 +329,34 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
   const handleReceiptDismiss = useCallback(() => {
     setLastReceipt(null);
-    router.replace('/(app)/floor');
-  }, [router]);
+    if (!viewOnly) router.replace('/(app)/floor');
+  }, [router, viewOnly]);
+
+  // View-only: print receipt by loading bill data
+  const handleViewReceipt = useCallback(async () => {
+    try {
+      const receipt = await getBillData(orderId, false);
+      setLastReceipt(receipt);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load receipt');
+    }
+  }, [orderId]);
+
+  // View-only: cycle through KOTs
+  const handleViewKOT = useCallback(() => {
+    if (kots.length === 0) {
+      Alert.alert('No KOTs', 'No kitchen order tickets found for this order.');
+      return;
+    }
+    setLastKOT(kots[kotIndex]);
+    setKotIndex((prev) => (prev + 1) % kots.length);
+  }, [kots, kotIndex]);
 
   // Guard: redirect if order was already completed BEFORE we opened checkout
+  // (skip in viewOnly mode — we intentionally open completed orders for viewing)
   const wasAlreadyCompleted = useRef(false);
   useEffect(() => {
-    if (!order) return;
-    // Only flag if the order was completed on first load (not by us)
+    if (!order || viewOnly) return;
     if (order.status === ORDER_STATUS.COMPLETED && !lastReceipt && !isProcessing) {
       wasAlreadyCompleted.current = true;
     }
@@ -328,6 +364,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
   }, [order?.id]);
 
   useEffect(() => {
+    if (viewOnly) return;
     if (wasAlreadyCompleted.current && order?.status === ORDER_STATUS.COMPLETED) {
       Alert.alert('Already Completed', 'This order has already been completed.', [
         { text: 'Go to Floor', onPress: () => router.replace('/(app)/floor') },
@@ -335,6 +372,12 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status]);
+
+  // View-only: load KOTs for this order
+  useEffect(() => {
+    if (!viewOnly || !orderId) return;
+    getKOTsForOrder(orderId).then(setKots).catch(() => {});
+  }, [viewOnly, orderId]);
 
   // ── Loading ───────────────────────────────────────────────────────────────────
 
@@ -389,7 +432,7 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
 
           <View className="rounded-full bg-accent-muted px-2.5 py-1">
             <Text className="text-[10px] font-extrabold tracking-widest text-accent">
-              CHECKOUT
+              {viewOnly ? 'VIEW ONLY' : 'CHECKOUT'}
             </Text>
           </View>
         </View>
@@ -493,169 +536,249 @@ function CheckoutContent({ orderIdStr }: CheckoutContentProps) {
         </View>
       </View>
 
-      {/* ── RIGHT: Payment panel ───────────────────────────────────────────────── */}
-      <View style={{ flex: 1 }}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 12, gap: 10 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Discount */}
-          <SectionCard>
-            <View className="mb-2.5 flex-row items-center justify-between">
-              <Text className="text-[11px] font-bold tracking-widest text-pos-text-faint">DISCOUNT</Text>
-              <Button
-                onPress={handleOpenDiscountPicker}
-                className="rounded border border-accent/30 bg-accent/10 px-2.5 py-1"
-              >
-                <Text className="text-[11px] font-bold text-accent-hover">
-                  {appliedDiscount ? 'Change' : '+ Apply'}
-                </Text>
-              </Button>
-            </View>
-
-            {appliedDiscount ? (
-              <View className="flex-row items-center gap-2 rounded-lg border border-pos-success/30 bg-pos-success/10 p-2.5">
-                <Tag size={16} color={ThemeColors.success.DEFAULT} />
-                <View className="flex-1">
-                  <Text className="text-pos-xs font-bold text-pos-success">
-                    {appliedDiscount.discount_name}
-                  </Text>
-                  <Text className="text-pos-xs text-pos-text-faint">
-                    −{formatIDR(appliedDiscount.applied_amount)}
+      {/* ── RIGHT: Payment panel OR View-only panel ────────────────────────────── */}
+      {viewOnly ? (
+        /* ── VIEW-ONLY: status + print actions ──────────────────────────────── */
+        <View style={{ flex: 1 }} className="border-l border-border">
+          <View className="flex-1 items-center justify-center px-6" style={{ gap: 16 }}>
+            {/* Order status */}
+            <SectionCard>
+              <Text className="mb-2 text-[11px] font-bold tracking-widest text-pos-text-faint">ORDER STATUS</Text>
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="rounded-lg px-3 py-1.5"
+                  style={{
+                    backgroundColor:
+                      order.status === 'completed' ? ThemeColors.success.dim :
+                      order.status === 'cancelled' ? ThemeColors.danger.muted :
+                      ThemeColors.accent.primaryMuted,
+                  }}
+                >
+                  <Text
+                    className="text-pos-sm font-extrabold"
+                    style={{
+                      color:
+                        order.status === 'completed' ? ThemeColors.success.DEFAULT :
+                        order.status === 'cancelled' ? ThemeColors.danger.DEFAULT :
+                        ThemeColors.accent.primary,
+                    }}
+                  >
+                    {order.status.toUpperCase()}
                   </Text>
                 </View>
-                <IconButton
-                  onPress={handleRemoveDiscount}
-                  size="sm"
-                  hitSlop={8}
-                  className="bg-transparent"
+                <View
+                  className="rounded-lg px-3 py-1.5"
+                  style={{
+                    backgroundColor:
+                      order.payment_status === 'paid' ? ThemeColors.success.dim :
+                      order.payment_status === 'partial' ? ThemeColors.warning.muted :
+                      ThemeColors.danger.muted,
+                  }}
                 >
-                  <X size={14} color={ThemeColors.danger.DEFAULT} />
-                </IconButton>
+                  <Text
+                    className="text-pos-sm font-extrabold"
+                    style={{
+                      color:
+                        order.payment_status === 'paid' ? ThemeColors.success.DEFAULT :
+                        order.payment_status === 'partial' ? ThemeColors.warning.DEFAULT :
+                        ThemeColors.danger.DEFAULT,
+                    }}
+                  >
+                    {order.payment_status?.toUpperCase() ?? 'UNPAID'}
+                  </Text>
+                </View>
               </View>
-            ) : (
-              <Text className="text-pos-xs italic text-pos-text-muted">No discount applied</Text>
-            )}
-          </SectionCard>
+            </SectionCard>
 
-          {/* Payment method */}
-          <SectionCard>
-            <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
-              PAYMENT METHOD
-            </Text>
-            <PaymentMethodSelector selected={selectedMethod} onSelect={handleMethodChange} />
-          </SectionCard>
-
-          {/* Amount entry */}
-          <SectionCard>
-            <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
-              {isCash ? 'CASH AMOUNT' : 'PAYMENT DETAILS'}
-            </Text>
-
-            {isCash ? (
-              <CashPayment
-                value={cashInput}
-                onChange={setCashInput}
-                remainingBalance={remainingBalance}
-                onExact={handleCashExact}
-              />
-            ) : (
-              <NonCashInput
-                remainingBalance={remainingBalance}
-                referenceInput={referenceInput}
-                onReferenceChange={setReferenceInput}
-              />
-            )}
-
-            <PrimaryButton
-              onPress={handleAddPayment}
-              disabled={isCash && !cashInput}
-              className="mt-3 h-11 rounded-lg"
+            {/* Print actions */}
+            <Button
+              onPress={handleViewReceipt}
+              className="w-full h-[52px] flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-card"
             >
-              <Text className="text-pos-sm font-extrabold text-white">
-                + Add Payment
+              <Receipt size={18} color={ThemeColors.accent.primary} />
+              <Text className="text-pos-base font-bold" style={{ color: ThemeColors.accent.primary }}>
+                View Receipt / Bill
               </Text>
-            </PrimaryButton>
-          </SectionCard>
+            </Button>
 
-          {/* Pending payments list */}
-          {pendingPayments.length > 0 && (
+            <Button
+              onPress={handleViewKOT}
+              className="w-full h-[52px] flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-card"
+            >
+              <FileText size={18} color={ThemeColors.text.muted} />
+              <Text className="text-pos-base font-bold text-pos-text-muted">
+                {kots.length > 1 ? `View KOT (${kots.length} rounds)` : 'View KOT'}
+              </Text>
+            </Button>
+          </View>
+        </View>
+      ) : (
+        /* ── CHECKOUT: full payment panel ────────────────────────────────────── */
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 12, gap: 10 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Discount */}
+            <SectionCard>
+              <View className="mb-2.5 flex-row items-center justify-between">
+                <Text className="text-[11px] font-bold tracking-widest text-pos-text-faint">DISCOUNT</Text>
+                <Button
+                  onPress={handleOpenDiscountPicker}
+                  className="rounded border border-accent/30 bg-accent/10 px-2.5 py-1"
+                >
+                  <Text className="text-[11px] font-bold text-accent-hover">
+                    {appliedDiscount ? 'Change' : '+ Apply'}
+                  </Text>
+                </Button>
+              </View>
+
+              {appliedDiscount ? (
+                <View className="flex-row items-center gap-2 rounded-lg border border-pos-success/30 bg-pos-success/10 p-2.5">
+                  <Tag size={16} color={ThemeColors.success.DEFAULT} />
+                  <View className="flex-1">
+                    <Text className="text-pos-xs font-bold text-pos-success">
+                      {appliedDiscount.discount_name}
+                    </Text>
+                    <Text className="text-pos-xs text-pos-text-faint">
+                      −{formatIDR(appliedDiscount.applied_amount)}
+                    </Text>
+                  </View>
+                  <IconButton
+                    onPress={handleRemoveDiscount}
+                    size="sm"
+                    hitSlop={8}
+                    className="bg-transparent"
+                  >
+                    <X size={14} color={ThemeColors.danger.DEFAULT} />
+                  </IconButton>
+                </View>
+              ) : (
+                <Text className="text-pos-xs italic text-pos-text-muted">No discount applied</Text>
+              )}
+            </SectionCard>
+
+            {/* Payment method */}
             <SectionCard>
               <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
-                PAYMENTS ADDED
+                PAYMENT METHOD
               </Text>
-              <SplitPayment
-                payments={pendingPayments}
-                orderTotal={orderTotal}
-                onRemove={handleRemovePayment}
-              />
+              <PaymentMethodSelector selected={selectedMethod} onSelect={handleMethodChange} />
             </SectionCard>
-          )}
-        </ScrollView>
 
-        {/* Sticky footer: summary + complete button */}
-        <View className="border-t border-border bg-surface-card px-4 py-3" style={{ gap: 8 }}>
-          {/* Balance / change summary line */}
-          {pendingPayments.length > 0 && (
-            <View className="flex-row items-center justify-between">
-              {remainingBalance > 0 ? (
-                <>
-                  <Text className="text-pos-sm text-pos-text-muted">Remaining</Text>
-                  <Text className="text-pos-base font-extrabold text-pos-warning">
-                    {formatIDR(remainingBalance)}
-                  </Text>
-                </>
+            {/* Amount entry */}
+            <SectionCard>
+              <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
+                {isCash ? 'CASH AMOUNT' : 'PAYMENT DETAILS'}
+              </Text>
+
+              {isCash ? (
+                <CashPayment
+                  value={cashInput}
+                  onChange={setCashInput}
+                  remainingBalance={remainingBalance}
+                  onExact={handleCashExact}
+                />
+              ) : (
+                <NonCashInput
+                  remainingBalance={remainingBalance}
+                  referenceInput={referenceInput}
+                  onReferenceChange={setReferenceInput}
+                />
+              )}
+
+              <PrimaryButton
+                onPress={handleAddPayment}
+                disabled={isCash && !cashInput}
+                className="mt-3 h-11 rounded-lg"
+              >
+                <Text className="text-pos-sm font-extrabold text-white">
+                  + Add Payment
+                </Text>
+              </PrimaryButton>
+            </SectionCard>
+
+            {/* Pending payments list */}
+            {pendingPayments.length > 0 && (
+              <SectionCard>
+                <Text className="mb-2.5 text-[11px] font-bold tracking-widest text-pos-text-faint">
+                  PAYMENTS ADDED
+                </Text>
+                <SplitPayment
+                  payments={pendingPayments}
+                  orderTotal={orderTotal}
+                  onRemove={handleRemovePayment}
+                />
+              </SectionCard>
+            )}
+          </ScrollView>
+
+          {/* Sticky footer: summary + complete button */}
+          <View className="border-t border-border bg-surface-card px-4 py-3" style={{ gap: 8 }}>
+            {pendingPayments.length > 0 && (
+              <View className="flex-row items-center justify-between">
+                {remainingBalance > 0 ? (
+                  <>
+                    <Text className="text-pos-sm text-pos-text-muted">Remaining</Text>
+                    <Text className="text-pos-base font-extrabold text-pos-warning">
+                      {formatIDR(remainingBalance)}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text className="text-pos-sm text-pos-text-muted">Change to give</Text>
+                    <Text className="text-pos-base font-extrabold text-pos-success">
+                      {formatIDR(changeAmount)}
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
+
+            <Button
+              onPress={handleComplete}
+              disabled={!canComplete}
+              className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
+                canComplete ? 'bg-accent' : 'bg-accent/40'
+              }`}
+            >
+              {isProcessing ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <>
-                  <Text className="text-pos-sm text-pos-text-muted">Change to give</Text>
-                  <Text className="text-pos-base font-extrabold text-pos-success">
-                    {formatIDR(changeAmount)}
+                  <Text
+                    className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
+                    style={{ fontSize: 15, letterSpacing: 0.3 }}
+                  >
+                    Complete &amp; Print Receipt
                   </Text>
+                  <Receipt size={18} color={ThemeColors.text.primary} />
                 </>
               )}
-            </View>
-          )}
-
-          <Button
-            onPress={handleComplete}
-            disabled={!canComplete}
-            className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
-              canComplete ? 'bg-accent' : 'bg-accent/40'
-            }`}
-          >
-            {isProcessing ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <>
-                <Text
-                  className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
-                  style={{ fontSize: 15, letterSpacing: 0.3 }}
-                >
-                  Complete &amp; Print Receipt
-                </Text>
-                <Receipt size={18} color={ThemeColors.text.primary} />
-              </>
-            )}
-          </Button>
+            </Button>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* ── Modals ─────────────────────────────────────────────────────────────── */}
 
-      <DiscountSelector
-        visible={showDiscountPicker}
-        discounts={availableDiscounts}
-        appliedDiscount={appliedDiscount}
-        orderSubtotal={orderSubtotal}
-        onApply={handleApplyDiscount}
-        onRemove={handleRemoveDiscount}
-        onClose={() => setShowDiscountPicker(false)}
-        isLoading={discountsLoading}
-      />
+      {!viewOnly && (
+        <DiscountSelector
+          visible={showDiscountPicker}
+          discounts={availableDiscounts}
+          appliedDiscount={appliedDiscount}
+          orderSubtotal={orderSubtotal}
+          onApply={handleApplyDiscount}
+          onRemove={handleRemoveDiscount}
+          onClose={() => setShowDiscountPicker(false)}
+          isLoading={discountsLoading}
+        />
+      )}
 
       <ReceiptPreview bill={lastReceipt} onDismiss={handleReceiptDismiss} />
+      <KOTTicketPreview kot={lastKOT} onDismiss={() => setLastKOT(null)} />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
-import { addBreadcrumb, captureError } from '@/lib/sentry';
+import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { deductStockForItems } from '@/services/inventory.service';
 import { generateOrderNumber } from '@/utils/order-number';
@@ -50,6 +50,7 @@ export async function createOrder(
   orderType: string,
   guestCount: number | null
 ): Promise<Order> {
+  return startSpan({ name: 'order.create', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
 
   if (tableId) {
@@ -131,12 +132,14 @@ export async function createOrder(
   addBreadcrumb('order', 'Order created', { orderId: newId, orderNumber, tableId, orderType });
   console.log('[OrderService] Created order:', orderNumber);
   return order;
+  }); // end order.create span
 }
 
 /**
  * Confirms an order (moves from pending to confirmed)
  */
 export async function confirmOrder(orderId: number, cashierId: number): Promise<void> {
+  return startSpan({ name: 'order.confirm', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
 
   await powersync.execute(
@@ -163,6 +166,7 @@ export async function confirmOrder(orderId: number, cashierId: number): Promise<
 
   addBreadcrumb('order', 'Order confirmed', { orderId });
   console.log('[OrderService] Confirmed order:', orderId);
+  }); // end order.confirm span
 }
 
 /**
@@ -501,20 +505,10 @@ export async function calculateOrderTotals(orderId: number): Promise<void> {
     throw new Error('Order not found');
   }
 
-  // Get the branch for tax and service charge rates
-  const branch = await powersync.getOptional<{ tax_rate: number; service_charge_rate: number }>(
-    `SELECT tax_rate, service_charge_rate FROM branches WHERE id = ?`,
-    [order.branch_id]
-  );
-
-  if (!branch) {
-    throw new Error('Branch not found');
-  }
-
   // Calculate subtotal from order items
   const itemsResult = await powersync.getAll<{ total_sum: number }>(
-    `SELECT COALESCE(SUM(total), 0) as total_sum 
-     FROM order_items 
+    `SELECT COALESCE(SUM(total), 0) as total_sum
+     FROM order_items
      WHERE order_id = ? AND is_voided = 0`,
     [orderId]
   );
@@ -525,11 +519,35 @@ export async function calculateOrderTotals(orderId: number): Promise<void> {
   const discountAmount = order.discount_amount || 0;
   const subtotalAfterDiscount = subtotal - discountAmount;
 
+  // Get the branch for tax and service charge rates
+  const branch = await powersync.getOptional<{ tax_rate: number; service_charge_rate: number }>(
+    `SELECT tax_rate, service_charge_rate FROM branches WHERE id = ?`,
+    [order.branch_id]
+  );
+
+  if (!branch) {
+    throw new Error('Branch not found');
+  }
+
+  console.log('[Tax] branch row:', JSON.stringify(branch));
+
   // Calculate tax (PPN)
   const taxAmount = subtotalAfterDiscount * (branch.tax_rate / 100);
 
   // Calculate service charge
   const serviceCharge = subtotalAfterDiscount * (branch.service_charge_rate / 100);
+
+  console.log('[Tax] subtotal:', subtotalAfterDiscount, '| taxAmount:', taxAmount, '| serviceCharge:', serviceCharge);
+
+  addBreadcrumb('order', 'Tax calculation', {
+    orderId,
+    branchId: order.branch_id,
+    taxRate: branch.tax_rate,
+    serviceChargeRate: branch.service_charge_rate,
+    subtotalAfterDiscount,
+    taxAmount,
+    serviceCharge,
+  });
 
   // Calculate total before rounding
   const totalBeforeRounding = subtotalAfterDiscount + taxAmount + serviceCharge;

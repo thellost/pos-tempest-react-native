@@ -1,5 +1,4 @@
 import {
-  BarChart2,
   Banknote,
   CalendarDays,
   ChefHat,
@@ -26,7 +25,6 @@ export const MAIN_NAV: NavItem[] = [
   { label: 'Kitchen Display', icon: ChefHat,       href: '/(app)/kitchen' },
   { label: 'Inventory',       icon: Package,       href: '/(app)/inventory' },
   { label: 'Customers',       icon: Users,         href: '/(app)/customers' },
-  { label: 'Reports',         icon: BarChart2,     href: '/(app)/reports', roles: ['admin', 'manager'] },
 ];
 
 export const SYSTEM_NAV: NavItem[] = [

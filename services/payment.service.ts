@@ -1,7 +1,7 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
 import { powersync } from '@/db/provider';
-import { addBreadcrumb, captureError } from '@/lib/sentry';
+import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { applyDiscount as calcDiscountAmount } from '@/services/calculator.service';
 import { calculateOrderTotals } from '@/services/order.service';
@@ -219,6 +219,7 @@ export async function processPayment(
   changeAmount: number = 0,
   referenceNumber: string | null = null,
 ): Promise<Payment> {
+  return startSpan({ name: 'payment.process', op: 'db.powersync' }, async () => {
   try {
   const now = new Date().toISOString();
 
@@ -286,6 +287,7 @@ export async function processPayment(
     captureError(error, { module: 'payment', operation: 'processPayment', level: 'error', extras: { orderId, method, amount } });
     throw error;
   }
+  }); // end payment.process span
 }
 
 // ── Order completion ────────────────────────────────────────────────────────
@@ -299,6 +301,7 @@ export async function processPayment(
  * @param orderId - The order to complete
  */
 export async function completeOrder(orderId: number): Promise<void> {
+  return startSpan({ name: 'order.complete', op: 'db.powersync' }, async () => {
   try {
   const now = new Date().toISOString();
 
@@ -354,4 +357,5 @@ export async function completeOrder(orderId: number): Promise<void> {
     captureError(error, { module: 'payment', operation: 'completeOrder', level: 'error', extras: { orderId } });
     throw error;
   }
+  }); // end order.complete span
 }

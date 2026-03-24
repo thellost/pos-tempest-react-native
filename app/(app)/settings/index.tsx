@@ -1,6 +1,6 @@
 import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
 import { Brand, ThemeColors } from '@/constants/theme';
-import { ChefHat, Moon, Receipt, Sun } from 'lucide-react-native';
+import { AlertTriangle, ChefHat, Moon, Receipt, Sun } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { Device } from '@/db/models';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -26,6 +26,40 @@ import {
 } from 'react-native';
 import { Button, SelectButton } from '@/components/ui';
 
+// ── Shared layout primitives ──────────────────────────────────────────────────
+
+function SectionLabel({ label, danger }: { label: string; danger?: boolean }) {
+  return (
+    <View className="mb-2.5 flex-row items-center gap-1.5 px-1">
+      {danger && (
+        <AlertTriangle size={11} color={ThemeColors.danger.DEFAULT} />
+      )}
+      <Text
+        className={`text-pos-xs font-semibold uppercase tracking-widest ${
+          danger ? 'text-pos-danger' : 'text-pos-muted'
+        }`}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function RowDivider() {
+  return <View className="mx-4 h-px bg-border opacity-50" />;
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between px-4 py-3">
+      <Text className="text-pos-sm text-pos-muted">{label}</Text>
+      <Text className="text-pos-sm text-pos-text">{value}</Text>
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
+
 export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useAppTheme();
   const { user } = useAuth();
@@ -44,7 +78,6 @@ export default function SettingsScreen() {
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
 
-  // Printer editing state
   const [editingPrinterType, setEditingPrinterType] = useState<PrinterType | null>(null);
   const [printerAddress, setPrinterAddress] = useState('');
   const [printerName, setPrinterName] = useState('');
@@ -56,7 +89,6 @@ export default function SettingsScreen() {
 
   const loadDevices = useCallback(async () => {
     if (!registration?.branch?.id) return;
-    
     try {
       setDevicesLoading(true);
       const branchDevices = await getDevicesByBranch(registration.branch.id);
@@ -77,13 +109,11 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Please enter a device name');
       return;
     }
-    
     try {
       await updateDeviceName(device.device_uid, editingName.trim());
       await loadDevices();
       setEditingDeviceId(null);
       setEditingName('');
-      
       if (device.device_uid === deviceInfo?.deviceId) {
         await refreshDevice();
       }
@@ -146,8 +176,6 @@ export default function SettingsScreen() {
     );
   };
 
-  // ── Printer helpers ──────────────────────────────────────────────────────────
-
   const handleSavePrinter = async () => {
     if (!editingPrinterType) return;
     if (!printerAddress.trim()) {
@@ -202,6 +230,8 @@ export default function SettingsScreen() {
     }
   };
 
+  // ── Printer card ────────────────────────────────────────────────────────────
+
   const renderPrinterSection = (
     type: PrinterType,
     label: string,
@@ -211,73 +241,90 @@ export default function SettingsScreen() {
   ) => {
     const isEditing = editingPrinterType === type;
     const isTesting = testingPrinter === type;
+    const Icon = icon;
 
     return (
-      <View key={type} className="mb-4 rounded-xl bg-surface-card p-4">
-        <View className="mb-3 flex-row items-center gap-2">
-          {(() => { const Icon = icon; return <Icon size={18} color={ThemeColors.text.muted} />; })()}
-          <Text className="text-pos-sm font-semibold text-pos-text">{label}</Text>
+      <View key={type} className="mb-3 overflow-hidden rounded-xl border border-border bg-surface-card">
+        {/* Header */}
+        <View className="flex-row items-center justify-between px-4 py-3.5">
+          <View className="flex-row items-center gap-2.5">
+            <Icon size={16} color={ThemeColors.text.muted} />
+            <Text className="text-pos-sm font-semibold text-pos-text">{label}</Text>
+          </View>
+          {!isEditing && (
+            address ? (
+              <View className="flex-row items-center gap-1.5 rounded-md bg-pos-success-muted px-2.5 py-1">
+                <View
+                  style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ThemeColors.success.DEFAULT }}
+                />
+                <Text className="text-pos-xs font-medium text-pos-success">Connected</Text>
+              </View>
+            ) : (
+              <View className="rounded-md border border-border bg-surface px-2.5 py-1">
+                <Text className="text-pos-xs text-pos-muted">Not configured</Text>
+              </View>
+            )
+          )}
         </View>
 
         {isEditing ? (
-          <View className="gap-3">
-            <View>
-              <Text className="mb-1 text-pos-xs text-pos-muted">
-                Bluetooth Address / MAC
-              </Text>
-              <TextInput
-                className="rounded-xl border border-border bg-surface px-3 py-2.5 text-pos-sm text-pos-text"
-                placeholder="e.g. 00:11:22:33:44:55"
-                placeholderTextColor="#6B7280"
-                value={printerAddress}
-                onChangeText={setPrinterAddress}
-                autoCapitalize="none"
-                autoFocus
-              />
+          <>
+            <RowDivider />
+            <View className="gap-3 p-4">
+              <View>
+                <Text className="mb-1.5 text-pos-xs text-pos-muted">Bluetooth Address / MAC</Text>
+                <TextInput
+                  className="rounded-xl border border-border bg-surface px-3 py-3 text-pos-sm text-pos-text"
+                  placeholder="00:11:22:33:44:55"
+                  placeholderTextColor={ThemeColors.text.faint}
+                  value={printerAddress}
+                  onChangeText={setPrinterAddress}
+                  autoCapitalize="none"
+                  autoFocus
+                />
+              </View>
+              <View>
+                <Text className="mb-1.5 text-pos-xs text-pos-muted">Display Name (optional)</Text>
+                <TextInput
+                  className="rounded-xl border border-border bg-surface px-3 py-3 text-pos-sm text-pos-text"
+                  placeholder="e.g. Kitchen Epson TM-T20"
+                  placeholderTextColor={ThemeColors.text.faint}
+                  value={printerName}
+                  onChangeText={setPrinterName}
+                />
+              </View>
+              <View className="flex-row gap-2">
+                <Button
+                  className="flex-1 items-center justify-center rounded-xl bg-brand py-3"
+                  onPress={handleSavePrinter}
+                >
+                  <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
+                </Button>
+                <Button
+                  className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-3"
+                  onPress={() => {
+                    setEditingPrinterType(null);
+                    setPrinterAddress('');
+                    setPrinterName('');
+                  }}
+                >
+                  <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
+                </Button>
+              </View>
             </View>
-            <View>
-              <Text className="mb-1 text-pos-xs text-pos-muted">
-                Display Name (optional)
-              </Text>
-              <TextInput
-                className="rounded-xl border border-border bg-surface px-3 py-2.5 text-pos-sm text-pos-text"
-                placeholder="e.g. Kitchen Epson TM-T20"
-                placeholderTextColor="#6B7280"
-                value={printerName}
-                onChangeText={setPrinterName}
-              />
-            </View>
-            <View className="flex-row gap-2">
-              <Button
-                className="flex-1 items-center justify-center rounded-xl bg-brand py-2.5"
-                onPress={handleSavePrinter}
-              >
-                <Text className="text-center text-pos-sm font-semibold text-white">Save</Text>
-              </Button>
-              <Button
-                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2.5"
-                onPress={() => {
-                  setEditingPrinterType(null);
-                  setPrinterAddress('');
-                  setPrinterName('');
-                }}
-              >
-                <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
-              </Button>
-            </View>
-          </View>
+          </>
         ) : address ? (
           <>
-            <View className="mb-3 rounded-lg bg-surface px-3 py-2.5">
+            <RowDivider />
+            <View className="px-4 py-3">
               <Text className="text-pos-xs text-pos-muted">Address</Text>
               <Text className="mt-0.5 text-pos-sm text-pos-text">{address}</Text>
-              {name ? (
-                <Text className="mt-0.5 text-pos-xs text-pos-muted">{name}</Text>
-              ) : null}
+              {name ? <Text className="mt-0.5 text-pos-xs text-pos-muted">{name}</Text> : null}
             </View>
-            <View className="flex-row gap-2">
+            <RowDivider />
+            <View className="flex-row gap-2 px-4 py-3">
               <Button
-                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2"
+                className="flex-1 items-center justify-center rounded-lg border border-border bg-surface py-2.5"
                 onPress={() => {
                   setEditingPrinterType(type);
                   setPrinterAddress(address);
@@ -287,7 +334,7 @@ export default function SettingsScreen() {
                 <Text className="text-center text-pos-xs text-pos-text">Edit</Text>
               </Button>
               <Button
-                className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-2"
+                className="flex-1 items-center justify-center rounded-lg border border-border bg-surface py-2.5"
                 onPress={() => handleTestPrint(type)}
                 disabled={isTesting}
               >
@@ -298,7 +345,7 @@ export default function SettingsScreen() {
                 )}
               </Button>
               <Button
-                className="flex-1 items-center justify-center rounded-xl border border-pos-danger/30 bg-pos-danger-muted py-2"
+                className="flex-1 items-center justify-center rounded-lg border border-pos-danger/30 bg-pos-danger-muted py-2.5"
                 onPress={() => handleClearPrinter(type)}
               >
                 <Text className="text-center text-pos-xs text-pos-danger">Remove</Text>
@@ -306,40 +353,45 @@ export default function SettingsScreen() {
             </View>
           </>
         ) : (
-          <View className="flex-row items-center justify-between">
-            <Text className="text-pos-sm text-pos-muted">Not configured</Text>
-            <Button
-              className="items-center justify-center rounded-xl border border-brand bg-brand-muted px-4 py-2"
-              onPress={() => {
-                setEditingPrinterType(type);
-                setPrinterAddress('');
-                setPrinterName('');
-              }}
-            >
-              <Text className="text-pos-xs font-semibold text-brand">+ Add Printer</Text>
-            </Button>
-          </View>
+          <>
+            <RowDivider />
+            <View className="p-3">
+              <Button
+                className="items-center justify-center rounded-xl border border-brand bg-brand-muted py-3"
+                onPress={() => {
+                  setEditingPrinterType(type);
+                  setPrinterAddress('');
+                  setPrinterName('');
+                }}
+              >
+                <Text className="text-center text-pos-sm font-semibold text-brand">+ Add Printer</Text>
+              </Button>
+            </View>
+          </>
         )}
       </View>
     );
   };
 
+  // ── Device row ──────────────────────────────────────────────────────────────
+
   const renderDevice = ({ item }: { item: Device }) => {
     const isCurrentDevice = item.device_uid === deviceInfo?.deviceId;
+    const isActive = item.status !== DEVICE_STATUS.INACTIVE;
     const isEditing = editingDeviceId === item.id;
 
     return (
       <View
-        className={`mb-3 rounded-xl border p-4 ${
+        className={`mb-2.5 overflow-hidden rounded-xl border ${
           isCurrentDevice
             ? 'border-accent bg-accent-muted'
-            : item.status === DEVICE_STATUS.INACTIVE
+            : !isActive
             ? 'border-pos-danger/20 bg-pos-danger-muted'
             : 'border-border bg-surface-card'
         }`}
       >
         {isEditing ? (
-          <View className="gap-3">
+          <View className="gap-3 p-4">
             <TextInput
               className="rounded-xl border border-border bg-surface p-3 text-pos-base text-pos-text"
               value={editingName}
@@ -366,60 +418,68 @@ export default function SettingsScreen() {
           </View>
         ) : (
           <>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-pos-base font-semibold text-pos-text">
-                  {item.device_name}
+            <View className="flex-row items-center gap-3 px-4 py-3.5">
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: isActive
+                    ? ThemeColors.success.DEFAULT
+                    : ThemeColors.danger.DEFAULT,
+                }}
+              />
+              <View className="flex-1">
+                <View className="flex-row flex-wrap items-center gap-2">
+                  <Text className="text-pos-sm font-semibold text-pos-text">{item.device_name}</Text>
+                  {isCurrentDevice && (
+                    <View className="rounded-md bg-accent-muted px-2 py-0.5">
+                      <Text className="text-pos-xs text-accent">This device</Text>
+                    </View>
+                  )}
+                  {!isActive && (
+                    <View className="rounded-md bg-pos-danger-muted px-2 py-0.5">
+                      <Text className="text-pos-xs text-pos-danger">Inactive</Text>
+                    </View>
+                  )}
+                </View>
+                <Text className="mt-0.5 text-pos-xs text-pos-muted">
+                  {item.device_uid.slice(0, 8)}... · {new Date(item.registered_at).toLocaleDateString()}
                 </Text>
-                {isCurrentDevice && (
-                  <View className="rounded-md bg-accent-muted px-2 py-0.5">
-                    <Text className="text-pos-xs text-accent">This Device</Text>
-                  </View>
-                )}
-                {item.status === DEVICE_STATUS.INACTIVE && (
-                  <View className="rounded-md bg-pos-danger-muted px-2 py-0.5">
-                    <Text className="text-pos-xs text-pos-danger">Inactive</Text>
-                  </View>
-                )}
               </View>
             </View>
-            
-            <Text className="mt-1 text-pos-xs text-pos-text-muted">
-              ID: {item.device_uid.slice(0, 8)}...
-            </Text>
-            
-            <Text className="mt-1 text-pos-xs text-pos-text-muted">
-              Registered: {new Date(item.registered_at).toLocaleDateString()}
-            </Text>
-            
-            {canManageDevices && (
-              <View className="mt-3 flex-row gap-2">
-                <Button
-                  className="items-center justify-center rounded-lg border border-border bg-surface px-3 py-1.5"
-                  onPress={() => {
-                    setEditingDeviceId(item.id);
-                    setEditingName(item.device_name);
-                  }}
-                >
-                  <Text className="text-pos-xs text-pos-text">Rename</Text>
-                </Button>
 
-                {item.status === DEVICE_STATUS.ACTIVE ? (
+            {canManageDevices && (
+              <>
+                <View className="mx-4 h-px bg-border opacity-40" />
+                <View className="flex-row gap-2 px-4 py-2.5">
                   <Button
-                    className="items-center justify-center rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-3 py-1.5"
-                    onPress={() => handleDeactivateDevice(item)}
+                    className="items-center justify-center rounded-lg border border-border bg-surface px-4 py-2"
+                    onPress={() => {
+                      setEditingDeviceId(item.id);
+                      setEditingName(item.device_name);
+                    }}
                   >
-                    <Text className="text-pos-xs text-pos-danger">Deactivate</Text>
+                    <Text className="text-pos-xs text-pos-text">Rename</Text>
                   </Button>
-                ) : (
-                  <Button
-                    className="items-center justify-center rounded-lg border border-pos-success/20 bg-pos-success-muted px-3 py-1.5"
-                    onPress={() => handleReactivateDevice(item)}
-                  >
-                    <Text className="text-pos-xs text-pos-success">Reactivate</Text>
-                  </Button>
-                )}
-              </View>
+
+                  {isActive ? (
+                    <Button
+                      className="items-center justify-center rounded-lg border border-pos-danger/20 bg-pos-danger-muted px-4 py-2"
+                      onPress={() => handleDeactivateDevice(item)}
+                    >
+                      <Text className="text-pos-xs text-pos-danger">Deactivate</Text>
+                    </Button>
+                  ) : (
+                    <Button
+                      className="items-center justify-center rounded-lg border border-pos-success/20 bg-pos-success-muted px-4 py-2"
+                      onPress={() => handleReactivateDevice(item)}
+                    >
+                      <Text className="text-pos-xs text-pos-success">Reactivate</Text>
+                    </Button>
+                  )}
+                </View>
+              </>
             )}
           </>
         )}
@@ -427,35 +487,34 @@ export default function SettingsScreen() {
     );
   };
 
-  return (
-    <ScrollView className="flex-1 bg-surface p-6">
+  // ── Render ──────────────────────────────────────────────────────────────────
 
-      {/* ── Appearance ───────────────────────────────────────────────────── */}
+  return (
+    <ScrollView className="flex-1 bg-surface p-5">
+
+      {/* ── Appearance ─────────────────────────────────────────────────────── */}
       <View className="mb-6">
-        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
-          Appearance
-        </Text>
-        <View className="rounded-xl bg-surface-card p-4">
-          <Text className="mb-3 text-pos-sm text-pos-text-muted">Color Theme</Text>
-          <View className="flex-row gap-3">
+        <SectionLabel label="Appearance" />
+        <View className="overflow-hidden rounded-xl border border-border bg-surface-card p-1.5">
+          <View className="flex-row gap-1">
             {(['dark', 'light'] as const).map((scheme) => {
               const active = colorScheme === scheme;
               return (
                 <SelectButton
                   key={scheme}
                   selected={active}
-                  selectedClassName="border-brand bg-brand"
-                  unselectedClassName="border-border bg-surface"
-                  className="flex-1 flex-row gap-2 rounded-xl py-3"
+                  selectedClassName="bg-brand"
+                  unselectedClassName="bg-transparent"
+                  className="flex-1 flex-row items-center justify-center gap-2 rounded-lg py-3"
                   onPress={() => setColorScheme(scheme)}
                 >
                   {scheme === 'dark'
-                    ? <Moon size={18} color={active ? '#fff' : ThemeColors.text.primary} />
-                    : <Sun size={18} color={active ? '#fff' : ThemeColors.text.primary} />
+                    ? <Moon size={15} color={active ? '#fff' : ThemeColors.text.muted} />
+                    : <Sun size={15} color={active ? '#fff' : ThemeColors.text.muted} />
                   }
                   <Text
                     className={`text-pos-sm font-semibold capitalize ${
-                      active ? 'text-white' : 'text-pos-text'
+                      active ? 'text-white' : 'text-pos-muted'
                     }`}
                   >
                     {scheme}
@@ -467,53 +526,53 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* ── This Device ────────────────────────────────────────────────────── */}
       <View className="mb-6">
-        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
-          Current Device
-        </Text>
-        <View className="rounded-xl bg-surface-card p-4">
-          <View className="gap-2">
-            <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-text-muted">Name:</Text>
-              <Text className="text-pos-sm text-pos-text">
-                {registration?.device?.device_name || 'Not set'}
-              </Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-text-muted">Branch:</Text>
-              <Text className="text-pos-sm text-pos-text">
-                {registration?.branch?.name || 'Not set'}
-              </Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-text-muted">Model:</Text>
-              <Text className="text-pos-sm text-pos-text">
-                {deviceInfo?.model || 'Unknown'}
-              </Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-pos-sm text-pos-text-muted">Device ID:</Text>
-              <Text className="text-pos-sm text-pos-text">
-                {deviceInfo?.deviceId?.slice(0, 8)}...
-              </Text>
-            </View>
-          </View>
+        <SectionLabel label="This Device" />
+        <View className="overflow-hidden rounded-xl border border-border bg-surface-card">
+          <InfoRow
+            label="Name"
+            value={registration?.device?.device_name || 'Not set'}
+          />
+          <RowDivider />
+          <InfoRow
+            label="Branch"
+            value={registration?.branch?.name || 'Not set'}
+          />
+          <RowDivider />
+          <InfoRow
+            label="Model"
+            value={deviceInfo?.model || 'Unknown'}
+          />
+          <RowDivider />
+          <InfoRow
+            label="Device ID"
+            value={deviceInfo?.deviceId ? `${deviceInfo.deviceId.slice(0, 8)}...` : '—'}
+          />
         </View>
       </View>
 
+      {/* ── Branch Devices ─────────────────────────────────────────────────── */}
       {canManageDevices && (
         <View className="mb-6">
-          <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
-            Branch Devices
-          </Text>
-          
+          <View className="mb-2.5 flex-row items-center justify-between px-1">
+            <Text className="text-pos-xs font-semibold uppercase tracking-widest text-pos-muted">
+              Branch Devices
+            </Text>
+            {devices.length > 0 && (
+              <View className="rounded border border-border bg-surface-card px-1.5 py-0.5">
+                <Text className="text-pos-xs text-pos-muted">{devices.length}</Text>
+              </View>
+            )}
+          </View>
+
           {devicesLoading ? (
             <View className="items-center py-8">
               <ActivityIndicator size="large" color={Brand.primary} />
             </View>
           ) : devices.length === 0 ? (
-            <View className="rounded-xl bg-surface-card p-4">
-              <Text className="text-pos-sm text-pos-text-muted">
+            <View className="rounded-xl border border-border bg-surface-card px-4 py-5">
+              <Text className="text-pos-sm text-pos-muted">
                 No devices registered for this branch.
               </Text>
             </View>
@@ -528,10 +587,9 @@ export default function SettingsScreen() {
         </View>
       )}
 
+      {/* ── Printers ───────────────────────────────────────────────────────── */}
       <View className="mb-6">
-        <Text className="mb-3 text-pos-lg font-semibold text-pos-text">
-          Printer Settings
-        </Text>
+        <SectionLabel label="Printers" />
 
         {printerLoading ? (
           <View className="items-center py-6">
@@ -540,11 +598,11 @@ export default function SettingsScreen() {
         ) : (
           <>
             {/* Paper Width */}
-            <View className="mb-4 rounded-xl bg-surface-card p-4">
-              <Text className="mb-3 text-pos-sm font-semibold text-pos-text">
-                Paper Width
-              </Text>
-              <View className="flex-row gap-3">
+            <View className="mb-3 overflow-hidden rounded-xl border border-border bg-surface-card">
+              <View className="px-4 pb-1 pt-3.5">
+                <Text className="text-pos-xs font-medium text-pos-muted">Paper Width</Text>
+              </View>
+              <View className="flex-row gap-2 px-4 pb-3.5 pt-2">
                 {(['58mm', '80mm'] as const).map((w) => (
                   <SelectButton
                     key={w}
@@ -566,7 +624,6 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            {/* Kitchen Printer */}
             {renderPrinterSection(
               'kitchen',
               'Kitchen Printer',
@@ -574,8 +631,6 @@ export default function SettingsScreen() {
               kitchenPrinter?.address ?? null,
               kitchenPrinter?.name ?? null,
             )}
-
-            {/* Cashier Printer */}
             {renderPrinterSection(
               'cashier',
               'Cashier / Receipt Printer',
@@ -587,29 +642,38 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      <View className="p-4">
-        <Text className="mb-4 text-pos-lg font-semibold text-pos-text">
-          Device Management
-        </Text>
-
-        <Button
-          className="mb-4 items-center justify-center rounded-xl bg-pos-danger p-4"
-          onPress={handleResetDevice}
-        >
-          <Text className="text-center text-pos-base font-semibold text-white">
-            Reset Device Registration
-          </Text>
-        </Button>
+      {/* ── Danger Zone ────────────────────────────────────────────────────── */}
+      <View className="mb-6">
+        <SectionLabel label="Danger Zone" danger />
+        <View className="overflow-hidden rounded-xl border border-pos-danger/20 bg-pos-danger-muted">
+          <View className="px-4 pb-3 pt-4">
+            <Text className="text-pos-sm font-semibold text-pos-text">
+              Reset Device Registration
+            </Text>
+            <Text className="mt-1 text-pos-xs text-pos-muted">
+              Unlinks this device from its branch. Re-registration will be required to continue using the POS.
+            </Text>
+          </View>
+          <View className="mx-4 h-px bg-border opacity-50" />
+          <View className="p-3">
+            <Button
+              className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
+              onPress={handleResetDevice}
+            >
+              <Text className="text-center text-pos-sm font-semibold text-white">
+                Reset Registration
+              </Text>
+            </Button>
+          </View>
+        </View>
       </View>
 
-      <View className="rounded-xl bg-surface-card p-4">
-        <Text className="text-pos-sm text-pos-text-muted">
-          POS Tempest v1.0.0
-        </Text>
-        <Text className="mt-1 text-pos-xs text-pos-text-faint">
-          Offline-first restaurant POS
-        </Text>
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <View className="items-center pb-6 pt-2">
+        <Text className="text-pos-xs font-medium text-pos-muted">POS Tempest v1.0.0</Text>
+        <Text className="mt-1 text-pos-xs text-pos-faint">Offline-first restaurant POS</Text>
       </View>
+
     </ScrollView>
   );
 }

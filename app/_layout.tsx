@@ -33,13 +33,17 @@ Sentry.init({
   sendDefaultPii: true,
   enableLogs: true,
 
+  // Native frames tracking requires compiled native modules — disable in Expo Go / JS-only builds
+  enableNativeFramesTracking: !__DEV__,
+
   // Sampling — full in dev so nothing is dropped during testing
   tracesSampleRate: __DEV__ ? 1.0 : 0.2,
   replaysSessionSampleRate: __DEV__ ? 0 : 0.1,
   replaysOnErrorSampleRate: 1,
 
   integrations: [
-    Sentry.mobileReplayIntegration(),
+    // mobileReplayIntegration requires compiled native modules — unavailable in Expo Go / JS-only builds
+    ...(__DEV__ ? [] : [Sentry.mobileReplayIntegration()]),
     Sentry.feedbackIntegration(),
     navigationIntegration,
   ],
