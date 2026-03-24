@@ -52,7 +52,7 @@ export default function DailyOrdersScreen() {
   return (
     <View className="flex-1 bg-surface">
       {/* Header */}
-      <View className="border-b border-border bg-surface-card px-4 py-3">
+      <View className="border-b border-border bg-surface-card px-4 py-2">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-pos-2xl font-bold text-pos-text">Order History</Text>
@@ -60,29 +60,29 @@ export default function DailyOrdersScreen() {
           </View>
         </View>
 
-        {/* Summary stats */}
-        <View className="mt-3 flex-row items-center gap-2">
-          <View className="w-24 rounded-sm bg-surface-raised px-3 py-2 items-center">
+        {/* Summary stats — flex-1 so cards stretch evenly regardless of screen width */}
+        <View className="mt-2 flex-row gap-2">
+          <View className="flex-1 rounded-sm bg-surface-raised px-2 py-1.5 items-center">
             <Text className="text-pos-xs text-pos-text-muted">Total</Text>
             <Text className="font-mono text-pos-xl font-bold text-pos-text text-center">
               {summary.totalOrders}
             </Text>
           </View>
-          <View className="w-24 rounded-sm px-3 py-2 items-center" style={{ backgroundColor: ThemeColors.accent.primaryMuted }}>
+          <View className="flex-1 rounded-sm px-2 py-1.5 items-center" style={{ backgroundColor: ThemeColors.accent.primaryMuted }}>
             <Text className="text-pos-xs text-pos-text-muted">Active</Text>
             <Text className="font-mono text-pos-xl font-bold text-center" style={{ color: ThemeColors.accent.primary }}>
               {summary.activeCount}
             </Text>
           </View>
-          <View className="w-24 rounded-sm px-3 py-2 items-center" style={{ backgroundColor: ThemeColors.success.dim }}>
+          <View className="flex-1 rounded-sm px-2 py-1.5 items-center" style={{ backgroundColor: ThemeColors.success.dim }}>
             <Text className="text-pos-xs text-pos-text-muted">Done</Text>
             <Text className="font-mono text-pos-xl font-bold text-center" style={{ color: ThemeColors.success.DEFAULT }}>
               {summary.completedCount}
             </Text>
           </View>
-          <View className="rounded-sm px-3 py-2 items-center" style={{ backgroundColor: ThemeColors.success.dim, minWidth: 120 }}>
+          <View className="flex-1 rounded-sm px-2 py-1.5 items-center" style={{ backgroundColor: ThemeColors.success.dim }}>
             <Text className="text-pos-xs text-pos-text-muted">Revenue</Text>
-            <Text className="font-mono text-pos-lg font-bold text-center" style={{ color: ThemeColors.success.DEFAULT }}>
+            <Text className="font-mono text-pos-base font-bold text-center" style={{ color: ThemeColors.success.DEFAULT }}>
               {formatIDR(summary.totalRevenue)}
             </Text>
           </View>

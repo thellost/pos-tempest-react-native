@@ -2,7 +2,7 @@ import { Colors, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button, IconButton } from '@/components/ui';
 import 'react-native-url-polyfill/auto';
 
@@ -101,21 +101,28 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-surface">
-      <View className="flex-1 items-center justify-center p-8">
-        <View className="w-full max-w-md rounded-2xl border border-border bg-surface-card p-8">
-          <View className="mb-2 h-14 w-14 items-center justify-center self-center rounded-2xl bg-accent-muted">
-            <Zap size={28} color={ThemeColors.accent.primary} />
+    <KeyboardAvoidingView
+      className="flex-1 bg-surface"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="w-full max-w-md self-center rounded-2xl border border-border bg-surface-card p-5">
+          <View className="mb-2 h-10 w-10 items-center justify-center self-center rounded-xl bg-accent-muted">
+            <Zap size={22} color={ThemeColors.accent.primary} />
           </View>
-          <Text className="mb-2 text-center text-pos-2xl font-bold text-pos-text">
+          <Text className="mb-1 text-center text-pos-xl font-bold text-pos-text">
             POS Tempest
           </Text>
-          <Text className="mb-8 text-center text-pos-sm text-pos-text-muted">
+          <Text className="mb-4 text-center text-pos-sm text-pos-text-muted">
             Sign in to continue
           </Text>
 
           {isLoginLocked && lockTimeRemaining > 0 && (
-            <View className="mb-5 rounded-xl border border-pos-danger/30 bg-pos-danger-muted p-4">
+            <View className="mb-4 rounded-xl border border-pos-danger/30 bg-pos-danger-muted p-3">
               <Text className="text-center text-pos-sm font-semibold text-pos-danger">
                 Account temporarily locked
               </Text>
@@ -126,7 +133,7 @@ export default function LoginScreen() {
           )}
 
           {!isLoginLocked && loginAttempts > 0 && loginAttempts <= 2 && (
-            <View className="mb-5 rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-4">
+            <View className="mb-4 rounded-xl border border-pos-warning/30 bg-pos-warning-muted p-3">
               <Text className="text-center text-pos-sm text-pos-warning">
                 {loginAttempts} {loginAttempts === 1 ? 'attempt' : 'attempts'} remaining
               </Text>
@@ -145,11 +152,11 @@ export default function LoginScreen() {
             placeholderTextColor="#64748B"
             editable={!loading && !isLoginLocked}
             returnKeyType="next"
-            className="mb-5 rounded-xl border border-border bg-surface px-4 py-3.5 text-pos-base text-pos-text"
+            className="mb-4 rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
           />
 
           <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Password</Text>
-          <View className="relative mb-8">
+          <View className="relative mb-5">
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -162,13 +169,13 @@ export default function LoginScreen() {
               editable={!loading && !isLoginLocked}
               returnKeyType="go"
               onSubmitEditing={onSubmitEditing}
-              className="rounded-xl border border-border bg-surface px-4 py-3.5 pr-12 text-pos-base text-pos-text"
+              className="rounded-xl border border-border bg-surface px-4 py-3 pr-12 text-pos-base text-pos-text"
             />
             <IconButton
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading || isLoginLocked}
               size="sm"
-              className="absolute right-3 top-3 bg-transparent"
+              className="absolute right-3 top-2.5 bg-transparent"
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
               {showPassword
@@ -178,7 +185,7 @@ export default function LoginScreen() {
           </View>
 
           <Button
-            className="items-center justify-center rounded-xl bg-accent p-4"
+            className="items-center justify-center rounded-xl bg-accent p-3.5"
             onPress={handleSignIn}
             disabled={loading || isLoginLocked || !email.trim() || !password.trim()}>
             <View className="flex-row items-center justify-center">
@@ -189,11 +196,11 @@ export default function LoginScreen() {
             </View>
           </Button>
 
-          <Text className="mt-5 text-center text-pos-xs text-pos-text-faint">
+          <Text className="mt-4 text-center text-pos-xs text-pos-text-faint">
             Your credentials are encrypted and secure
           </Text>
         </View>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

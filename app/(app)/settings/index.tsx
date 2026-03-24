@@ -7,6 +7,11 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { type PrinterType, usePrinter } from '@/hooks/use-printer';
+import {
+    scanBluetoothPrinters,
+    type DiscoveredPrinter,
+    type ScanStatus,
+} from '@/lib/bluetooth';
 import { sendToPrinter } from '@/lib/printer';
 import {
     deactivateDevice,
@@ -14,11 +19,14 @@ import {
     reactivateDevice,
     updateDeviceName,
 } from '@/services/device.service';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Linking,
+    Platform,
+    Pressable,
     ScrollView,
     Text,
     TextInput,
@@ -82,6 +90,12 @@ export default function SettingsScreen() {
   const [printerAddress, setPrinterAddress] = useState('');
   const [printerName, setPrinterName] = useState('');
   const [testingPrinter, setTestingPrinter] = useState<PrinterType | null>(null);
+
+  const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
+  const [discoveredPrinters, setDiscoveredPrinters] = useState<DiscoveredPrinter[]>([]);
+  const stopScanRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => { stopScanRef.current?.(); }, []);
 
   const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
   const isManager = user?.role_name === ROLE_TYPE.MANAGER;
@@ -174,6 +188,47 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleStartScan = () => {
+    stopScanRef.current?.();
+    setDiscoveredPrinters([]);
+    setScanStatus('scanning');
+    stopScanRef.current = scanBluetoothPrinters(
+      setDiscoveredPrinters,
+      setScanStatus,
+      (msg) => Alert.alert('Scan Error', msg),
+    );
+  };
+
+  const handleSelectPrinter = async (printer: DiscoveredPrinter) => {
+    if (!editingPrinterType) return;
+    stopScanRef.current?.();
+    stopScanRef.current = null;
+    try {
+      await updatePrinter(editingPrinterType, {
+        address: printer.target,
+        name: printer.name,
+        type: editingPrinterType,
+      });
+      setEditingPrinterType(null);
+      setPrinterAddress('');
+      setPrinterName('');
+      setDiscoveredPrinters([]);
+      setScanStatus('idle');
+    } catch {
+      Alert.alert('Error', 'Failed to save printer settings.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    stopScanRef.current?.();
+    stopScanRef.current = null;
+    setEditingPrinterType(null);
+    setPrinterAddress('');
+    setPrinterName('');
+    setDiscoveredPrinters([]);
+    setScanStatus('idle');
   };
 
   const handleSavePrinter = async () => {
@@ -271,16 +326,94 @@ export default function SettingsScreen() {
           <>
             <RowDivider />
             <View className="gap-3 p-4">
+
+              {/* ── Pair first notice ── */}
+              <View className="flex-row items-start gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3">
+                <View className="mt-0.5 h-2 w-2 rounded-full bg-pos-warning" />
+                <View className="flex-1">
+                  <Text className="text-pos-xs font-semibold text-pos-text">
+                    Pair your printer first
+                  </Text>
+                  <Text className="mt-0.5 text-pos-xs text-pos-muted">
+                    Open Bluetooth Settings, pair the printer there, then come back to scan.
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      if (Platform.OS === 'android') {
+                        Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => {});
+                      } else {
+                        Linking.openURL('App-Prefs:Bluetooth').catch(() => {});
+                      }
+                    }}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <Text className="mt-1.5 text-pos-xs font-semibold text-brand">
+                      Open Bluetooth Settings →
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* ── Scan ── */}
+              <Button
+                className="items-center justify-center rounded-xl border border-brand bg-brand-muted py-3"
+                onPress={handleStartScan}
+                disabled={scanStatus === 'scanning'}
+              >
+                {scanStatus === 'scanning' ? (
+                  <View className="flex-row items-center gap-2">
+                    <ActivityIndicator size="small" color={Brand.primary} />
+                    <Text className="text-pos-sm font-semibold text-brand">Scanning…</Text>
+                  </View>
+                ) : (
+                  <Text className="text-pos-sm font-semibold text-brand">
+                    {scanStatus === 'idle' ? 'Scan for Paired Printers' : 'Scan Again'}
+                  </Text>
+                )}
+              </Button>
+
+              {/* ── Discovered devices ── */}
+              {discoveredPrinters.length > 0 && (
+                <View className="gap-1.5">
+                  {discoveredPrinters.map((p) => (
+                    <Pressable
+                      key={p.target}
+                      onPress={() => handleSelectPrinter(p)}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                      className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
+                    >
+                      <View className="flex-1">
+                        <Text className="text-pos-sm font-semibold text-pos-text">{p.name}</Text>
+                        <Text className="mt-0.5 text-pos-xs text-pos-muted">{p.target}</Text>
+                      </View>
+                      <Text className="text-pos-xs font-semibold text-brand">Select</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {scanStatus === 'done' && discoveredPrinters.length === 0 && (
+                <Text className="text-center text-pos-xs text-pos-muted">
+                  No paired printers found. Make sure the printer is paired in Bluetooth Settings and powered on.
+                </Text>
+              )}
+
+              {/* ── Manual fallback ── */}
+              <View className="flex-row items-center gap-3">
+                <View className="h-px flex-1 bg-border opacity-50" />
+                <Text className="text-pos-xs text-pos-faint">or enter manually</Text>
+                <View className="h-px flex-1 bg-border opacity-50" />
+              </View>
+
               <View>
                 <Text className="mb-1.5 text-pos-xs text-pos-muted">Bluetooth Address / MAC</Text>
                 <TextInput
                   className="rounded-xl border border-border bg-surface px-3 py-3 text-pos-sm text-pos-text"
-                  placeholder="00:11:22:33:44:55"
+                  placeholder="BT:AA:BB:CC:DD:EE:FF"
                   placeholderTextColor={ThemeColors.text.faint}
                   value={printerAddress}
                   onChangeText={setPrinterAddress}
                   autoCapitalize="none"
-                  autoFocus
                 />
               </View>
               <View>
@@ -293,6 +426,7 @@ export default function SettingsScreen() {
                   onChangeText={setPrinterName}
                 />
               </View>
+
               <View className="flex-row gap-2">
                 <Button
                   className="flex-1 items-center justify-center rounded-xl bg-brand py-3"
@@ -302,15 +436,12 @@ export default function SettingsScreen() {
                 </Button>
                 <Button
                   className="flex-1 items-center justify-center rounded-xl border border-border bg-surface py-3"
-                  onPress={() => {
-                    setEditingPrinterType(null);
-                    setPrinterAddress('');
-                    setPrinterName('');
-                  }}
+                  onPress={handleCancelEdit}
                 >
                   <Text className="text-center text-pos-sm text-pos-text">Cancel</Text>
                 </Button>
               </View>
+
             </View>
           </>
         ) : address ? (

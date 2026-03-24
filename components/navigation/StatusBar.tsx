@@ -50,16 +50,16 @@ export function AppStatusBar({
   return (
     <View className="h-11 flex-row items-center border-b border-border bg-surface-card px-4">
       {/* LEFT — user info */}
-      <View className="flex-row items-center gap-2">
-        <View className="h-7 w-7 items-center justify-center rounded-full bg-accent">
+      <View className="flex-row items-center gap-2" style={{ flexShrink: 0 }}>
+        <View className="h-7 w-7 items-center justify-center rounded-full bg-accent" style={{ flexShrink: 0 }}>
           <Text className="text-[11px] font-bold text-white">{initials}</Text>
         </View>
-        <Text className="text-pos-base font-medium text-pos-text" numberOfLines={1}>
+        <Text className="text-pos-sm font-medium text-pos-text" numberOfLines={1} style={{ maxWidth: 120 }}>
           {user?.name ?? 'Unknown'}
         </Text>
         {user?.role_name ? (
-          <View className="rounded bg-accent-muted px-2 py-0.5">
-            <Text className="text-pos-sm font-semibold uppercase tracking-wider text-accent">
+          <View className="rounded bg-accent-muted px-2 py-0.5" style={{ flexShrink: 0 }}>
+            <Text className="text-[10px] font-semibold uppercase tracking-wider text-accent">
               {user.role_name}
             </Text>
           </View>
@@ -74,27 +74,31 @@ export function AppStatusBar({
       </View>
 
       {/* RIGHT — shift, orders, device */}
-      <View className="flex-row items-center gap-3">
-        <View className="flex-row items-center gap-1.5">
+      <View className="flex-row items-center gap-2" style={{ flexShrink: 1 }}>
+        <View className="flex-row items-center gap-1.5" style={{ flexShrink: 0 }}>
           <View
             className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-danger'}`}
           />
-          <Text className="text-pos-base text-pos-text-muted">
+          <Text className="text-pos-sm text-pos-text-muted">
             {isShiftOpen ? 'Shift: Open' : 'No Shift'}
           </Text>
         </View>
 
-        <Text className="text-pos-base text-pos-text-faint">|</Text>
+        <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>|</Text>
 
-        <Text className="font-mono text-pos-base font-bold text-pos-text">
+        <Text className="font-mono text-pos-sm font-bold text-pos-text" style={{ flexShrink: 0 }}>
           {activeOrdersCount}
         </Text>
-        <Text className="text-pos-base text-pos-text-faint">orders</Text>
+        <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>orders</Text>
 
         {(deviceName || branchName) && (
           <>
-            <Text className="text-pos-base text-pos-text-faint">|</Text>
-            <Text className="text-pos-base text-pos-text-faint" numberOfLines={1}>
+            <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>|</Text>
+            <Text
+              className="text-pos-sm text-pos-text-faint"
+              numberOfLines={1}
+              style={{ flexShrink: 1 }}
+            >
               {[deviceName, branchName].filter(Boolean).join(' · ')}
             </Text>
           </>

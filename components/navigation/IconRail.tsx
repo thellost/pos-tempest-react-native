@@ -1,6 +1,6 @@
 import { Lock, LogOut } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import type { NavItem } from '@/constants/navigation';
 import { ThemeColors } from '@/constants/theme';
@@ -48,8 +48,8 @@ export function IconRail({
 
   return (
     <View className="w-14 border-r border-border bg-surface-card">
-      {/* Nav items */}
-      <View className="flex-1 pt-1">
+      {/* Nav items — ScrollView handles overflow on small phone landscape screens */}
+      <ScrollView className="flex-1 pt-1" showsVerticalScrollIndicator={false}>
         {visibleItems.map((item) => {
           // usePathname() strips route groups, e.g. "/(app)/floor" → "/floor"
           const bare = item.href.replace(/\/\([^)]+\)/g, '');
@@ -91,7 +91,7 @@ export function IconRail({
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Bottom actions */}
       <View className="items-center border-t border-border pb-2 pt-2">

@@ -39,20 +39,25 @@ export function OrderRow({ order, onPress }: OrderRowProps) {
       className="rounded-lg border border-border bg-surface-card px-4 py-3 active:bg-surface-raised"
     >
       {/* Top row: order number + time */}
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <Text className="font-mono text-pos-base font-bold text-pos-text">
+      <View className="flex-row items-center justify-between gap-2">
+        {/* Left: order number + badge — flex-1 so long IDs don't push time off screen */}
+        <View className="flex-1 flex-row items-center gap-2" style={{ minWidth: 0 }}>
+          <Text
+            className="font-mono text-pos-base font-bold text-pos-text"
+            numberOfLines={1}
+            style={{ flexShrink: 1 }}
+          >
             {order.order_number}
           </Text>
           {isTakeaway ? (
-            <View className="flex-row items-center gap-1 rounded px-2 py-0.5" style={{ backgroundColor: ThemeColors.warning.muted }}>
+            <View className="flex-row items-center gap-1 rounded px-2 py-0.5" style={{ backgroundColor: ThemeColors.warning.muted, flexShrink: 0 }}>
               <ShoppingBag size={10} color={ThemeColors.warning.DEFAULT} />
               <Text className="text-[10px] font-bold" style={{ color: ThemeColors.warning.DEFAULT }}>
                 TAKEAWAY
               </Text>
             </View>
           ) : order.table_number ? (
-            <View className="rounded px-2 py-0.5" style={{ backgroundColor: ThemeColors.accent.primaryMuted }}>
+            <View className="rounded px-2 py-0.5" style={{ backgroundColor: ThemeColors.accent.primaryMuted, flexShrink: 0 }}>
               <Text className="text-[10px] font-bold" style={{ color: ThemeColors.accent.primary }}>
                 Table {order.table_number}
               </Text>
@@ -60,7 +65,8 @@ export function OrderRow({ order, onPress }: OrderRowProps) {
           ) : null}
         </View>
 
-        <View className="flex-row items-center gap-1">
+        {/* Right: time — flex-shrink: 0 so it always stays visible */}
+        <View className="flex-row items-center gap-1" style={{ flexShrink: 0 }}>
           <Clock size={12} color={ThemeColors.text.faint} />
           <Text className="font-mono text-pos-xs text-pos-text-faint">
             {formatTime(order.created_at)}
