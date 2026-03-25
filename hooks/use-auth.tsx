@@ -7,6 +7,7 @@ import { powersync } from '@/db/provider';
 import {
   AuditEventType,
   getSafeErrorMessage,
+  isCredentialError,
   logAuditEvent,
   loginRateLimiter,
   pinRateLimiter,
@@ -226,8 +227,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
-          // Record failed attempt (DB-backed) if local user exists
-          if (userRow) {
+          // Only count the attempt when credentials are wrong — not for network/timeout errors
+          if (userRow && isCredentialError(error)) {
             await loginRateLimiter.recordAttempt(userRow.id, powersync);
             const updatedCheck = await loginRateLimiter.check(userRow.id, powersync);
             setLoginAttempts(updatedCheck.remainingAttempts);
@@ -272,6 +273,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
         markActivity();
         setIsLocked(false);
       } catch (error) {
+        // Raw TypeError from the fetch layer (no network connection)
+        if (error instanceof TypeError) {
+          captureError(error, {
+            module: 'auth',
+            operation: 'signIn.networkError',
+            level: 'warning',
+            extras: { email: sanitizeInput(email) },
+          });
+          throw new Error('Network error. Please check your connection');
+        }
+        // Any other unexpected error — capture full details to Sentry
+        captureError(error, {
+          module: 'auth',
+          operation: 'signIn.unexpectedError',
+          level: 'error',
+          extras: {
+            email: sanitizeInput(email),
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+          },
+        });
         throw error;
       }
       }); // end auth.login span

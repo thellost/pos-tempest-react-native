@@ -1,6 +1,19 @@
 import { DEVICE_STATUS, ROLE_TYPE } from '@/constants/enums';
-import { Brand, ThemeColors } from '@/constants/theme';
-import { AlertTriangle, ChefHat, Moon, Receipt, Sun } from 'lucide-react-native';
+import { Brand, LightThemeColors, ThemeColors } from '@/constants/theme';
+import { type EditableConfigKey, useConfig } from '@/hooks/use-config';
+import {
+  AlertTriangle,
+  ChefHat,
+  ChevronRight,
+  Monitor,
+  Palette,
+  Printer,
+  Receipt,
+  Moon,
+  Settings2,
+  Sun,
+  Users,
+} from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { Device } from '@/db/models';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -8,67 +21,275 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { type PrinterType, usePrinter } from '@/hooks/use-printer';
 import {
-    getBondedPrinters,
-    openBluetoothSettings,
-    type DiscoveredPrinter,
-    type ScanStatus,
+  getBondedPrinters,
+  openBluetoothSettings,
+  type DiscoveredPrinter,
+  type ScanStatus,
 } from '@/lib/bluetooth';
 import { sendToPrinter } from '@/lib/printer';
 import {
-    deactivateDevice,
-    getDevicesByBranch,
-    reactivateDevice,
-    updateDeviceName,
+  deactivateDevice,
+  getDevicesByBranch,
+  reactivateDevice,
+  updateDeviceName,
 } from '@/services/device.service';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  UIManager,
+  View,
 } from 'react-native';
 import { Button, SelectButton } from '@/components/ui';
 
-// ── Shared layout primitives ──────────────────────────────────────────────────
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
-function SectionLabel({ label, danger }: { label: string; danger?: boolean }) {
+// ── Config section component ───────────────────────────────────────────────────
+
+type ConfigRow = {
+  key: EditableConfigKey;
+  label: string;
+  hint: string;
+  display: string;
+  unit: string | null;
+  parse: (v: string) => string | number;
+  keyboardType: 'numeric' | 'default';
+};
+
+function ConfigSection({
+  title,
+  rows,
+  overrides,
+  draft,
+  setDraft,
+  updateConfig,
+  resetConfig,
+  C,
+}: {
+  title: string;
+  rows: ConfigRow[];
+  config: Record<string, unknown>;
+  overrides: Record<string, unknown>;
+  draft: Record<string, string>;
+  setDraft: (d: Record<string, string>) => void;
+  updateConfig: (key: EditableConfigKey, value: string | number) => Promise<void>;
+  resetConfig: (key?: EditableConfigKey) => Promise<void>;
+  C: typeof ThemeColors;
+}) {
   return (
-    <View className="mb-2.5 flex-row items-center gap-1.5 px-1">
-      {danger && (
-        <AlertTriangle size={11} color={ThemeColors.danger.DEFAULT} />
-      )}
-      <Text
-        className={`text-pos-xs font-semibold uppercase tracking-widest ${
-          danger ? 'text-pos-danger' : 'text-pos-muted'
-        }`}
-      >
-        {label}
-      </Text>
+    <View className="overflow-hidden rounded-xl border border-border bg-surface">
+      {/* Sub-header */}
+      <View className="px-3.5 pb-1.5 pt-3">
+        <Text className="text-pos-xs font-semibold uppercase tracking-widest text-pos-faint">
+          {title}
+        </Text>
+      </View>
+
+      {rows.map((row, i) => {
+        const isOverridden = row.key in overrides;
+        const draftVal = draft[row.key] ?? row.display;
+
+        const commit = async () => {
+          const raw = draft[row.key];
+          if (raw === undefined || raw === row.display) return;
+          const parsed = row.parse(raw);
+          if (parsed !== null && parsed !== undefined && String(parsed).trim() !== '') {
+            await updateConfig(row.key, parsed as string & number);
+          }
+        };
+
+        return (
+          <View key={row.key}>
+            {i > 0 && <RowDivider />}
+            <View className="flex-row items-center gap-3 px-3.5 py-2.5">
+              {/* Label + hint */}
+              <View className="flex-1">
+                <View className="flex-row items-center gap-1.5">
+                  <Text className="text-pos-xs font-medium text-pos-text">{row.label}</Text>
+                  {isOverridden && (
+                    <View className="rounded bg-accent-muted px-1.5 py-0.5">
+                      <Text className="text-pos-xs text-accent" style={{ fontSize: 9 }}>
+                        custom
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text className="mt-0.5 text-pos-xs text-pos-faint">{row.hint}</Text>
+              </View>
+
+              {/* Input + unit */}
+              <View className="flex-row items-center gap-1.5">
+                <TextInput
+                  className="min-w-[60px] rounded-lg border border-border bg-surface-raised px-2.5 py-2 text-right text-pos-xs font-medium text-pos-text"
+                  value={draftVal}
+                  onChangeText={(v) => setDraft({ ...draft, [row.key]: v })}
+                  onBlur={commit}
+                  keyboardType={row.keyboardType}
+                  selectTextOnFocus
+                  autoCapitalize="none"
+                />
+                {row.unit && (
+                  <Text className="w-6 text-pos-xs text-pos-faint">{row.unit}</Text>
+                )}
+                {isOverridden && (
+                  <Pressable
+                    onPress={() => {
+                      resetConfig(row.key);
+                      const next = { ...draft };
+                      delete next[row.key];
+                      setDraft(next);
+                    }}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+                    hitSlop={8}
+                  >
+                    <Text style={{ color: C.danger.DEFAULT, fontSize: 10 }}>↺</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
+// ── Shared primitives ──────────────────────────────────────────────────────────
+
 function RowDivider() {
-  return <View className="mx-4 h-px bg-border opacity-50" />;
+  return <View className="h-px bg-border" />;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row items-center justify-between px-4 py-3">
-      <Text className="text-pos-sm text-pos-muted">{label}</Text>
-      <Text className="text-pos-sm text-pos-text">{value}</Text>
+    <View className="flex-row items-center justify-between py-2.5">
+      <Text className="text-pos-xs text-pos-muted">{label}</Text>
+      <Text className="text-pos-xs font-medium text-pos-text">{value}</Text>
     </View>
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────────────────────
+// ── Accordion section ──────────────────────────────────────────────────────────
+
+function AccordionSection({
+  icon: Icon,
+  title,
+  summary,
+  danger = false,
+  children,
+  defaultOpen = false,
+}: {
+  icon: LucideIcon;
+  title: string;
+  summary?: React.ReactNode;
+  danger?: boolean;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const { isDark } = useAppTheme();
+  const C = isDark ? ThemeColors : LightThemeColors;
+
+  const [open, setOpen] = useState(defaultOpen);
+  const chevron = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
+
+  const toggle = () => {
+    LayoutAnimation.configureNext({
+      duration: 260,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    Animated.timing(chevron, {
+      toValue: open ? 0 : 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+    setOpen((prev) => !prev);
+  };
+
+  const rotate = chevron.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '90deg'],
+  });
+
+  return (
+    <View
+      className={`mb-2 overflow-hidden rounded-2xl bg-surface-card border ${
+        danger ? 'border-pos-danger/20' : 'border-border'
+      }`}
+    >
+      {/* Header */}
+      <Pressable
+        onPress={toggle}
+        style={({ pressed }) => ({ opacity: pressed ? 0.70 : 1 })}
+        className="flex-row items-center gap-3 px-4 py-3.5"
+      >
+        {/* Icon chip */}
+        <View
+          className={`h-8 w-8 items-center justify-center rounded-xl ${
+            danger ? 'bg-pos-danger-muted' : 'bg-accent-muted'
+          }`}
+        >
+          <Icon
+            size={15}
+            color={danger ? C.danger.DEFAULT : C.accent.primary}
+          />
+        </View>
+
+        {/* Title */}
+        <Text className="flex-1 text-pos-sm font-semibold text-pos-text">
+          {title}
+        </Text>
+
+        {/* Summary — only shown when collapsed */}
+        {summary && !open && (
+          <View className="mr-1.5">{summary}</View>
+        )}
+
+        {/* Chevron */}
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <ChevronRight size={14} color={C.text.faint} />
+        </Animated.View>
+      </Pressable>
+
+      {/* Content */}
+      {open && (
+        <>
+          <RowDivider />
+          <View className="p-4">{children}</View>
+        </>
+      )}
+    </View>
+  );
+}
+
+// ── Main screen ────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
-  const { colorScheme, setColorScheme } = useAppTheme();
+  const { colorScheme, setColorScheme, isDark } = useAppTheme();
+  const C = isDark ? ThemeColors : LightThemeColors;
+  const { config, overrides, updateConfig, resetConfig } = useConfig();
+
+  // Local draft state for config fields (committed on blur)
+  const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
+
   const { user } = useAuth();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
   const {
@@ -96,6 +317,13 @@ export default function SettingsScreen() {
   const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
   const isManager = user?.role_name === ROLE_TYPE.MANAGER;
   const canManageDevices = isAdmin || isManager;
+
+  // Show inactive devices only if the current device is the inactive one
+  const visibleDevices = devices.filter((d) => {
+    const isCurrentDevice = d.device_uid === deviceInfo?.deviceId;
+    const isActive = d.status !== DEVICE_STATUS.INACTIVE;
+    return isActive || isCurrentDevice;
+  });
 
   const loadDevices = useCallback(async () => {
     if (!registration?.branch?.id) return;
@@ -279,9 +507,9 @@ export default function SettingsScreen() {
     }
   };
 
-  // ── Printer card ────────────────────────────────────────────────────────────
+  // ── Printer card ─────────────────────────────────────────────────────────────
 
-  const renderPrinterSection = (
+  const renderPrinterCard = (
     type: PrinterType,
     label: string,
     icon: LucideIcon,
@@ -293,24 +521,34 @@ export default function SettingsScreen() {
     const Icon = icon;
 
     return (
-      <View key={type} className="mb-3 overflow-hidden rounded-xl border border-border bg-surface-card">
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3.5">
-          <View className="flex-row items-center gap-2.5">
-            <Icon size={16} color={ThemeColors.text.muted} />
-            <Text className="text-pos-sm font-semibold text-pos-text">{label}</Text>
+      <View
+        key={type}
+        className="mb-3 overflow-hidden rounded-xl border border-border bg-surface"
+      >
+        {/* Sub-header */}
+        <View className="flex-row items-center justify-between px-3.5 py-3">
+          <View className="flex-row items-center gap-2">
+            <Icon size={14} color={C.text.muted} />
+            <Text className="text-pos-xs font-semibold text-pos-text">{label}</Text>
           </View>
           {!isEditing && (
             address ? (
               <View className="flex-row items-center gap-1.5 rounded-md bg-pos-success-muted px-2.5 py-1">
                 <View
-                  style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ThemeColors.success.DEFAULT }}
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: 3,
+                    backgroundColor: ThemeColors.success.DEFAULT,
+                  }}
                 />
-                <Text className="text-pos-xs font-medium text-pos-success">Connected</Text>
+                <Text className="text-pos-xs font-medium text-pos-success">
+                  Connected
+                </Text>
               </View>
             ) : (
-              <View className="rounded-md border border-border bg-surface px-2.5 py-1">
-                <Text className="text-pos-xs text-pos-muted">Not configured</Text>
+              <View className="rounded-md bg-surface-raised px-2.5 py-1">
+                <Text className="text-pos-xs text-pos-faint">Not configured</Text>
               </View>
             )
           )}
@@ -319,17 +557,25 @@ export default function SettingsScreen() {
         {isEditing ? (
           <>
             <RowDivider />
-            <View className="gap-3 p-4">
+            <View className="gap-3 p-3.5">
 
-              {/* ── Pair first notice ── */}
-              <View className="flex-row items-start gap-2.5 rounded-xl border border-border bg-surface px-3.5 py-3">
-                <View className="mt-0.5 h-2 w-2 rounded-full bg-pos-warning" />
+              {/* Pair first notice */}
+              <View className="flex-row items-start gap-2.5 rounded-xl border border-pos-warning/35 bg-pos-warning-muted px-3.5 py-3">
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: ThemeColors.warning.DEFAULT,
+                    marginTop: 3,
+                  }}
+                />
                 <View className="flex-1">
                   <Text className="text-pos-xs font-semibold text-pos-text">
                     Pair your printer first
                   </Text>
                   <Text className="mt-0.5 text-pos-xs text-pos-muted">
-                    Open Bluetooth Settings, pair the printer there, then come back to scan.
+                    Open Bluetooth Settings, pair the printer there, then scan.
                   </Text>
                   <Pressable
                     onPress={() => openBluetoothSettings()}
@@ -342,7 +588,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* ── Scan ── */}
+              {/* Scan button */}
               <Button
                 className="items-center justify-center rounded-xl border border-brand bg-brand-muted py-3"
                 onPress={handleStartScan}
@@ -360,7 +606,7 @@ export default function SettingsScreen() {
                 )}
               </Button>
 
-              {/* ── Discovered devices ── */}
+              {/* Discovered devices */}
               {discoveredPrinters.length > 0 && (
                 <View className="gap-1.5">
                   {discoveredPrinters.map((p) => (
@@ -386,11 +632,11 @@ export default function SettingsScreen() {
                 </Text>
               )}
 
-              {/* ── Manual fallback ── */}
+              {/* Manual fallback divider */}
               <View className="flex-row items-center gap-3">
-                <View className="h-px flex-1 bg-border opacity-50" />
+                <View className="h-px flex-1 bg-border" />
                 <Text className="text-pos-xs text-pos-faint">or enter manually</Text>
-                <View className="h-px flex-1 bg-border opacity-50" />
+                <View className="h-px flex-1 bg-border" />
               </View>
 
               <View>
@@ -398,7 +644,7 @@ export default function SettingsScreen() {
                 <TextInput
                   className="rounded-xl border border-border bg-surface px-3 py-3 text-pos-sm text-pos-text"
                   placeholder="BT:AA:BB:CC:DD:EE:FF"
-                  placeholderTextColor={ThemeColors.text.faint}
+                  placeholderTextColor={C.text.faint}
                   value={printerAddress}
                   onChangeText={setPrinterAddress}
                   autoCapitalize="none"
@@ -409,7 +655,7 @@ export default function SettingsScreen() {
                 <TextInput
                   className="rounded-xl border border-border bg-surface px-3 py-3 text-pos-sm text-pos-text"
                   placeholder="e.g. Kitchen Epson TM-T20"
-                  placeholderTextColor={ThemeColors.text.faint}
+                  placeholderTextColor={C.text.faint}
                   value={printerName}
                   onChangeText={setPrinterName}
                 />
@@ -435,13 +681,15 @@ export default function SettingsScreen() {
         ) : address ? (
           <>
             <RowDivider />
-            <View className="px-4 py-3">
-              <Text className="text-pos-xs text-pos-muted">Address</Text>
-              <Text className="mt-0.5 text-pos-sm text-pos-text">{address}</Text>
-              {name ? <Text className="mt-0.5 text-pos-xs text-pos-muted">{name}</Text> : null}
+            <View className="px-3.5 py-3">
+              <Text className="text-pos-xs text-pos-faint">Address</Text>
+              <Text className="mt-0.5 text-pos-xs text-pos-muted">{address}</Text>
+              {name ? (
+                <Text className="mt-0.5 text-pos-xs text-pos-faint">{name}</Text>
+              ) : null}
             </View>
             <RowDivider />
-            <View className="flex-row gap-2 px-4 py-3">
+            <View className="flex-row gap-2 px-3.5 py-2.5">
               <Button
                 className="flex-1 items-center justify-center rounded-lg border border-border bg-surface py-2.5"
                 onPress={() => {
@@ -464,7 +712,7 @@ export default function SettingsScreen() {
                 )}
               </Button>
               <Button
-                className="flex-1 items-center justify-center rounded-lg border border-pos-danger/30 bg-pos-danger-muted py-2.5"
+                className="flex-1 items-center justify-center rounded-lg border border-pos-danger/20 bg-pos-danger-muted py-2.5"
                 onPress={() => handleClearPrinter(type)}
               >
                 <Text className="text-center text-pos-xs text-pos-danger">Remove</Text>
@@ -483,7 +731,9 @@ export default function SettingsScreen() {
                   setPrinterName('');
                 }}
               >
-                <Text className="text-center text-pos-sm font-semibold text-brand">+ Add Printer</Text>
+                <Text className="text-center text-pos-sm font-semibold text-brand">
+                  + Add Printer
+                </Text>
               </Button>
             </View>
           </>
@@ -492,7 +742,7 @@ export default function SettingsScreen() {
     );
   };
 
-  // ── Device row ──────────────────────────────────────────────────────────────
+  // ── Device row ────────────────────────────────────────────────────────────────
 
   const renderDevice = ({ item }: { item: Device }) => {
     const isCurrentDevice = item.device_uid === deviceInfo?.deviceId;
@@ -501,16 +751,16 @@ export default function SettingsScreen() {
 
     return (
       <View
-        className={`mb-2.5 overflow-hidden rounded-xl border ${
+        className={`mb-2 overflow-hidden rounded-xl border ${
           isCurrentDevice
-            ? 'border-accent bg-accent-muted'
+            ? 'border-accent/30 bg-accent-muted'
             : !isActive
             ? 'border-pos-danger/20 bg-pos-danger-muted'
-            : 'border-border bg-surface-card'
+            : 'border-border bg-surface'
         }`}
       >
         {isEditing ? (
-          <View className="gap-3 p-4">
+          <View className="gap-3 p-3.5">
             <TextInput
               className="rounded-xl border border-border bg-surface p-3 text-pos-base text-pos-text"
               value={editingName}
@@ -537,11 +787,11 @@ export default function SettingsScreen() {
           </View>
         ) : (
           <>
-            <View className="flex-row items-center gap-3 px-4 py-3.5">
+            <View className="flex-row items-center gap-3 px-3.5 py-3">
               <View
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 7,
+                  height: 7,
                   borderRadius: 4,
                   backgroundColor: isActive
                     ? ThemeColors.success.DEFAULT
@@ -550,7 +800,9 @@ export default function SettingsScreen() {
               />
               <View className="flex-1">
                 <View className="flex-row flex-wrap items-center gap-2">
-                  <Text className="text-pos-sm font-semibold text-pos-text">{item.device_name}</Text>
+                  <Text className="text-pos-xs font-semibold text-pos-text">
+                    {item.device_name}
+                  </Text>
                   {isCurrentDevice && (
                     <View className="rounded-md bg-accent-muted px-2 py-0.5">
                       <Text className="text-pos-xs text-accent">This device</Text>
@@ -562,16 +814,16 @@ export default function SettingsScreen() {
                     </View>
                   )}
                 </View>
-                <Text className="mt-0.5 text-pos-xs text-pos-muted">
-                  {item.device_uid.slice(0, 8)}... · {new Date(item.registered_at).toLocaleDateString()}
+                <Text className="mt-0.5 text-pos-xs text-pos-faint">
+                  {item.device_uid.slice(0, 8)}… · {new Date(item.registered_at).toLocaleDateString()}
                 </Text>
               </View>
             </View>
 
             {canManageDevices && (
               <>
-                <View className="mx-4 h-px bg-border opacity-40" />
-                <View className="flex-row gap-2 px-4 py-2.5">
+                <RowDivider />
+                <View className="flex-row gap-2 px-3.5 py-2.5">
                   <Button
                     className="items-center justify-center rounded-lg border border-border bg-surface px-4 py-2"
                     onPress={() => {
@@ -606,18 +858,76 @@ export default function SettingsScreen() {
     );
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Summaries for collapsed headers ──────────────────────────────────────────
+
+  const appearanceSummary = (
+    <View className="rounded-lg bg-surface-raised px-2.5 py-1">
+      <Text className="text-pos-xs font-medium capitalize text-pos-muted">
+        {colorScheme}
+      </Text>
+    </View>
+  );
+
+  const deviceSummary = (
+    <Text className="text-pos-xs text-pos-faint" numberOfLines={1}>
+      {registration?.device?.device_name ?? '—'}
+    </Text>
+  );
+
+  const activeDeviceCount = visibleDevices.filter(
+    (d) => d.status !== DEVICE_STATUS.INACTIVE
+  ).length;
+  const devicesSummary = devicesLoading ? null : (
+    <View className="rounded-lg bg-surface-raised px-2.5 py-1">
+      <Text className="text-pos-xs font-medium text-pos-muted">
+        {activeDeviceCount} active
+      </Text>
+    </View>
+  );
+
+  const configuredPrinters = [kitchenPrinter, cashierPrinter].filter(Boolean).length;
+  const printerSummary = printerLoading ? null : (
+    <View
+      className={`rounded-lg px-2.5 py-1 ${
+        configuredPrinters > 0 ? 'bg-pos-success-muted' : 'bg-surface-raised'
+      }`}
+    >
+      <Text
+        className={`text-pos-xs font-medium ${
+          configuredPrinters > 0 ? 'text-pos-success' : 'text-pos-faint'
+        }`}
+      >
+        {configuredPrinters}/2
+      </Text>
+    </View>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <ScrollView className="flex-1 bg-surface p-5">
+    <ScrollView
+      className="flex-1 bg-surface"
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+    >
+      {/* Page header */}
+      <View className="mb-4 flex-row items-center justify-between px-1">
+        <Text className="text-pos-base font-bold text-pos-text">Settings</Text>
+        <View className="rounded-lg bg-surface-raised px-2.5 py-1">
+          <Text className="text-pos-xs text-pos-faint">POS Tempest v1.0.0</Text>
+        </View>
+      </View>
 
-      {/* ── Appearance ─────────────────────────────────────────────────────── */}
-      <View className="mb-6">
-        <SectionLabel label="Appearance" />
-        <View className="overflow-hidden rounded-xl border border-border bg-surface-card p-1.5">
+      {/* ── Appearance ──────────────────────────────────────────────────────── */}
+      <AccordionSection
+        icon={Palette}
+        title="Appearance"
+        summary={appearanceSummary}
+      >
+        <View className="overflow-hidden rounded-xl border border-border bg-surface-raised p-1.5">
           <View className="flex-row gap-1">
             {(['dark', 'light'] as const).map((scheme) => {
               const active = colorScheme === scheme;
+              const ThemeIcon = scheme === 'dark' ? Moon : Sun;
               return (
                 <SelectButton
                   key={scheme}
@@ -627,10 +937,10 @@ export default function SettingsScreen() {
                   className="flex-1 flex-row items-center justify-center gap-2 rounded-lg py-3"
                   onPress={() => setColorScheme(scheme)}
                 >
-                  {scheme === 'dark'
-                    ? <Moon size={15} color={active ? '#fff' : ThemeColors.text.muted} />
-                    : <Sun size={15} color={active ? '#fff' : ThemeColors.text.muted} />
-                  }
+                  <ThemeIcon
+                    size={14}
+                    color={active ? '#fff' : C.text.muted}
+                  />
                   <Text
                     className={`text-pos-sm font-semibold capitalize ${
                       active ? 'text-white' : 'text-pos-muted'
@@ -643,73 +953,73 @@ export default function SettingsScreen() {
             })}
           </View>
         </View>
-      </View>
+      </AccordionSection>
 
-      {/* ── This Device ────────────────────────────────────────────────────── */}
-      <View className="mb-6">
-        <SectionLabel label="This Device" />
-        <View className="overflow-hidden rounded-xl border border-border bg-surface-card">
-          <InfoRow
-            label="Name"
-            value={registration?.device?.device_name || 'Not set'}
-          />
-          <RowDivider />
-          <InfoRow
-            label="Branch"
-            value={registration?.branch?.name || 'Not set'}
-          />
-          <RowDivider />
-          <InfoRow
-            label="Model"
-            value={deviceInfo?.model || 'Unknown'}
-          />
-          <RowDivider />
-          <InfoRow
-            label="Device ID"
-            value={deviceInfo?.deviceId ? `${deviceInfo.deviceId.slice(0, 8)}...` : '—'}
-          />
-        </View>
-      </View>
+      {/* ── This Device ─────────────────────────────────────────────────────── */}
+      <AccordionSection
+        icon={Monitor}
+        title="This Device"
+        summary={deviceSummary}
+      >
+        <InfoRow
+          label="Name"
+          value={registration?.device?.device_name || 'Not set'}
+        />
+        <RowDivider />
+        <InfoRow
+          label="Branch"
+          value={registration?.branch?.name || 'Not set'}
+        />
+        <RowDivider />
+        <InfoRow
+          label="Model"
+          value={deviceInfo?.model || 'Unknown'}
+        />
+        <RowDivider />
+        <InfoRow
+          label="Device ID"
+          value={
+            deviceInfo?.deviceId
+              ? `${deviceInfo.deviceId.slice(0, 8)}…`
+              : '—'
+          }
+        />
+      </AccordionSection>
 
-      {/* ── Branch Devices ─────────────────────────────────────────────────── */}
+      {/* ── Branch Devices ──────────────────────────────────────────────────── */}
       {canManageDevices && (
-        <View className="mb-6">
-          <View className="mb-2.5 flex-row items-center justify-between px-1">
-            <Text className="text-pos-xs font-semibold uppercase tracking-widest text-pos-muted">
-              Branch Devices
-            </Text>
-            {devices.length > 0 && (
-              <View className="rounded border border-border bg-surface-card px-1.5 py-0.5">
-                <Text className="text-pos-xs text-pos-muted">{devices.length}</Text>
-              </View>
-            )}
-          </View>
-
+        <AccordionSection
+          icon={Users}
+          title="Branch Devices"
+          summary={devicesSummary}
+        >
           {devicesLoading ? (
-            <View className="items-center py-8">
+            <View className="items-center py-6">
               <ActivityIndicator size="large" color={Brand.primary} />
             </View>
-          ) : devices.length === 0 ? (
-            <View className="rounded-xl border border-border bg-surface-card px-4 py-5">
-              <Text className="text-pos-sm text-pos-muted">
-                No devices registered for this branch.
+          ) : visibleDevices.length === 0 ? (
+            <View className="rounded-xl border border-border bg-surface px-4 py-5">
+              <Text className="text-pos-xs text-pos-muted">
+                No active devices registered for this branch.
               </Text>
             </View>
           ) : (
             <FlatList
-              data={devices}
+              data={visibleDevices}
               renderItem={renderDevice}
               keyExtractor={(item) => item.id.toString()}
               scrollEnabled={false}
             />
           )}
-        </View>
+        </AccordionSection>
       )}
 
-      {/* ── Printers ───────────────────────────────────────────────────────── */}
-      <View className="mb-6">
-        <SectionLabel label="Printers" />
-
+      {/* ── Printers ────────────────────────────────────────────────────────── */}
+      <AccordionSection
+        icon={Printer}
+        title="Printers"
+        summary={printerSummary}
+      >
         {printerLoading ? (
           <View className="items-center py-6">
             <ActivityIndicator size="small" color={Brand.primary} />
@@ -717,11 +1027,11 @@ export default function SettingsScreen() {
         ) : (
           <>
             {/* Paper Width */}
-            <View className="mb-3 overflow-hidden rounded-xl border border-border bg-surface-card">
-              <View className="px-4 pb-1 pt-3.5">
+            <View className="mb-3 overflow-hidden rounded-xl border border-border bg-surface-raised">
+              <View className="px-3.5 pb-1 pt-3">
                 <Text className="text-pos-xs font-medium text-pos-muted">Paper Width</Text>
               </View>
-              <View className="flex-row gap-2 px-4 pb-3.5 pt-2">
+              <View className="flex-row gap-2 px-3.5 pb-3 pt-2">
                 {(['58mm', '80mm'] as const).map((w) => (
                   <SelectButton
                     key={w}
@@ -743,14 +1053,14 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            {renderPrinterSection(
+            {renderPrinterCard(
               'kitchen',
               'Kitchen Printer',
               ChefHat,
               kitchenPrinter?.address ?? null,
               kitchenPrinter?.name ?? null,
             )}
-            {renderPrinterSection(
+            {renderPrinterCard(
               'cashier',
               'Cashier / Receipt Printer',
               Receipt,
@@ -759,13 +1069,139 @@ export default function SettingsScreen() {
             )}
           </>
         )}
-      </View>
+      </AccordionSection>
 
-      {/* ── Danger Zone ────────────────────────────────────────────────────── */}
-      <View className="mb-6">
-        <SectionLabel label="Danger Zone" danger />
-        <View className="overflow-hidden rounded-xl border border-pos-danger/20 bg-pos-danger-muted">
-          <View className="px-4 pb-3 pt-4">
+      {/* ── Configuration ───────────────────────────────────────────────────── */}
+      {isAdmin && (
+        <AccordionSection
+          icon={Settings2}
+          title="Configuration"
+          summary={
+            Object.keys(overrides).length > 0 ? (
+              <View className="rounded-lg bg-accent-muted px-2.5 py-1">
+                <Text className="text-pos-xs font-medium text-accent">
+                  {Object.keys(overrides).length} overridden
+                </Text>
+              </View>
+            ) : undefined
+          }
+        >
+          <ConfigSection
+            title="Session"
+            rows={[
+              {
+                key: 'IDLE_TIMEOUT_MS',
+                label: 'Auto-lock timeout',
+                hint: 'Minutes before screen locks',
+                display: String(Math.round(config.IDLE_TIMEOUT_MS / 60000)),
+                unit: 'min',
+                parse: (v) => Math.max(1, Number(v)) * 60000,
+                keyboardType: 'numeric',
+              },
+              {
+                key: 'MAX_SESSION_DURATION_HOURS',
+                label: 'Max session duration',
+                hint: 'Hours before forced re-login',
+                display: String(config.MAX_SESSION_DURATION_HOURS),
+                unit: 'hr',
+                parse: (v) => Math.max(1, Number(v)),
+                keyboardType: 'numeric',
+              },
+            ]}
+            config={config}
+            overrides={overrides}
+            draft={configDraft}
+            setDraft={setConfigDraft}
+            updateConfig={updateConfig}
+            resetConfig={resetConfig}
+            C={C}
+          />
+
+          <View className="mt-3">
+            <ConfigSection
+              title="Business"
+              rows={[
+                {
+                  key: 'ORDER_PREFIX',
+                  label: 'Order prefix',
+                  hint: 'Prepended to every order number',
+                  display: config.ORDER_PREFIX,
+                  unit: null,
+                  parse: (v) => v.trim().toUpperCase(),
+                  keyboardType: 'default',
+                },
+                {
+                  key: 'TICKET_PREFIX',
+                  label: 'Kitchen ticket prefix',
+                  hint: 'Prepended to kitchen ticket numbers',
+                  display: config.TICKET_PREFIX,
+                  unit: null,
+                  parse: (v) => v.trim().toUpperCase(),
+                  keyboardType: 'default',
+                },
+                {
+                  key: 'CURRENCY',
+                  label: 'Currency code',
+                  hint: 'ISO 4217 code e.g. IDR, USD',
+                  display: config.CURRENCY,
+                  unit: null,
+                  parse: (v) => v.trim().toUpperCase(),
+                  keyboardType: 'default',
+                },
+                {
+                  key: 'TIMEZONE',
+                  label: 'Timezone',
+                  hint: 'IANA timezone e.g. Asia/Jakarta',
+                  display: config.TIMEZONE,
+                  unit: null,
+                  parse: (v) => v.trim(),
+                  keyboardType: 'default',
+                },
+              ]}
+              config={config}
+              overrides={overrides}
+              draft={configDraft}
+              setDraft={setConfigDraft}
+              updateConfig={updateConfig}
+              resetConfig={resetConfig}
+              C={C}
+            />
+          </View>
+
+          {Object.keys(overrides).length > 0 && (
+            <Button
+              className="mt-3 items-center justify-center rounded-xl border border-border bg-surface py-3"
+              onPress={() => {
+                Alert.alert(
+                  'Reset all settings',
+                  'Restore all configuration values to their defaults?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Reset all',
+                      style: 'destructive',
+                      onPress: () => resetConfig(),
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text className="text-center text-pos-xs text-pos-muted">
+                Reset all to defaults
+              </Text>
+            </Button>
+          )}
+        </AccordionSection>
+      )}
+
+      {/* ── Danger Zone ─────────────────────────────────────────────────────── */}
+      <AccordionSection
+        icon={AlertTriangle}
+        title="Danger Zone"
+        danger
+      >
+        <View className="gap-3">
+          <View>
             <Text className="text-pos-sm font-semibold text-pos-text">
               Reset Device Registration
             </Text>
@@ -773,25 +1209,16 @@ export default function SettingsScreen() {
               Unlinks this device from its branch. Re-registration will be required to continue using the POS.
             </Text>
           </View>
-          <View className="mx-4 h-px bg-border opacity-50" />
-          <View className="p-3">
-            <Button
-              className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
-              onPress={handleResetDevice}
-            >
-              <Text className="text-center text-pos-sm font-semibold text-white">
-                Reset Registration
-              </Text>
-            </Button>
-          </View>
+          <Button
+            className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
+            onPress={handleResetDevice}
+          >
+            <Text className="text-center text-pos-sm font-semibold text-white">
+              Reset Registration
+            </Text>
+          </Button>
         </View>
-      </View>
-
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <View className="items-center pb-6 pt-2">
-        <Text className="text-pos-xs font-medium text-pos-muted">POS Tempest v1.0.0</Text>
-        <Text className="mt-1 text-pos-xs text-pos-faint">Offline-first restaurant POS</Text>
-      </View>
+      </AccordionSection>
 
     </ScrollView>
   );

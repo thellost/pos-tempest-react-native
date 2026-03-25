@@ -30,7 +30,7 @@ export const Config = {
   LOGIN_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   
   /** Login lockout duration in milliseconds */
-  LOGIN_LOCKOUT_MS: 30 * 60 * 1000, // 30 minutes
+  LOGIN_LOCKOUT_MS: 10 * 60 * 1000, // 10 minutes
   
   // ============================================================================
   // RATE LIMITING - PIN
@@ -67,12 +67,6 @@ export const Config = {
   
   /** Max items per order */
   MAX_ORDER_ITEMS: 100,
-  
-  /** Default tax rate (PPN 11%) */
-  TAX_RATE: 0.11,
-  
-  /** Default service charge rate (5%) */
-  SERVICE_CHARGE_RATE: 0.05,
   
   /** Currency code */
   CURRENCY: 'IDR',

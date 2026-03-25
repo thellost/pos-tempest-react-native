@@ -286,6 +286,22 @@ export function sanitizeInput(input: string): string {
 // ============================================================================
 
 /**
+ * Returns true only when the error is specifically about wrong email/password.
+ * Network errors, timeouts, and other infrastructure failures return false
+ * so they do NOT count against the login attempt limit.
+ */
+export function isCredentialError(error: unknown): boolean {
+  if (!error || !(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('invalid login') ||
+    message.includes('invalid credentials') ||
+    message.includes('invalid_credentials') ||
+    message.includes('wrong password')
+  );
+}
+
+/**
  * Return user-safe error messages that don't leak security information
  */
 export function getSafeErrorMessage(error: unknown): string {

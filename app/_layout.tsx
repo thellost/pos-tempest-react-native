@@ -8,14 +8,17 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Modal, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import ImmersiveMode from 'react-native-immersive-mode';
 import 'react-native-reanimated';
 
 import { PowerSyncProvider } from '@/components/powersync-provider';
 import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
 import { AuthProvider } from '@/hooks/use-auth';
+import { ConfigProvider } from '@/hooks/use-config';
 import { DeviceProvider } from '@/hooks/use-device';
 
 import '../global.css';
+import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 
 const navigationIntegration = Sentry.reactNavigationIntegration();
@@ -31,7 +34,7 @@ Sentry.init({
   dist: String(Constants.expoConfig?.extra?.eas?.buildNumber ?? '1'),
 
   sendDefaultPii: true,
-  enableLogs: true,
+  enableLogs: Platform.OS !== 'android',
 
   // Native frames tracking requires compiled native modules — disable in Expo Go / JS-only builds
   enableNativeFramesTracking: !__DEV__,
@@ -78,6 +81,16 @@ function ThemedApp() {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    ImmersiveMode.fullLayout(true);
+    ImmersiveMode.setBarMode('FullSticky');
+    const sub = ImmersiveMode.addEventListener(() => {
+      ImmersiveMode.setBarMode('FullSticky');
+    });
+    return () => sub.remove();
+  }, []);
+
   if (!fontsLoaded) {
     return null;
   }
@@ -91,6 +104,7 @@ function ThemedApp() {
             <ActivityIndicator size="large" color="#FFFFFF" />
           </View>
         </Modal>
+        <ConfigProvider>
         <PowerSyncProvider>
           <AuthProvider>
             <DeviceProvider>
@@ -101,11 +115,12 @@ function ThemedApp() {
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(app)" />
                 </Stack>
-                <StatusBar style="auto" />
+                {Platform.OS !== 'android' && <StatusBar style="auto" />}
               </ThemeProvider>
             </DeviceProvider>
           </AuthProvider>
         </PowerSyncProvider>
+        </ConfigProvider>
       </View>
     </GestureHandlerRootView>
   );
