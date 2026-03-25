@@ -135,7 +135,7 @@ async function getNextShiftId(): Promise<number> {
   return Math.max(toNumber(row?.max_id ?? 0), 0) + 1;
 }
 
-export async function getActiveShift(userId: number): Promise<ShiftRecord | null> {
+export async function getActiveShift(branchId: number): Promise<ShiftRecord | null> {
   const row = await powersync.getOptional<ShiftRow>(
     `
       SELECT
@@ -152,12 +152,12 @@ export async function getActiveShift(userId: number): Promise<ShiftRecord | null
         closed_at,
         notes
       FROM shifts
-      WHERE user_id = ?
+      WHERE branch_id = ?
         AND status = ?
       ORDER BY opened_at DESC
       LIMIT 1
     `,
-    [userId, SHIFT_STATUS.OPEN],
+    [branchId, SHIFT_STATUS.OPEN],
   );
 
   return row ? normalizeShift(row) : null;
@@ -210,7 +210,7 @@ export async function openShift(userId: number, branchId: number, openingCash: n
     throw new Error('Opening cash must be a valid positive amount');
   }
 
-  const existingShift = await getActiveShift(userId);
+  const existingShift = await getActiveShift(branchId);
   if (existingShift) {
     // Repair legacy negative-ID shifts created before the MAX+1 fix.
     if (existingShift.id < 0) {
@@ -258,7 +258,7 @@ export async function openShift(userId: number, branchId: number, openingCash: n
     return inserted;
   }
 
-  const activeShift = await getActiveShift(userId);
+  const activeShift = await getActiveShift(branchId);
   if (!activeShift) {
     throw new Error('Failed to open shift');
   }

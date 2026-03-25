@@ -53,7 +53,7 @@ export function useShift(): UseShiftReturn {
   const isShiftOpen = !requiresShift || Boolean(activeShift);
 
   const refresh = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !user?.branch_id) {
       setActiveShift(null);
       setSummary(null);
       setLoading(false);
@@ -64,7 +64,7 @@ export function useShift(): UseShiftReturn {
       setLoading(true);
       setError(null);
 
-      const shift = await getActiveShift(user.id);
+      const shift = await getActiveShift(user.branch_id);
       setActiveShift(shift);
 
       if (shift) {
@@ -83,7 +83,7 @@ export function useShift(): UseShiftReturn {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.branch_id]);
 
   const openShift = useCallback(
     async (openingCash: number) => {
