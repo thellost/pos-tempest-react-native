@@ -333,6 +333,16 @@ export function getSafeErrorMessage(error: unknown): string {
       return 'Request timed out. Please try again';
     }
 
+    // Supabase serializes the raw Response on unexpected HTTP errors (502, 503, etc.)
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed.status >= 500) {
+        return 'Server error. Please try again later';
+      }
+    } catch {
+      // not a JSON response, fall through
+    }
+
     // Generic message for other errors
     return 'Authentication failed. Please try again';
   }

@@ -225,6 +225,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
+          console.warn('[auth] signInWithPassword raw error', {
+            message: error.message,
+            status: error.status,
+            code: (error as any).code,
+          });
           // Only count the attempt when credentials are wrong — not for network/timeout errors
           if (userRow && isCredentialError(error)) {
             await loginRateLimiter.recordAttempt(userRow.id, powersync);

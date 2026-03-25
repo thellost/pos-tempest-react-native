@@ -27,7 +27,12 @@ export async function initializePowerSync() {
 			await powersync.init();
 
 			if (process.env.EXPO_PUBLIC_POWERSYNC_URL) {
-				await powersync.connect(powerSyncConnector);
+				const env = __DEV__ ? 'development' : 'production';
+				await powersync.connect(powerSyncConnector,
+					{
+						params: { environment: env }
+					}
+				);
 			}
 		} catch (error) {
 			// Reset so callers can retry
