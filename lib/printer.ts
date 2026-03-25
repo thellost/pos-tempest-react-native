@@ -7,6 +7,7 @@ import {
 } from 'react-native-esc-pos-printer';
 import type { TrueFalseParam } from 'react-native-esc-pos-printer';
 
+import { Config } from '@/constants/config';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { runPrinterJob, openCashDrawerViaBluetooth } from '@/lib/bluetooth';
 
@@ -29,7 +30,7 @@ export interface PrinterSettings {
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = '@pos_tempest/printer_settings';
+const STORAGE_KEY = Config.STORAGE_KEY_PRINTER_SETTINGS;
 
 const DEFAULTS: PrinterSettings = {
   kitchenPrinter: null,

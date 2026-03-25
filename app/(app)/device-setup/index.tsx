@@ -1,6 +1,6 @@
 import { Brand } from '@/constants/theme';
 import { useDevice } from '@/hooks/use-device';
-import { DeviceInactiveError } from '@/services/device.service';
+import { DeviceInactiveError, DeviceNameTakenError } from '@/services/device.service';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -50,6 +50,10 @@ export default function DeviceSetupScreen() {
     } catch (err) {
       if (err instanceof DeviceInactiveError) {
         setInactiveDeviceName(err.device.device_name);
+        return;
+      }
+      if (err instanceof DeviceNameTakenError) {
+        setRegisterError(`Device name "${err.deviceName}" is already in use on this branch. Please choose a different name.`);
         return;
       }
       setRegisterError(err instanceof Error ? err.message : 'Failed to register device');

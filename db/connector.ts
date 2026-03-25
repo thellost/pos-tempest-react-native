@@ -51,6 +51,17 @@ async function applyCrudOperation(op: CrudOp) {
 	const schemaClient = supabase.schema(target.schema);
 	const tableRef = `${target.schema}.${target.table}`;
 
+	// devices: upsert on device_uid so a re-registered device (new local id, same physical uid)
+	// updates the existing Supabase row instead of hitting the devices_device_uid_key constraint.
+	if (target.table === 'devices' && op.op === 'PUT') {
+		const payload = { id: rowId, ...(op.opData ?? {}) };
+		const { error } = await schemaClient.from(target.table).upsert(payload as never, { onConflict: 'device_uid' });
+		if (error) {
+			throw new Error(`[PowerSync upload] PUT failed for ${tableRef}#${rowId}: ${error.message}`);
+		}
+		return;
+	}
+
 	// audit_logs is append-only — use insert (no upsert/ON CONFLICT needed).
 	// old_values/new_values are JSON strings in SQLite but jsonb in Supabase, so parse them.
 	if (target.table === 'audit_logs' && op.op === 'PUT') {
@@ -61,7 +72,9 @@ async function applyCrudOperation(op: CrudOp) {
 				try { raw[field] = JSON.parse(val); } catch { raw[field] = null; }
 			}
 		}
-		const { error } = await schemaClient.from(target.table).insert(raw as never);
+		// ignoreDuplicates: PowerSync may retry a batch after a network failure,
+		// so the record might already exist in Supabase — silently skip it.
+		const { error } = await schemaClient.from(target.table).upsert(raw as never, { onConflict: 'id', ignoreDuplicates: true });
 		if (error) {
 			throw new Error(`[PowerSync upload] PUT failed for ${tableRef}#${rowId}: ${error.message}`);
 		}

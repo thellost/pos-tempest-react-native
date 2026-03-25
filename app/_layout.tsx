@@ -12,14 +12,15 @@ import ImmersiveMode from 'react-native-immersive-mode';
 import 'react-native-reanimated';
 
 import { PowerSyncProvider } from '@/components/powersync-provider';
+import { ThemeColors } from '@/constants/theme';
 import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ConfigProvider } from '@/hooks/use-config';
 import { DeviceProvider } from '@/hooks/use-device';
 
-import '../global.css';
-import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
+import { Platform } from 'react-native';
+import '../global.css';
 
 const navigationIntegration = Sentry.reactNavigationIntegration();
 
@@ -27,7 +28,7 @@ Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? 'https://1c005b8ac82e51e8b9f3d1f6c52528c9@o4511089167695872.ingest.us.sentry.io/4511089168744448',
 
   environment: __DEV__ ? 'development' : 'production',
-  debug: __DEV__,
+  debug: false,
 
   // Release tracking
   release: `com.thellost.postempest@${Constants.expoConfig?.version ?? '1.0.0'}`,
@@ -100,8 +101,8 @@ function ThemedApp() {
       {/* themeVars applies CSS custom properties to all children */}
       <View style={[{ flex: 1 }, themeVars]} className="font-sans">
         <Modal visible={isThemeChanging} transparent animationType="none" statusBarTranslucent>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator size="large" color="#FFFFFF" />
+          <View style={{ flex: 1, backgroundColor: ThemeColors.surfaces.overlay, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color={ThemeColors.text.strong} />
           </View>
         </Modal>
         <ConfigProvider>

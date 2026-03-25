@@ -88,10 +88,8 @@ async function fetchUserProfile(supabaseAuthId?: string): Promise<UserRow | null
   );
 }
 
-/** Maximum number of retries when waiting for PowerSync to sync user data on fresh install */
-const PROFILE_FETCH_MAX_RETRIES = 12;
-/** Delay between retries in ms (starts at 500ms, doubles each time up to 4s) */
-const PROFILE_FETCH_INITIAL_DELAY_MS = 500;
+const PROFILE_FETCH_MAX_RETRIES = Config.PROFILE_FETCH_MAX_RETRIES;
+const PROFILE_FETCH_INITIAL_DELAY_MS = Config.PROFILE_FETCH_INITIAL_DELAY_MS;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
@@ -125,7 +123,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // On fresh install, PowerSync may not have synced the users table yet.
       // Retry with exponential backoff to wait for the initial sync to complete.
       let profile: UserRow | null = null;
-      let delay = PROFILE_FETCH_INITIAL_DELAY_MS;
+      let delay: number = PROFILE_FETCH_INITIAL_DELAY_MS;
 
       for (let attempt = 0; attempt <= PROFILE_FETCH_MAX_RETRIES; attempt++) {
         profile = await fetchUserProfile(authUserId);
@@ -141,7 +139,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           );
           await new Promise<void>((resolve) => setTimeout(resolve, delay));
           // Exponential backoff capped at 4 seconds
-          delay = Math.min(delay * 2, 4000);
+          delay = Math.min(delay * 2, Config.PROFILE_FETCH_MAX_DELAY_MS);
         }
       }
 

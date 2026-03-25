@@ -149,7 +149,7 @@ export default function LoginScreen() {
             autoCorrect={false}
             keyboardType="email-address"
             placeholder="your@email.com"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={ThemeColors.text.faint}
             editable={!loading && !isLoginLocked}
             returnKeyType="next"
             className="mb-4 rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
@@ -165,7 +165,7 @@ export default function LoginScreen() {
               autoComplete="password"
               autoCorrect={false}
               placeholder="••••••••"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={ThemeColors.text.faint}
               editable={!loading && !isLoginLocked}
               returnKeyType="go"
               onSubmitEditing={onSubmitEditing}

@@ -220,7 +220,7 @@ export function MenuGrid({
   if (!isMounted) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="small" color="#6366F1" />
+        <ActivityIndicator size="small" color={ThemeColors.accent.primary} />
       </View>
     );
   }
@@ -236,8 +236,8 @@ export function MenuGrid({
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor="#6366F1"
-              colors={['#6366F1']}
+              tintColor={ThemeColors.accent.primary}
+              colors={[ThemeColors.accent.primary]}
             />
           ) : undefined
         }
@@ -280,7 +280,7 @@ export function MenuGrid({
       {disabled && (
         <View
           className="absolute bottom-0 left-0 right-0 top-0 z-10 items-center justify-center"
-          style={{ backgroundColor: 'rgba(10, 13, 20, 0.82)' }}
+          style={{ backgroundColor: ThemeColors.surfaces.overlay }}
         >
           <View className="items-center rounded-2xl bg-surface-card px-10 py-8">
             <Lock size={36} color={ThemeColors.text.muted} style={{ marginBottom: 8 }} />

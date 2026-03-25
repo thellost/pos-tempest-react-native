@@ -3,6 +3,8 @@ import { createClient, processLock } from '@supabase/supabase-js'
 import { AppState, Platform } from 'react-native'
 import 'react-native-url-polyfill/auto'
 
+import { Config } from '@/constants/config'
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 // Enforce minimum lock timeout to reduce token-refresh lock contention warnings
@@ -12,7 +14,7 @@ const lock: typeof processLock = (name, acquireTimeout, fn) => {
       ? acquireTimeout
       : 0
 
-  const safeTimeout = Math.max(requestedTimeout, 15000)
+  const safeTimeout = Math.max(requestedTimeout, Config.SUPABASE_LOCK_MIN_TIMEOUT_MS)
   return processLock(name, safeTimeout, fn)
 }
 

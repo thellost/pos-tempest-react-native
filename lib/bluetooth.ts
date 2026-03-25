@@ -17,6 +17,7 @@ import {
 import BluetoothClassic from 'react-native-bluetooth-classic';
 import { Linking, PermissionsAndroid, Platform } from 'react-native';
 
+import { Config } from '@/constants/config';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -76,9 +77,9 @@ export function openBluetoothSettings(): void {
 
 // ── Timeouts ──────────────────────────────────────────────────────────────────
 
-const CONNECT_TIMEOUT_MS = 15_000;
-const SEND_TIMEOUT_MS    = 10_000;
-const PING_TIMEOUT_MS    =  8_000;
+const CONNECT_TIMEOUT_MS = Config.BT_CONNECT_TIMEOUT_MS;
+const SEND_TIMEOUT_MS    = Config.BT_SEND_TIMEOUT_MS;
+const PING_TIMEOUT_MS    = Config.BT_PING_TIMEOUT_MS;
 
 // ── Discovery ─────────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function scanBluetoothPrinters(
   onResults: (printers: DiscoveredPrinter[]) => void,
   onStatus?: (status: ScanStatus) => void,
   onError?: (message: string) => void,
-  timeoutMs = 10_000,
+  timeoutMs = Config.BT_SCAN_TIMEOUT_MS,
 ): () => void {
   const found: DiscoveredPrinter[] = [];
 

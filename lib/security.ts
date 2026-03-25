@@ -16,13 +16,13 @@ import { insertAuditLog } from '@/services/audit.service';
 // PIN SECURITY
 // ============================================================================
 
-const BCRYPT_ROUNDS = 6; // Adjusted for mobile performance; bcryptjs is optimized for JS environments
+const BCRYPT_ROUNDS = Config.BCRYPT_ROUNDS;
 
 /**
  * Hash a PIN using bcrypt with 12 rounds for secure storage
  */
 export async function hashPin(pin: string): Promise<string> {
-  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+  if (!pin || pin.length !== Config.PIN_LENGTH || !/^\d{6}$/.test(pin)) {
     throw new Error('Invalid PIN format. Must be 6 digits.');
   }
 
@@ -278,7 +278,7 @@ export function sanitizeInput(input: string): string {
   return input
     .trim()
     .replace(/[<>]/g, '') // Remove potential HTML tags
-    .substring(0, 255); // Limit length
+    .substring(0, Config.SANITIZE_MAX_LENGTH);
 }
 
 // ============================================================================
@@ -361,8 +361,8 @@ export function validatePasswordStrength(password: string): PasswordStrength {
     return { valid: false, score: 0, feedback: ['Password is required'] };
   }
 
-  if (password.length < 8) {
-    feedback.push('Password must be at least 8 characters');
+  if (password.length < Config.PASSWORD_MIN_LENGTH) {
+    feedback.push(`Password must be at least ${Config.PASSWORD_MIN_LENGTH} characters`);
   } else {
     score += 1;
   }
@@ -391,7 +391,7 @@ export function validatePasswordStrength(password: string): PasswordStrength {
     score += 1;
   }
 
-  const valid = score >= 3 && password.length >= 8;
+  const valid = score >= Config.PASSWORD_MIN_SCORE && password.length >= Config.PASSWORD_MIN_LENGTH;
 
   return { valid, score, feedback };
 }

@@ -2,6 +2,8 @@ import * as Sentry from '@sentry/react-native';
 import { PropsWithChildren } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { ThemeColors } from '@/constants/theme';
+
 function ErrorFallback({
   error,
   resetError,
@@ -41,28 +43,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    backgroundColor: '#0f1117',
+    backgroundColor: ThemeColors.surfaces.base,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#f1f5f9',
+    color: ThemeColors.text.primary,
     marginBottom: 12,
   },
   message: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: ThemeColors.text.muted,
     textAlign: 'center',
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: ThemeColors.info.DEFAULT,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#ffffff',
+    color: ThemeColors.text.strong,
     fontSize: 15,
     fontWeight: '600',
   },

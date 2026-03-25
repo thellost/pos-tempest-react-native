@@ -1,5 +1,6 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enums';
+import { Config } from '@/constants/config';
 import { ThemeColors } from '@/constants/theme';
 import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
@@ -54,7 +55,7 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
       return;
     }
 
-    if (amountInput.length >= 9) return;
+    if (amountInput.length >= Config.CASH_AMOUNT_MAX_INPUT_LENGTH) return;
 
     if (amountInput === '0') {
       setAmountInput(key);
@@ -93,7 +94,7 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
   if (!visible) return null;
 
   return (
-    <View className="absolute inset-0 z-50 items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.72)' }}>
+    <View className="absolute inset-0 z-50 items-center justify-center" style={{ backgroundColor: ThemeColors.surfaces.overlay }}>
       <View
         className="overflow-hidden rounded-2xl border border-border bg-surface-card"
         style={{ width: 520, maxHeight: '85%' }}

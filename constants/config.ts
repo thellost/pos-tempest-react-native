@@ -73,4 +73,77 @@ export const Config = {
   
   /** Timezone */
   TIMEZONE: 'Asia/Jakarta',
+
+  // ============================================================================
+  // NETWORK
+  // ============================================================================
+
+  /** API request timeout in milliseconds */
+  API_TIMEOUT_MS: 10_000, // 10 seconds
+
+  // ============================================================================
+  // BLUETOOTH PRINTER
+  // ============================================================================
+
+  /** Bluetooth printer connect timeout in milliseconds */
+  BT_CONNECT_TIMEOUT_MS: 15_000, // 15 seconds
+
+  /** Bluetooth printer send data timeout in milliseconds */
+  BT_SEND_TIMEOUT_MS: 10_000, // 10 seconds
+
+  /** Bluetooth printer ping timeout in milliseconds */
+  BT_PING_TIMEOUT_MS: 8_000, // 8 seconds
+
+  /** Bluetooth printer scan timeout in milliseconds */
+  BT_SCAN_TIMEOUT_MS: 10_000, // 10 seconds
+
+  // ============================================================================
+  // DATABASE
+  // ============================================================================
+
+  /** Minimum Supabase processLock acquire timeout to reduce contention warnings */
+  SUPABASE_LOCK_MIN_TIMEOUT_MS: 15_000, // 15 seconds
+
+  // ============================================================================
+  // PROFILE SYNC
+  // ============================================================================
+
+  /** Maximum retries when waiting for PowerSync to sync user data on fresh install */
+  PROFILE_FETCH_MAX_RETRIES: 12,
+
+  /** Initial delay between profile fetch retries in milliseconds (doubles each attempt) */
+  PROFILE_FETCH_INITIAL_DELAY_MS: 500,
+
+  /** Maximum delay between profile fetch retries in milliseconds */
+  PROFILE_FETCH_MAX_DELAY_MS: 4_000, // 4 seconds
+
+  // ============================================================================
+  // SECURITY
+  // ============================================================================
+
+  /** bcrypt cost factor — lowered for mobile JS performance */
+  BCRYPT_ROUNDS: 6,
+
+  /** Maximum length for sanitized user input */
+  SANITIZE_MAX_LENGTH: 255,
+
+  /** Minimum password length */
+  PASSWORD_MIN_LENGTH: 8,
+
+  /** Minimum password strength score (out of 5) */
+  PASSWORD_MIN_SCORE: 3,
+
+  // ============================================================================
+  // STORAGE KEYS
+  // ============================================================================
+
+  /** AsyncStorage key for printer settings */
+  STORAGE_KEY_PRINTER_SETTINGS: '@pos_tempest/printer_settings',
+
+  // ============================================================================
+  // UI
+  // ============================================================================
+
+  /** Maximum number of digits allowed in cash amount input */
+  CASH_AMOUNT_MAX_INPUT_LENGTH: 9,
 } as const;

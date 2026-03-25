@@ -10,6 +10,7 @@ import { AUDIT_ACTION, DEVICE_STATUS } from '@/constants/enums';
 import type { Branch, Device } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { captureError } from '@/lib/sentry';
+import { supabase } from '@/lib/supabase';
 import { insertAuditLog } from '@/services/audit.service';
 
 /**
@@ -19,6 +20,16 @@ export interface DeviceRegistrationResult {
   registered: boolean;
   device: Device | null;
   branch: Branch | null;
+}
+
+/**
+ * Thrown when attempting to register a device with a name already in use on the same branch.
+ */
+export class DeviceNameTakenError extends Error {
+  constructor(public readonly deviceName: string) {
+    super('DEVICE_NAME_TAKEN');
+    this.name = 'DeviceNameTakenError';
+  }
 }
 
 /**
@@ -54,7 +65,18 @@ export async function registerDevice(
   
   // Check if device already exists (active OR inactive)
   const existing = await getDeviceRegistration(deviceUid);
-  
+
+  if (!existing.device) {
+    // Guard: check if the device name is already taken on this branch
+    const nameTaken = await powersync.getOptional<Device>(
+      `SELECT id FROM devices WHERE device_name = ? AND branch_id = ? AND status = ?`,
+      [deviceName, branchId, DEVICE_STATUS.ACTIVE]
+    );
+    if (nameTaken) {
+      throw new DeviceNameTakenError(deviceName);
+    }
+  }
+
   if (existing.device) {
     // If the device exists but is inactive, block registration and tell the
     // user to ask an admin to reactivate it.
@@ -87,18 +109,73 @@ export async function registerDevice(
     };
   }
   
-  console.log('[DeviceService] Registering device with:', {
-    deviceUid,
-    branchId,
-    deviceName,
-  });
-  
-  // Generate a new unique ID
+  // Local DB has no record — check Supabase directly in case the device was
+  // previously registered but the local DB hasn't synced yet (e.g. fresh install).
+  const { data: serverDevice } = await supabase
+    .from('devices')
+    .select('id, device_uid, status')
+    .eq('device_uid', deviceUid)
+    .maybeSingle();
+
+  if (serverDevice) {
+    console.log('[DeviceService] Device found on server (id:', serverDevice.id, ') — re-using server id');
+
+    if (serverDevice.status === DEVICE_STATUS.INACTIVE) {
+      // Need the full record to throw DeviceInactiveError
+      const { data: full } = await supabase.from('devices').select('*').eq('id', serverDevice.id).single();
+      if (full) throw new DeviceInactiveError(full as unknown as Device);
+    }
+
+    // Check if the server record has since arrived in the local DB
+    const localById = await powersync.getOptional<Device>(
+      `SELECT * FROM devices WHERE id = ?`, [String(serverDevice.id)]
+    );
+
+    if (localById) {
+      await powersync.execute(
+        `UPDATE devices SET branch_id = ?, device_name = ?, status = ?, last_seen_at = ? WHERE id = ?`,
+        [branchId, deviceName, DEVICE_STATUS.ACTIVE, now, String(serverDevice.id)]
+      );
+    } else {
+      await powersync.execute(
+        `INSERT INTO devices (id, branch_id, device_uid, device_name, status, registered_at, last_seen_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [String(serverDevice.id), branchId, deviceUid, deviceName, DEVICE_STATUS.ACTIVE, now, now]
+      );
+    }
+
+    const device = await powersync.getOptional<Device>(
+      `SELECT * FROM devices WHERE id = ?`, [String(serverDevice.id)]
+    );
+    if (!device) throw new Error('Failed to sync existing device record');
+
+    void insertAuditLog({
+      action: AUDIT_ACTION.UPDATE,
+      tableName: 'devices',
+      recordId: device.id,
+      newValues: { branch_id: branchId, device_name: deviceName, status: DEVICE_STATUS.ACTIVE },
+      description: `Device re-registered (recovered from server): ${deviceName} (${deviceUid})`,
+    });
+
+    console.log('[DeviceService] Re-used server device id:', serverDevice.id, 'for', deviceUid);
+    return device;
+  }
+
+  console.log('[DeviceService] Registering new device:', { deviceUid, branchId, deviceName });
+
+  // Find the next free integer ID. Walk forward from MAX(id)+1 until we find
+  // a slot not yet taken by a server-synced record.
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(id) as max_id FROM devices`
   );
-  // Convert newId to a string
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  let nextId = (maxIdRow?.max_id ?? 0) + 1;
+  console.log('[DeviceService] ID search starting at:', nextId);
+  while (await powersync.getOptional<{ id: number }>(`SELECT id FROM devices WHERE id = ?`, [String(nextId)])) {
+    console.log('[DeviceService] ID', nextId, 'already taken, trying', nextId + 1);
+    nextId++;
+  }
+  const newId = String(nextId);
+  console.log('[DeviceService] Using ID:', newId);
 
   // Insert new device record
   await powersync.execute(
@@ -106,13 +183,13 @@ export async function registerDevice(
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [newId, branchId, deviceUid, deviceName, DEVICE_STATUS.ACTIVE, now, now]
   );
-  
-  // Fetch by id to avoid stale results if duplicate device_uid rows exist
+  console.log('[DeviceService] Insert successful for ID:', newId);
+
   const device = await powersync.getOptional<Device>(
     `SELECT * FROM devices WHERE id = ?`,
     [newId]
   );
-  
+
   if (!device) {
     throw new Error('Failed to create device record');
   }
