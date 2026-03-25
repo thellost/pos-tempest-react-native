@@ -167,13 +167,16 @@ export const appSchema = new Schema({
 	}),
 	inventories: new Table({
 		branch_id: column.integer,
-		menu_item_id: column.integer,
+		name: column.text,
+		unit_of_measure: column.text,
+		description: column.text,
 		stock_quantity: column.real,
 		low_stock_threshold: column.real,
+		created_at: column.text,
 		updated_at: column.text,
 	}, {
 		indexes: {
-			by_branch_item: ['branch_id', 'menu_item_id'],
+			by_branch_name: ['branch_id', 'name'],
 		},
 	}),
 	inventory_movements: new Table({
@@ -341,7 +344,7 @@ export const appSchema = new Schema({
 	}),
 	purchase_items: new Table({
 		purchase_id: column.integer,
-		menu_item_id: column.integer,
+		inventory_id: column.integer,
 		quantity: column.real,
 		unit_of_measure: column.text,
 		cost_per_unit: column.real,

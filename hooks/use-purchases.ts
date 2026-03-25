@@ -7,8 +7,8 @@ import { useAuth } from './use-auth';
 export interface PurchaseItem {
   id: number;
   purchase_id: number;
-  menu_item_id: number;
-  menu_item_name: string;
+  inventory_id: number;
+  inventory_name: string;
   quantity: number;
   unit_of_measure: UnitOfMeasure;
   cost_per_unit: number;
@@ -37,8 +37,8 @@ export interface Purchase {
 }
 
 export interface CreatePurchaseItem {
-  menu_item_id: number;
-  menu_item_name: string; // local only for display
+  inventory_id: number;
+  inventory_name: string; // local only for display
   quantity: number;
   unit_of_measure: UnitOfMeasure;
   cost_per_unit: number;
@@ -49,7 +49,7 @@ export interface CreatePurchaseInput {
   branch_id: number;
   notes?: string;
   tax_amount?: number;
-  items: Omit<CreatePurchaseItem, 'menu_item_name'>[];
+  items: Omit<CreatePurchaseItem, 'inventory_name'>[];
 }
 
 export function usePurchases() {

@@ -206,10 +206,8 @@ function StockDetailModal({ item, onClose, onAdjust, onThreshold, getMovements }
             {/* Modal header */}
             <View className="flex-row items-center justify-between border-b border-border px-4 py-3 bg-surface-raised">
               <View className="flex-1">
-                <Text className="text-pos-lg font-bold text-pos-text">{item.menu_item_name}</Text>
-                {item.menu_item_sku ? (
-                  <Text className="text-pos-xs text-pos-text-faint font-mono">{item.menu_item_sku}</Text>
-                ) : null}
+                <Text className="text-pos-lg font-bold text-pos-text">{item.name}</Text>
+                <Text className="text-pos-xs text-pos-text-faint font-mono">{item.unit_of_measure}</Text>
               </View>
               <Pressable onPress={onClose} hitSlop={8} className="p-1">
                 <X size={20} color={ThemeColors.text.muted} />
@@ -371,7 +369,7 @@ function StockTab() {
     if (lowOnly && !i.is_low_stock) return false;
     if (search) {
       const q = search.toLowerCase();
-      return i.menu_item_name.toLowerCase().includes(q) || i.menu_item_sku?.toLowerCase().includes(q);
+      return i.name.toLowerCase().includes(q);
     }
     return true;
   });
@@ -385,7 +383,7 @@ function StockTab() {
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search item name or SKU..."
+          placeholder="Search ingredient name..."
           placeholderTextColor={ThemeColors.text.faint}
           className="flex-1 rounded-sm border border-border bg-surface-raised px-3 text-pos-sm text-pos-text"
           style={{ height: 36 }}
@@ -431,10 +429,8 @@ function StockTab() {
                 className="flex-row items-center gap-3 rounded-sm border border-border bg-surface-card px-4 py-3"
               >
                 <View className="flex-1">
-                  <Text className="text-pos-base font-semibold text-pos-text">{item.menu_item_name}</Text>
-                  {item.menu_item_sku ? (
-                    <Text className="text-pos-xs font-mono text-pos-text-faint">{item.menu_item_sku}</Text>
-                  ) : null}
+                  <Text className="text-pos-base font-semibold text-pos-text">{item.name}</Text>
+                  <Text className="text-pos-xs font-mono text-pos-text-faint">{item.unit_of_measure}</Text>
                 </View>
 
                 <View className="items-end gap-1">
@@ -472,12 +468,12 @@ function StockTab() {
 
 // ─── purchases tab ───────────────────────────────────────────────────────────
 
-interface MenuItemRow { id: number; name: string; sku: string | null }
+interface InventoryRow { id: number; name: string; unit_of_measure: string }
 
-async function searchMenuItems(query: string): Promise<MenuItemRow[]> {
+async function searchInventory(query: string): Promise<InventoryRow[]> {
   if (!query.trim()) return [];
-  return powersync.getAll<MenuItemRow>(
-    `SELECT id, name, sku FROM menu_items WHERE is_active = 1 AND name LIKE ? LIMIT 12`,
+  return powersync.getAll<InventoryRow>(
+    `SELECT id, name, unit_of_measure FROM inventories WHERE name LIKE ? LIMIT 12`,
     [`%${query}%`],
   );
 }
@@ -492,8 +488,8 @@ interface CreatePOModalProps {
 
 // Draft item uses raw strings for number inputs to avoid NaN in controlled TextInput
 interface DraftPOItem {
-  menu_item_id: number;
-  menu_item_name: string;
+  inventory_id: number;
+  inventory_name: string;
   quantity: string;
   unit_of_measure: UnitOfMeasure;
   cost_per_unit: string;
@@ -552,7 +548,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
   const [saving, setSaving] = useState(false);
 
   const [itemSearch, setItemSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<MenuItemRow[]>([]);
+  const [searchResults, setSearchResults] = useState<InventoryRow[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
   // Filtered supplier list
@@ -563,7 +559,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
   useEffect(() => {
     if (!itemSearch.trim()) { setSearchResults([]); return; }
     setSearchLoading(true);
-    searchMenuItems(itemSearch)
+    searchInventory(itemSearch)
       .then(setSearchResults)
       .finally(() => setSearchLoading(false));
   }, [itemSearch]);
@@ -577,10 +573,10 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
   const taxAmount = parseFloat(tax) || 0;
   const total = subtotal + taxAmount;
 
-  function addItem(menuItem: MenuItemRow) {
+  function addItem(inv: InventoryRow) {
     setItems((prev) => [
       ...prev,
-      { menu_item_id: Number(menuItem.id), menu_item_name: menuItem.name, quantity: '1', unit_of_measure: 'piece', cost_per_unit: '' },
+      { inventory_id: Number(inv.id), inventory_name: inv.name, quantity: '1', unit_of_measure: inv.unit_of_measure as UnitOfMeasure, cost_per_unit: '' },
     ]);
     setItemSearch('');
     setSearchResults([]);
@@ -609,7 +605,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
     if (items.length === 0) { Alert.alert('Add Items', 'Add at least one item to the PO.'); return; }
 
     const parsed = items.map((it) => ({
-      menu_item_id: parseInt(String(it.menu_item_id), 10),
+      inventory_id: parseInt(String(it.inventory_id), 10),
       unit_of_measure: it.unit_of_measure,
       quantity: parseFloat(it.quantity),
       cost_per_unit: parseFloat(it.cost_per_unit),
@@ -738,7 +734,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                 <TextInput
                   value={itemSearch}
                   onChangeText={setItemSearch}
-                  placeholder="Search menu item by name..."
+                  placeholder="Search ingredient by name..."
                   placeholderTextColor={ThemeColors.text.faint}
                   className="rounded-sm border border-border bg-surface-raised px-4 text-pos-base text-pos-text"
                   style={{ height: 52 }}
@@ -754,7 +750,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                       >
                         <Plus size={16} color={ThemeColors.accent.primary} />
                         <Text className="flex-1 text-pos-base text-pos-text">{r.name}</Text>
-                        {r.sku ? <Text className="font-mono text-pos-sm text-pos-text-faint">{r.sku}</Text> : null}
+                        <Text className="font-mono text-pos-sm text-pos-text-faint">{r.unit_of_measure}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -773,7 +769,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                       <View key={idx} className="rounded-sm border border-border bg-surface-raised p-4 gap-3">
                         {/* Item name + remove */}
                         <View className="flex-row items-center justify-between">
-                          <Text className="flex-1 text-pos-lg font-bold text-pos-text">{it.menu_item_name}</Text>
+                          <Text className="flex-1 text-pos-lg font-bold text-pos-text">{it.inventory_name}</Text>
                           <Pressable onPress={() => removeItem(idx)} hitSlop={8} className="ml-2">
                             <X size={18} color={ThemeColors.danger.DEFAULT} />
                           </Pressable>
@@ -1040,7 +1036,7 @@ function PODetailModal({ purchaseId, onClose, onReceive, onCancel, getPurchase }
                     {(purchase.items ?? []).map((item) => (
                       <View key={item.id} className="mb-2 rounded-sm bg-surface-raised px-3 py-3">
                         <View className="flex-row items-center justify-between mb-1">
-                          <Text className="flex-1 text-pos-base font-semibold text-pos-text">{item.menu_item_name}</Text>
+                          <Text className="flex-1 text-pos-base font-semibold text-pos-text">{item.inventory_name}</Text>
                           <Text className="font-mono text-pos-lg font-bold text-pos-text">
                             {formatIDR(item.total)}
                           </Text>

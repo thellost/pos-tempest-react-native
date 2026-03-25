@@ -100,11 +100,7 @@ export function useMenu() {
   );
 
   const { data: menuItems = [], isLoading: menuItemsLoading } = useQuery<MenuItemWithInventoryRow>(
-    `SELECT mi.*, inv.stock_quantity, inv.low_stock_threshold
-     FROM menu_items mi
-     LEFT JOIN inventories inv ON inv.menu_item_id = mi.id AND inv.branch_id = ?
-     ORDER BY mi.sort_order ASC`,
-    [branchId ?? 0]
+    `SELECT * FROM menu_items ORDER BY sort_order ASC`
   );
 
   // -- Log individual query resolution times --
@@ -187,19 +183,10 @@ export function useMenu() {
         const itemId = toNumber(item.id) || 0;
         const categoryId = toNumber(item.category_id);
         const category = categoryId !== null ? categoryById.get(categoryId) : undefined;
-        const inventoryInfo: MenuItemInventoryInfo | undefined =
-          item.stock_quantity != null
-            ? { stock_quantity: item.stock_quantity, low_stock_threshold: item.low_stock_threshold }
-            : undefined;
-        const isLowStock =
-          inventoryInfo && inventoryInfo.low_stock_threshold !== null
-            ? inventoryInfo.stock_quantity <= inventoryInfo.low_stock_threshold
-            : false;
-
         return {
           ...item,
-          inventoryInfo,
-          isLowStock,
+          inventoryInfo: undefined,
+          isLowStock: false,
           categoryName: category?.name || 'Food & Drink',
           _itemId: itemId,
           _categoryId: categoryId,

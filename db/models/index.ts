@@ -194,9 +194,12 @@ export interface MenuItemModifierGroup {
 export interface Inventory {
 	id: EntityId;
 	branch_id: EntityId;
-	menu_item_id: EntityId;
+	name: string;
+	unit_of_measure: string;
+	description: string | null;
 	stock_quantity: number;
 	low_stock_threshold: number | null;
+	created_at: Timestamp;
 	updated_at: Timestamp;
 }
 
@@ -382,7 +385,7 @@ export interface Purchase {
 export interface PurchaseItem {
 	id: EntityId;
 	purchase_id: EntityId;
-	menu_item_id: EntityId;
+	inventory_id: EntityId;
 	quantity: number;
 	unit_of_measure: UnitOfMeasure;
 	cost_per_unit: number;

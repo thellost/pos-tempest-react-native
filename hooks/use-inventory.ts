@@ -7,12 +7,13 @@ import { useAuth } from './use-auth';
 export interface InventoryItem {
   id: number;
   branch_id: number;
-  menu_item_id: number;
+  name: string;
+  unit_of_measure: string;
+  description: string | null;
   stock_quantity: number;
   low_stock_threshold: number;
+  created_at: string;
   updated_at: string;
-  menu_item_name: string;
-  menu_item_sku: string;
   branch_name: string;
   is_low_stock: boolean;
 }
@@ -30,6 +31,14 @@ export interface InventoryMovement {
   reason: string | null;
   created_at: string;
   user_name: string;
+}
+
+export interface CreateInventoryInput {
+  branch_id: number;
+  name: string;
+  unit_of_measure: string;
+  description?: string;
+  low_stock_threshold?: number;
 }
 
 export type AdjustmentType = 'adjustment' | 'waste' | 'transfer';
@@ -75,6 +84,12 @@ export function useInventory() {
     fetchInventory();
   }, [fetchInventory]);
 
+  const createInventory = useCallback(async (input: CreateInventoryInput): Promise<InventoryItem> => {
+    const created = await api.post<InventoryItem>('/api/v1/inventory', input);
+    setItems((prev) => [...prev, created]);
+    return created;
+  }, []);
+
   const adjustStock = useCallback(async (input: AdjustStockInput): Promise<InventoryItem> => {
     const updated = await api.post<InventoryItem>('/api/v1/inventory/adjust', input);
     setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
@@ -104,6 +119,7 @@ export function useInventory() {
     isLoading,
     error,
     fetchInventory,
+    createInventory,
     adjustStock,
     updateThreshold,
     getMovements,
