@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCheckoutPayment } from '@/hooks/use-checkout-payment';
 import { useOrderDiscount } from '@/hooks/use-order-discount';
 import { useShift } from '@/hooks/use-shift';
+import { toFloat } from '@/utils/coerce';
 import { completeOrder, processPayment } from '@/services/payment.service';
 import { calculateOrderTotals } from '@/services/order.service';
 import type { KOTWithItems } from '@/services/kitchen.service';
@@ -22,10 +23,6 @@ import { getKOTsForOrder } from '@/services/kitchen.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
 
-function toNum(v: number | string | null | undefined): number {
-  if (v === null || v === undefined) return 0;
-  return typeof v === 'string' ? parseFloat(v) || 0 : v;
-}
 
 export default function CheckoutScreen() {
   const { orderId, viewOnly } = useLocalSearchParams<{ orderId: string; viewOnly?: string }>();
@@ -81,12 +78,12 @@ function CheckoutContent({
     return itemRows.map(item => ({
       ...item,
       modifiers: (allModifiers ?? []).filter(
-        m => toNum(m.order_item_id) === toNum(item.id),
+        m => toFloat(m.order_item_id) === toFloat(item.id),
       ),
     }));
   }, [itemRows, allModifiers]);
 
-  const orderTotal = toNum(order?.total);
+  const orderTotal = toFloat(order?.total);
   const payment  = useCheckoutPayment(orderTotal);
   const discount = useOrderDiscount(orderId, user?.id);
 
@@ -222,7 +219,7 @@ function CheckoutContent({
           visible={discount.showDiscountPicker}
           discounts={discount.availableDiscounts}
           appliedDiscount={discount.appliedDiscount}
-          orderSubtotal={toNum(order.subtotal)}
+          orderSubtotal={toFloat(order.subtotal)}
           onApply={discount.onApply}
           onRemove={discount.onRemove}
           onClose={discount.onClose}

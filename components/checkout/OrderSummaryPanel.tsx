@@ -5,6 +5,7 @@ import { ThemeColors } from '@/constants/theme';
 import { ORDER_TYPE } from '@/constants/enums';
 import type { Order, OrderDiscount, OrderItem, OrderItemModifier } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
+import { toFloat } from '@/utils/coerce';
 
 export type OrderRow = Order & { table_number: string | null; branch_name: string | null };
 export interface OrderItemRow extends OrderItem { modifiers: OrderItemModifier[] }
@@ -17,11 +18,6 @@ interface Props {
   onBack: () => void;
 }
 
-function toNum(v: number | string | null | undefined): number {
-  if (v === null || v === undefined) return 0;
-  return typeof v === 'string' ? parseFloat(v) || 0 : v;
-}
-
 export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onBack }: Props) {
   const isTakeaway = order.order_type === ORDER_TYPE.TAKEAWAY;
   const tableLabel = isTakeaway
@@ -30,12 +26,12 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
     ? `Table ${order.table_number}`
     : 'Order';
 
-  const subtotal       = toNum(order.subtotal);
-  const discountAmount = toNum(order.discount_amount);
-  const taxAmount      = toNum(order.tax_amount);
-  const serviceCharge  = toNum(order.service_charge);
-  const roundingAmount = toNum(order.rounding_amount);
-  const orderTotal     = toNum(order.total);
+  const subtotal       = toFloat(order.subtotal);
+  const discountAmount = toFloat(order.discount_amount);
+  const taxAmount      = toFloat(order.tax_amount);
+  const serviceCharge  = toFloat(order.service_charge);
+  const roundingAmount = toFloat(order.rounding_amount);
+  const orderTotal     = toFloat(order.total);
   const taxBase        = Math.max(1, subtotal - discountAmount);
   const taxRateDisplay = Math.round((taxAmount / taxBase) * 100);
 
@@ -80,9 +76,9 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
           <Text className="mt-8 text-center text-pos-sm text-pos-text-faint">No items</Text>
         ) : (
           items.map((item, index) => {
-            const qty   = toNum(item.quantity);
-            const price = toNum(item.unit_price);
-            const total = toNum(item.total);
+            const qty   = toFloat(item.quantity);
+            const price = toFloat(item.unit_price);
+            const total = toFloat(item.total);
             return (
               <View
                 key={item.id}

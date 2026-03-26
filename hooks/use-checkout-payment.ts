@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_TYPE } from '@/constants/enums';
 import type { PendingPayment } from '@/components/payment/SplitPayment';
+import { generateLocalId } from '@/components/order/types';
 
 export function useCheckoutPayment(orderTotal: number) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>(PAYMENT_METHOD_TYPE.CASH);
@@ -43,7 +44,7 @@ export function useCheckoutPayment(orderTotal: number) {
     setPendingPayments(prev => [
       ...prev,
       {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: generateLocalId(),
         method: selectedMethod,
         amount,
         referenceNumber: referenceInput.trim() || null,
