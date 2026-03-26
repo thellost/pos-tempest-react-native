@@ -73,8 +73,8 @@ export interface AuditLogParams {
   /** The database table the action affects (e.g. 'orders', 'payments'). */
   tableName: string;
 
-  /** Primary key of the affected record. */
-  recordId?: number | null;
+  /** Primary key of the affected record (integer for most tables, UUID string for devices). */
+  recordId?: string | number | null;
 
   /**
    * Override the module-level user ID.

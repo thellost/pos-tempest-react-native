@@ -85,7 +85,7 @@ function ConfigSection({
   setDraft: (d: Record<string, string>) => void;
   updateConfig: (key: EditableConfigKey, value: string | number) => Promise<void>;
   resetConfig: (key?: EditableConfigKey) => Promise<void>;
-  C: typeof ThemeColors;
+  C: typeof ThemeColors | typeof LightThemeColors;
 }) {
   return (
     <View className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -105,7 +105,7 @@ function ConfigSection({
           if (raw === undefined || raw === row.display) return;
           const parsed = row.parse(raw);
           if (parsed !== null && parsed !== undefined && String(parsed).trim() !== '') {
-            await updateConfig(row.key, parsed as string & number);
+            await updateConfig(row.key, parsed);
           }
         };
 

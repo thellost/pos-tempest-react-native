@@ -409,9 +409,8 @@ export interface AuditLog {
 }
 
 export interface Device {
-	id: EntityId;
+	id: string;
 	branch_id: EntityId;
-	device_uid: string;
 	device_name: string;
 	status: DeviceStatus;
 	registered_at: Timestamp;

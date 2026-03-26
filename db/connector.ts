@@ -51,15 +51,32 @@ async function applyCrudOperation(op: CrudOp) {
 	const schemaClient = supabase.schema(target.schema);
 	const tableRef = `${target.schema}.${target.table}`;
 
-	// devices: upsert on device_uid so a re-registered device (new local id, same physical uid)
-	// updates the existing Supabase row instead of hitting the devices_device_uid_key constraint.
-	if (target.table === 'devices' && op.op === 'PUT') {
-		const payload = { id: rowId, ...(op.opData ?? {}) };
-		const { error } = await schemaClient.from(target.table).upsert(payload as never, { onConflict: 'device_uid' });
-		if (error) {
-			throw new Error(`[PowerSync upload] PUT failed for ${tableRef}#${rowId}: ${error.message}`);
+	// devices: PK is device_uid (uuid) after migration — skip stale pre-migration integer ids.
+	if (target.table === 'devices') {
+		const isLegacyIntegerId = /^\d+$/.test(rowId);
+		if (isLegacyIntegerId) {
+			console.warn(`[PowerSync upload] Skipping stale pre-migration device op (${op.op}#${rowId})`);
+			return;
 		}
-		return;
+
+		if (op.op === 'PUT') {
+			const payload = { device_uid: rowId, ...(op.opData ?? {}) };
+			const { error } = await schemaClient.from(target.table).upsert(payload as never, { onConflict: 'device_uid' });
+			if (error) throw new Error(`[PowerSync upload] PUT failed for ${tableRef}#${rowId}: ${error.message}`);
+			return;
+		}
+		if (op.op === 'PATCH') {
+			const patch = op.opData ?? {};
+			if (Object.keys(patch).length === 0) return;
+			const { error } = await schemaClient.from(target.table).update(patch as never).eq('device_uid', rowId);
+			if (error) throw new Error(`[PowerSync upload] PATCH failed for ${tableRef}#${rowId}: ${error.message}`);
+			return;
+		}
+		if (op.op === 'DELETE') {
+			const { error } = await schemaClient.from(target.table).delete().eq('device_uid', rowId);
+			if (error) throw new Error(`[PowerSync upload] DELETE failed for ${tableRef}#${rowId}: ${error.message}`);
+			return;
+		}
 	}
 
 	// audit_logs is append-only — use insert (no upsert/ON CONFLICT needed).

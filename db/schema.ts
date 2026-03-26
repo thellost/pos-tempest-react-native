@@ -366,7 +366,6 @@ export const appSchema = new Schema({
 	}),
 	devices: new Table({
 		branch_id: column.integer,
-		device_uid: column.text,
 		device_name: column.text,
 		status: column.text,
 		registered_at: column.text,

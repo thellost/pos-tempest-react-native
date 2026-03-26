@@ -24,9 +24,8 @@ import {
 } from '@/hooks/use-customers';
 import { formatIDR } from '@/utils/currency';
 
-// ─────────────────────────────────────────────
-// New-customer modal form
-// ─────────────────────────────────────────────
+const PLACEHOLDER_COLOR = ThemeColors.text.faint;
+const EMPTY_FORM = { name: '', phone: '', email: '', address: '', notes: '' };
 
 interface NewCustomerModalProps {
   visible: boolean;
@@ -36,19 +35,9 @@ interface NewCustomerModalProps {
 }
 
 function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomerModalProps) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
+  const [form, setForm] = useState(EMPTY_FORM);
 
-  const reset = () => {
-    setName('');
-    setPhone('');
-    setEmail('');
-    setAddress('');
-    setNotes('');
-  };
+  const reset = useCallback(() => setForm(EMPTY_FORM), []);
 
   const handleClose = () => {
     reset();
@@ -56,21 +45,21 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
   };
 
   const handleSubmit = async () => {
-    if (!phone.trim()) {
+    if (!form.phone.trim()) {
       Alert.alert('Validation', 'Phone number is required.');
       return;
     }
-    if (!name.trim()) {
+    if (!form.name.trim()) {
       Alert.alert('Validation', 'Customer name is required.');
       return;
     }
     try {
       await onCreate({
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim() || null,
-        address: address.trim() || null,
-        notes: notes.trim() || null,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || null,
+        address: form.address.trim() || null,
+        notes: form.notes.trim() || null,
       });
       reset();
     } catch (err) {
@@ -90,32 +79,26 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
               Register New Customer
             </Text>
 
-            {/* Name */}
             <View className="mb-4">
-              <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
-                Full Name *
-              </Text>
+              <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Full Name *</Text>
               <TextInput
-                value={name}
-                onChangeText={setName}
+                value={form.name}
+                onChangeText={name => setForm(p => ({ ...p, name }))}
                 placeholder="Customer name"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={PLACEHOLDER_COLOR}
                 className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
               />
             </View>
 
-            {/* Phone (required — primary identifier) */}
             <View className="mb-4">
-              <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
-                Phone Number *
-              </Text>
+              <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Phone Number *</Text>
               <View className="flex-row items-center rounded-xl border border-brand bg-surface px-4 py-3">
                 <Phone size={16} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
                 <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
+                  value={form.phone}
+                  onChangeText={phone => setForm(p => ({ ...p, phone }))}
                   placeholder="e.g. 081234567890"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
                   keyboardType="phone-pad"
                   className="flex-1 text-pos-base text-pos-text"
                 />
@@ -125,49 +108,43 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
               </Text>
             </View>
 
-            {/* Email (optional) */}
             <View className="mb-4">
               <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
-                Email{' '}
-                <Text className="text-pos-text-muted">(optional)</Text>
+                Email{' '}<Text className="text-pos-text-muted">(optional)</Text>
               </Text>
               <TextInput
-                value={email}
-                onChangeText={setEmail}
+                value={form.email}
+                onChangeText={email => setForm(p => ({ ...p, email }))}
                 placeholder="customer@email.com"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={PLACEHOLDER_COLOR}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
               />
             </View>
 
-            {/* Address (optional) */}
             <View className="mb-4">
               <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
-                Address{' '}
-                <Text className="text-pos-text-muted">(optional)</Text>
+                Address{' '}<Text className="text-pos-text-muted">(optional)</Text>
               </Text>
               <TextInput
-                value={address}
-                onChangeText={setAddress}
+                value={form.address}
+                onChangeText={address => setForm(p => ({ ...p, address }))}
                 placeholder="Street address"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={PLACEHOLDER_COLOR}
                 className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
               />
             </View>
 
-            {/* Notes (optional) */}
             <View className="mb-6">
               <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
-                Notes{' '}
-                <Text className="text-pos-text-muted">(optional)</Text>
+                Notes{' '}<Text className="text-pos-text-muted">(optional)</Text>
               </Text>
               <TextInput
-                value={notes}
-                onChangeText={setNotes}
+                value={form.notes}
+                onChangeText={notes => setForm(p => ({ ...p, notes }))}
                 placeholder="Dietary restrictions, preferences…"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={PLACEHOLDER_COLOR}
                 multiline
                 numberOfLines={2}
                 className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
@@ -175,7 +152,6 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
               />
             </View>
 
-            {/* Actions */}
             <View className="flex-row gap-3">
               <Button
                 onPress={handleClose}
@@ -202,10 +178,6 @@ function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomer
   );
 }
 
-// ─────────────────────────────────────────────
-// Customer detail panel
-// ─────────────────────────────────────────────
-
 interface CustomerDetailProps {
   customer: Customer;
   onClose: () => void;
@@ -228,7 +200,6 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
 
   return (
     <View className="flex-1">
-      {/* Detail header */}
       <View className="border-b border-border px-6 py-5">
         <View className="flex-row items-start justify-between">
           <View className="flex-1">
@@ -248,16 +219,11 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
               </View>
             ) : null}
           </View>
-          <IconButton
-            size="lg"
-            onPress={onClose}
-            className="ml-4 rounded-full bg-surface-raised"
-          >
+          <IconButton size="lg" onPress={onClose} className="ml-4 rounded-full bg-surface-raised">
             <X size={18} color={ThemeColors.text.muted} />
           </IconButton>
         </View>
 
-        {/* Loyalty stats */}
         <View className="mt-4 flex-row gap-3">
           <View className="flex-1 rounded-xl bg-brand/10 p-3">
             <Text className="text-pos-xs text-pos-text-muted">Loyalty Points</Text>
@@ -267,9 +233,7 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
           </View>
           <View className="flex-1 rounded-xl bg-surface-raised p-3">
             <Text className="text-pos-xs text-pos-text-muted">Total Visits</Text>
-            <Text className="text-pos-2xl font-bold text-pos-text">
-              {customer.total_visits}
-            </Text>
+            <Text className="text-pos-2xl font-bold text-pos-text">{customer.total_visits}</Text>
           </View>
           <View className="flex-1 rounded-xl bg-surface-raised p-3">
             <Text className="text-pos-xs text-pos-text-muted">Total Spent</Text>
@@ -284,10 +248,7 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
         ) : null}
       </View>
 
-      {/* Order history */}
-      <View className="px-6 py-4">
-        <Text className="text-pos-base font-bold text-pos-text">Order History</Text>
-      </View>
+      <Text className="px-6 py-4 text-pos-base font-bold text-pos-text">Order History</Text>
 
       {historyLoading ? (
         <View className="flex-1 items-center justify-center">
@@ -330,10 +291,6 @@ function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerDetailPr
   );
 }
 
-// ─────────────────────────────────────────────
-// Main customers screen
-// ─────────────────────────────────────────────
-
 export default function CustomersScreen() {
   const {
     customers,
@@ -348,20 +305,20 @@ export default function CustomersScreen() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
 
+  const selectedId = selectedCustomer ? toInt(selectedCustomer.id) : null;
+
   const handleCreate = useCallback(
     async (input: CreateCustomerInput) => {
       const created = await createCustomer(input);
       setShowNewModal(false);
       setSelectedCustomer(created);
     },
-    [createCustomer]
+    [createCustomer],
   );
 
   return (
     <View className="flex-1 flex-row bg-surface">
-      {/* ── Left panel: search + list ── */}
       <View className="w-[38%] border-r border-border bg-surface-card">
-        {/* Header */}
         <View className="border-b border-border px-5 py-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-pos-2xl font-bold text-pos-text">Customers</Text>
@@ -373,14 +330,13 @@ export default function CustomersScreen() {
             </Button>
           </View>
 
-          {/* Search bar */}
           <View className="mt-4 flex-row items-center rounded-xl border border-border bg-surface px-4 py-2.5">
             <Search size={16} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search name or phone…"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={PLACEHOLDER_COLOR}
               className="flex-1 text-pos-base text-pos-text"
             />
             {searchQuery.length > 0 && (
@@ -391,7 +347,6 @@ export default function CustomersScreen() {
           </View>
         </View>
 
-        {/* Customer list */}
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#6366F1" />
@@ -408,15 +363,7 @@ export default function CustomersScreen() {
         ) : (
           <ScrollView className="flex-1">
             {customers.map((customer) => {
-              const isSelected =
-                selectedCustomer &&
-                (typeof selectedCustomer.id === 'string'
-                  ? parseInt(selectedCustomer.id as string, 10)
-                  : selectedCustomer.id) ===
-                  (typeof customer.id === 'string'
-                    ? parseInt(customer.id as string, 10)
-                    : customer.id);
-
+              const isSelected = selectedId === toInt(customer.id);
               return (
                 <Pressable
                   key={customer.id}
@@ -425,7 +372,6 @@ export default function CustomersScreen() {
                     isSelected ? 'bg-brand/10' : ''
                   }`}
                 >
-                  {/* Avatar initial */}
                   <View className="flex-row items-center gap-3">
                     <View className="h-11 w-11 items-center justify-center rounded-full bg-brand/20">
                       <Text className="text-pos-base font-bold text-brand">
@@ -448,7 +394,8 @@ export default function CustomersScreen() {
                     {customer.loyalty_points > 0 && (
                       <View className="rounded-full bg-brand/10 px-2 py-0.5">
                         <Text className="text-pos-xs font-semibold text-brand">
-                          <Star size={10} color={ThemeColors.accent.primary} /> {customer.loyalty_points}
+                          <Star size={10} color={ThemeColors.accent.primary} />{' '}
+                          {customer.loyalty_points}
                         </Text>
                       </View>
                     )}
@@ -468,7 +415,6 @@ export default function CustomersScreen() {
         )}
       </View>
 
-      {/* ── Right panel: customer detail ── */}
       <View className="flex-1">
         {selectedCustomer ? (
           <CustomerDetail
@@ -496,7 +442,6 @@ export default function CustomersScreen() {
         )}
       </View>
 
-      {/* New customer registration modal */}
       <NewCustomerModal
         visible={showNewModal}
         onClose={() => setShowNewModal(false)}

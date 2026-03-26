@@ -33,7 +33,7 @@ interface ConfigContextValue {
   config: ResolvedConfig;
   overrides: ConfigOverrides;
   isLoading: boolean;
-  updateConfig: <K extends EditableConfigKey>(key: K, value: (typeof Config)[K]) => Promise<void>;
+  updateConfig: (key: EditableConfigKey, value: string | number) => Promise<void>;
   resetConfig: (key?: EditableConfigKey) => Promise<void>;
 }
 
@@ -63,8 +63,8 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateConfig = useCallback(
-    async <K extends EditableConfigKey>(key: K, value: (typeof Config)[K]) => {
-      const next = { ...overrides, [key]: value };
+    async (key: EditableConfigKey, value: string | number) => {
+      const next = { ...overrides, [key]: value } as ConfigOverrides;
       setOverrides(next);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     },
