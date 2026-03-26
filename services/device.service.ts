@@ -168,7 +168,7 @@ export async function registerDevice(
   const maxIdRow = await powersync.getOptional<{ max_id: number }>(
     `SELECT MAX(id) as max_id FROM devices`
   );
-  let nextId = (maxIdRow?.max_id ?? 0) + 1;
+  let nextId = parseInt(String(maxIdRow?.max_id ?? '0'), 10) + 1;
   console.log('[DeviceService] ID search starting at:', nextId);
   while (await powersync.getOptional<{ id: number }>(`SELECT id FROM devices WHERE id = ?`, [String(nextId)])) {
     console.log('[DeviceService] ID', nextId, 'already taken, trying', nextId + 1);
