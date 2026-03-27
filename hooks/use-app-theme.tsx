@@ -58,7 +58,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>('dark');
+  const [colorScheme, setColorSchemeState] = useState<ColorScheme>('light');
   const [isThemeChanging, setIsThemeChanging] = useState(false);
   const changingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

@@ -1,29 +1,29 @@
-import { ROLE_TYPE } from '@/constants/enums';
-import { Brand } from '@/constants/theme';
-import Constants from 'expo-constants';
-import { useConfig } from '@/hooks/use-config';
-import {
-  AlertTriangle,
-  Monitor,
-  Palette,
-  Printer,
-  Moon,
-  Settings2,
-  Sun,
-  Users,
-} from 'lucide-react-native';
-import { useAppTheme } from '@/hooks/use-app-theme';
-import { useAuth } from '@/hooks/use-auth';
-import { useDevice } from '@/hooks/use-device';
-import { usePrinter } from '@/hooks/use-printer';
-import { useState } from 'react';
-import { Alert, Platform, ScrollView, Text, UIManager, View } from 'react-native';
-import { Button, SelectButton } from '@/components/ui';
 import { AccordionSection } from '@/components/settings/AccordionSection';
 import { ConfigSection, type ConfigRow } from '@/components/settings/ConfigSection';
 import { DeviceList } from '@/components/settings/DeviceList';
 import { InfoRow, RowDivider } from '@/components/settings/primitives';
 import { PrinterSection } from '@/components/settings/PrinterSection';
+import { Button, SelectButton } from '@/components/ui';
+import { ROLE_TYPE } from '@/constants/enums';
+import { Brand } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
+import { useAuth } from '@/hooks/use-auth';
+import { useConfig } from '@/hooks/use-config';
+import { useDevice } from '@/hooks/use-device';
+import { usePrinter } from '@/hooks/use-printer';
+import Constants from 'expo-constants';
+import {
+  AlertTriangle,
+  Monitor,
+  Moon,
+  Palette,
+  Printer,
+  Settings2,
+  Sun,
+  Users,
+} from 'lucide-react-native';
+import { useState } from 'react';
+import { Alert, Platform, ScrollView, Text, UIManager, View } from 'react-native';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
