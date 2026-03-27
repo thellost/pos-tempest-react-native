@@ -261,6 +261,7 @@ CREATE TABLE "categories" (
   "description" text,
   "sort_order" integer NOT NULL DEFAULT 0,
   "is_active" boolean NOT NULL DEFAULT true,
+  "button_color" text,
   "created_at" timestamp NOT NULL DEFAULT (now()),
   "updated_at" timestamp NOT NULL DEFAULT (now())
 );
