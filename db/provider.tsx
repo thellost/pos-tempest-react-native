@@ -33,6 +33,7 @@ export async function initializePowerSync() {
 						params: { environment: env }
 					}
 				);
+				console.log('[PowerSync] connected — status:', powersync.currentStatus);
 			}
 		} catch (error) {
 			// Reset so callers can retry

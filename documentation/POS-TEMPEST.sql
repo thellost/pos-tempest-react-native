@@ -522,7 +522,7 @@ CREATE TABLE "audit_logs" (
   "branch_id" integer,
   "action" audit_action NOT NULL,
   "table_name" varchar(100) NOT NULL,
-  "record_id" integer,
+  "record_id" text,
   "old_values" jsonb,
   "new_values" jsonb,
   "description" text,

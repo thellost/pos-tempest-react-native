@@ -28,8 +28,8 @@ import { captureError } from '@/lib/sentry';
 
 // ── Module-level context ──────────────────────────────────────────────────────
 
-/** Integer DB primary key of the registered device (stored in audit_logs.session_id). */
-let _deviceId: number | null = null;
+/** UUID of the registered device (stored in audit_logs.session_id). */
+let _deviceId: string | null = null;
 
 /** Human-readable device label, e.g. "Kasir 1 (device-uuid)" (stored in audit_logs.user_agent). */
 let _deviceInfo: string | null = null;
@@ -47,7 +47,7 @@ let _branchId: number | null = null;
  * @param deviceId   - DB integer PK of the device
  * @param deviceInfo - Human-readable label, e.g. "Kasir 1 (uuid)"
  */
-export function setAuditDeviceContext(deviceId: number | null, deviceInfo: string | null): void {
+export function setAuditDeviceContext(deviceId: string | null, deviceInfo: string | null): void {
   _deviceId = deviceId;
   _deviceInfo = deviceInfo;
 }
@@ -73,7 +73,7 @@ export interface AuditLogParams {
   /** The database table the action affects (e.g. 'orders', 'payments'). */
   tableName: string;
 
-  /** Primary key of the affected record (integer for most tables, UUID string for devices). */
+  /** Primary key of the affected record (stored as text — accepts integers or UUIDs). */
   recordId?: string | number | null;
 
   /**

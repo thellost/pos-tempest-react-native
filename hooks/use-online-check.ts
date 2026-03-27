@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { addBreadcrumb, startSpan } from '@/lib/sentry';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.zidan.id';
+const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.zidan.id';
 
 /**
  * Checks whether the backend API is reachable by hitting the /health endpoint.

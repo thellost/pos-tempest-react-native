@@ -355,7 +355,7 @@ export const appSchema = new Schema({
 		branch_id: column.integer,
 		action: column.text,
 		table_name: column.text,
-		record_id: column.integer,
+		record_id: column.text,
 		old_values: column.text,
 		new_values: column.text,
 		description: column.text,

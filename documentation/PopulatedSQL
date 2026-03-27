@@ -859,6 +859,7 @@ SELECT setval('branches_id_seq',             (SELECT MAX(id) FROM branches));
 SELECT setval('roles_id_seq',                (SELECT MAX(id) FROM roles));
 SELECT setval('users_id_seq',                (SELECT MAX(id) FROM users));
 SELECT setval('shifts_id_seq',               (SELECT MAX(id) FROM shifts));
+SELECT setval('shift_cash_transactions_id_seq', (SELECT MAX(id) FROM shift_cash_transactions));
 SELECT setval('floor_areas_id_seq',          (SELECT MAX(id) FROM floor_areas));
 SELECT setval('tables_id_seq',               (SELECT MAX(id) FROM tables));
 SELECT setval('customers_id_seq',            (SELECT MAX(id) FROM customers));
@@ -869,6 +870,7 @@ SELECT setval('modifier_groups_id_seq',      (SELECT MAX(id) FROM modifier_group
 SELECT setval('modifiers_id_seq',            (SELECT MAX(id) FROM modifiers));
 SELECT setval('menu_item_modifier_groups_id_seq', (SELECT MAX(id) FROM menu_item_modifier_groups));
 SELECT setval('inventories_id_seq',          (SELECT MAX(id) FROM inventories));
+SELECT setval('menu_item_ingredients_id_seq',(SELECT MAX(id) FROM menu_item_ingredients));
 SELECT setval('inventory_movements_id_seq',  (SELECT MAX(id) FROM inventory_movements));
 SELECT setval('orders_id_seq',               (SELECT MAX(id) FROM orders));
 SELECT setval('order_items_id_seq',          (SELECT MAX(id) FROM order_items));

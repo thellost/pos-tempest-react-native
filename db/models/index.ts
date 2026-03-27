@@ -398,7 +398,7 @@ export interface AuditLog {
 	branch_id: EntityId | null;
 	action: AuditAction;
 	table_name: string;
-	record_id: EntityId | null;
+	record_id: string | null;
 	old_values: string | null;
 	new_values: string | null;
 	description: string | null;

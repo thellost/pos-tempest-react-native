@@ -2,7 +2,7 @@
   "expo": {
     "name": "pos-tempest",
     "slug": "pos-tempest",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "landscape",
     "icon": "./assets/images/icon.png",
     "scheme": "postempest",
@@ -53,7 +53,8 @@
           "project": "react-native",
           "organization": "zidanid"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
