@@ -72,7 +72,7 @@ export function useInventory() {
       const data = await api.get<InventoryItem[]>(
         `/api/v1/inventory?branch_id=${branchId}&page_size=100`,
       );
-      setItems(data);
+      setItems(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load inventory');
     } finally {
@@ -110,7 +110,7 @@ export function useInventory() {
 
   const getMovements = useCallback(
     (inventoryId: number): Promise<InventoryMovement[]> =>
-      api.get<InventoryMovement[]>(`/api/v1/inventory/${inventoryId}/movements`),
+      api.get<InventoryMovement[]>(`/api/v1/inventory/${inventoryId}/movements`).then((data) => data ?? []),
     [],
   );
 

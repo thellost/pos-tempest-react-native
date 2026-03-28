@@ -32,7 +32,7 @@ export function useSuppliers() {
     setError(null);
     try {
       const data = await api.get<Supplier[]>('/api/v1/suppliers?page_size=100');
-      setSuppliers(data);
+      setSuppliers(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load suppliers');
     } finally {
