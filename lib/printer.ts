@@ -1,14 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Config } from '@/constants/config';
-import { addBreadcrumb, captureError } from '@/lib/sentry';
 import {
-  receipt, text, row, columns, divider, header, space, total,
-  CommandBuilder, BluetoothTransport,
+  barcode,
+  BluetoothTransport,
+  columns,
+  CommandBuilder,
+  divider,
   GENERIC_PROFILE_58, GENERIC_PROFILE_80,
+  header,
+  image, qr,
+  receipt,
+  row,
+  space,
+  text,
+  total,
   type PrinterProfile,
   type ReceiptElement,
 } from '@/lib/escpos';
+import { TEST_IMAGE_BITMAP } from '@/lib/escpos/test-image-data';
+import { addBreadcrumb, captureError } from '@/lib/sentry';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -320,15 +331,17 @@ async function getConfig(type: PrinterType): Promise<PrinterConfig | null> {
 
 export async function printKOT(
   type: PrinterType,
-  params: Parameters<typeof formatKOT>[0],
+  params: Omit<Parameters<typeof formatKOT>[0], 'paperWidth'>,
 ): Promise<void> {
-  const cfg = await getConfig(type);
+  const [cfg, settings] = await Promise.all([getConfig(type), getPrinterSettings()]);
   if (!cfg) {
     addBreadcrumb('print', 'KOT print skipped — no printer configured', { type }, 'warning');
     return;
   }
   try {
-    await new BluetoothTransport(cfg.address).send(buildKOTBytes(params));
+    await new BluetoothTransport(cfg.address).send(
+      buildKOTBytes({ ...params, paperWidth: settings.paperWidth }),
+    );
     addBreadcrumb('print', 'KOT printed', {
       type,
       address: cfg.address,
@@ -347,15 +360,17 @@ export async function printKOT(
 
 export async function printBill(
   type: PrinterType,
-  params: Parameters<typeof formatBill>[0],
+  params: Omit<Parameters<typeof formatBill>[0], 'paperWidth'>,
 ): Promise<void> {
-  const cfg = await getConfig(type);
+  const [cfg, settings] = await Promise.all([getConfig(type), getPrinterSettings()]);
   if (!cfg) {
     addBreadcrumb('print', 'Bill print skipped — no printer configured', { type }, 'warning');
     return;
   }
   try {
-    await new BluetoothTransport(cfg.address).send(buildBillBytes(params));
+    await new BluetoothTransport(cfg.address).send(
+      buildBillBytes({ ...params, paperWidth: settings.paperWidth }),
+    );
     addBreadcrumb('print', 'Bill printed', {
       type,
       address: cfg.address,
@@ -397,6 +412,7 @@ export async function sendToPrinter(
   }
 }
 
+
 export async function printTestPage(
   type: PrinterType,
   paperWidth: PaperWidth,
@@ -415,6 +431,22 @@ export async function printTestPage(
     row('Printer', type),
     row('Paper',   paperWidth),
     row('Time',    now),
+    // ── Image ──────────────────────────────────────────────────────
+    divider(),
+    text('Image Test', { align: 'center', bold: true }),
+    space(1),
+    image(TEST_IMAGE_BITMAP),
+    // ── QR Code ────────────────────────────────────────────────────
+    divider(),
+    text('QR Code Test', { align: 'center', bold: true }),
+    space(1),
+    qr('https://wikipedia.org', { size: 4, correction: 'M' }),
+    // ── Barcode ────────────────────────────────────────────────────
+    divider(),
+    text('Barcode Test', { align: 'center', bold: true }),
+    space(1),
+    barcode('CODE128', 'POS-TEMPEST', { height: 60, hri: 'below' }),
+    // ── Footer ─────────────────────────────────────────────────────
     divider(),
     text('POS Tempest', { align: 'center' }),
     header(),

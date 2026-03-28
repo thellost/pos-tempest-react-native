@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toInt, toIntOrNull } from '@/utils/coerce';
 import { Alert } from 'react-native';
 
+import { printBill as printBillToPrinter, printKOT } from '@/lib/printer';
 import { captureError } from '@/lib/sentry';
 
 import type { CartItem } from '@/components/order/types';
@@ -651,6 +652,23 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
       setLastKOT(kot);
 
+      printKOT('kitchen', {
+        ticketNumber: kot.ticket_number,
+        orderNumber:  kot.order_number,
+        roundNumber:  kot.round_number,
+        tableLabel:   kot.order_type === ORDER_TYPE.TAKEAWAY
+          ? 'Takeaway'
+          : kot.table_number ? `Table ${kot.table_number}` : 'N/A',
+        time:        new Date(kot.created_at).toLocaleString('id-ID'),
+        isTakeaway:  kot.order_type === ORDER_TYPE.TAKEAWAY,
+        items:       kot.items.map(item => ({
+          name:      item.menu_item_name,
+          quantity:  item.quantity,
+          modifiers: item.modifier_names,
+          notes:     item.notes,
+        })),
+      }).catch(() => {});
+
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'sendToKitchen', level: 'error', extras: { orderId: toInt(order?.id) } });
@@ -676,6 +694,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       const orderIdNum = toInt(order.id);
       const bill = await getBillData(orderIdNum, false);
       setLastBill(bill);
+      printBillToPrinter('cashier', bill).catch(() => {});
     } catch (error) {
       captureError(error, { module: 'order', operation: 'printBill', level: 'warning', extras: { orderId: toInt(order?.id) } });
       Alert.alert(
