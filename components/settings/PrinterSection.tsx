@@ -7,7 +7,7 @@ import {
   type DiscoveredPrinter,
   type ScanStatus,
 } from '@/lib/bluetooth';
-import { sendToPrinter } from '@/lib/printer';
+import { printTestPage } from '@/lib/printer';
 import { ChefHat, Receipt } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
@@ -349,8 +349,8 @@ export function PrinterSection({
   const handleTestPrint = async (type: PrinterType) => {
     setTestingPrinter(type);
     try {
-      await sendToPrinter(type, `\n== TEST PRINT ==\nPrinter: ${type}\nPOS Tempest\n================\n\n`);
-      Alert.alert('Test Print', 'Test data sent to printer (simulated).\nCheck console log.');
+      await printTestPage(type, paperWidth);
+      Alert.alert('Test Print', 'Test page sent successfully.');
     } catch {
       Alert.alert('Error', 'Test print failed.');
     } finally {

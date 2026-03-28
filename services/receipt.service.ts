@@ -11,6 +11,8 @@ export interface BillLineItem {
   total: number;
   modifiers: string[];
   notes: string | null;
+  weight: number | null;
+  unitOfMeasure: string;
 }
 
 export interface PaymentLine {
@@ -40,7 +42,9 @@ export interface BillData {
   discountAmount: number;
   discountName: string | null;
   taxAmount: number;
+  taxRate: number;
   serviceCharge: number;
+  serviceChargeRate: number;
   roundingAmount: number;
   total: number;
 
@@ -58,6 +62,8 @@ type OrderBillRow = {
   branch_name: string | null;
   branch_address: string | null;
   branch_phone: string | null;
+  tax_rate: number | string | null;
+  service_charge_rate: number | string | null;
   subtotal: number | string | null;
   discount_amount: number | string | null;
   tax_amount: number | string | null;
@@ -75,6 +81,8 @@ type ItemBillRow = {
   modifier_total: number | string;
   total: number | string;
   notes: string | null;
+  weight: number | string | null;
+  unit_of_measure: string;
 };
 
 type PaymentBillRow = {
@@ -106,7 +114,9 @@ export async function getBillData(
        u.name AS cashier_name,
        b.name AS branch_name,
        b.address AS branch_address,
-       b.phone AS branch_phone
+       b.phone AS branch_phone,
+       b.tax_rate,
+       b.service_charge_rate
      FROM orders o
      LEFT JOIN tables t ON o.table_id = t.id
      LEFT JOIN users u ON o.cashier_id = u.id
@@ -121,7 +131,7 @@ export async function getBillData(
 
   // Load items
   const itemRows = await powersync.getAll<ItemBillRow>(
-    `SELECT id, menu_item_name, quantity, unit_price, modifier_total, total, notes
+    `SELECT id, menu_item_name, quantity, unit_price, modifier_total, total, notes, weight, unit_of_measure
      FROM order_items
      WHERE order_id = ? AND is_voided = 0
      ORDER BY round_number ASC, id ASC`,
@@ -142,6 +152,8 @@ export async function getBillData(
       total: Number(row.total),
       modifiers: modRows.map((m) => m.modifier_name),
       notes: row.notes,
+      weight: row.weight != null ? Number(row.weight) : null,
+      unitOfMeasure: row.unit_of_measure || 'piece',
     });
   }
 
@@ -183,7 +195,9 @@ export async function getBillData(
     discountAmount: Number(orderRow.discount_amount) || 0,
     discountName: null,
     taxAmount: Number(orderRow.tax_amount) || 0,
+    taxRate: Number(orderRow.tax_rate) || 0,
     serviceCharge: Number(orderRow.service_charge) || 0,
+    serviceChargeRate: Number(orderRow.service_charge_rate) || 0,
     roundingAmount: Number(orderRow.rounding_amount) || 0,
     total: Number(orderRow.total) || 0,
     payments,

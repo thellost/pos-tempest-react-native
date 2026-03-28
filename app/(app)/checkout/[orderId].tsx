@@ -22,6 +22,7 @@ import type { KOTWithItems } from '@/services/kitchen.service';
 import { getKOTsForOrder } from '@/services/kitchen.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
+import { printBill } from '@/lib/printer';
 
 
 export default function CheckoutScreen() {
@@ -143,6 +144,7 @@ function CheckoutContent({
       await completeOrder(orderId);
       const receipt = await getBillData(orderId, true);
       setLastReceipt(receipt);
+      printBill('cashier', receipt).catch(() => {});
     } catch (err) {
       console.error('[Checkout] Payment error:', err);
       Alert.alert(

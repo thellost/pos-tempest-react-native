@@ -236,6 +236,7 @@ export const appSchema = new Schema({
 		voided_by: column.integer,
 		void_reason: column.text,
 		round_number: column.integer,
+		weight: column.real,
 		created_at: column.text,
 	}, {
 		indexes: {
@@ -306,15 +307,6 @@ export const appSchema = new Schema({
 		applied_amount: column.real,
 		applied_by: column.integer,
 		created_at: column.text,
-	}),
-	tax_configs: new Table({
-		branch_id: column.integer,
-		name: column.text,
-		rate: column.real,
-		is_inclusive: column.integer,
-		is_active: column.integer,
-		created_at: column.text,
-		updated_at: column.text,
 	}),
 	suppliers: new Table({
 		name: column.text,

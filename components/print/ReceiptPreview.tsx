@@ -3,7 +3,7 @@ import { Button } from '@/components/ui';
 
 import type { BillData } from '@/services/receipt.service';
 import { formatIDR } from '@/utils/currency';
-import { formatDate } from '@/utils/date';
+import { formatReceiptDate } from '@/utils/date';
 
 interface ReceiptPreviewProps {
   bill: BillData | null;
@@ -15,7 +15,7 @@ const SEP_LIGHT  = '────────────────────
 
 function formatDateTime(isoString: string): string {
   try {
-    return formatDate(isoString);
+    return formatReceiptDate(isoString);
   } catch {
     return isoString;
   }
@@ -120,7 +120,6 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
             ].map(([label, value]) => (
               <Row key={label} label={`${label}:`} value={value} />
             ))}
-
             <Text style={{ fontFamily: 'monospace', fontSize: 10, color: '#A8A29E', marginVertical: 8 }}>
               {SEP_LIGHT}
             </Text>
@@ -145,6 +144,11 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
                     {formatIDR(item.total)}
                   </Text>
                 </View>
+                {item.weight != null && (
+                  <Text style={{ fontFamily: 'monospace', fontSize: 10, color: '#57534E', marginLeft: 14 }}>
+                    {formatIDR(Math.round(item.unitPrice / item.weight))}/{item.unitOfMeasure} × {item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} {item.unitOfMeasure}
+                  </Text>
+                )}
                 {item.modifiers.map((mod, i) => (
                   <Text key={i} style={{ fontFamily: 'monospace', fontSize: 10, color: '#57534E', marginLeft: 14 }}>
                     • {mod}
@@ -167,7 +171,7 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
               <Row label={`Diskon${bill.discountName ? ` (${bill.discountName})` : ''}`} value={`-${formatIDR(bill.discountAmount)}`} />
             )}
             {bill.taxAmount > 0 && (
-              <Row label="Pajak (11%)" value={formatIDR(bill.taxAmount)} />
+              <Row label={`Pajak (${bill.taxRate}%)`} value={formatIDR(bill.taxAmount)} />
             )}
             {bill.serviceCharge > 0 && (
               <Row label="Servis" value={formatIDR(bill.serviceCharge)} />
@@ -202,6 +206,24 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
                 </Text>
               </>
             )}
+
+            {/* Status */}
+            <Text style={{ fontFamily: 'monospace', fontSize: 10, textAlign: 'center', color: '#78716C', letterSpacing: 1, marginVertical: 4 }}>
+              {SEP_HEAVY}
+            </Text>
+            <Text style={{
+              fontFamily: 'monospace',
+              fontSize: 16,
+              fontWeight: '900',
+              textAlign: 'center',
+              color: isReceipt ? '#15803D' : '#B45309',
+              marginVertical: 4,
+            }}>
+              {isReceipt ? 'LUNAS' : 'BELUM BAYAR'}
+            </Text>
+            <Text style={{ fontFamily: 'monospace', fontSize: 10, textAlign: 'center', color: '#78716C', letterSpacing: 1, marginBottom: 8 }}>
+              {SEP_HEAVY}
+            </Text>
 
             {/* Footer */}
             <Text style={{ fontFamily: 'monospace', fontSize: 12, textAlign: 'center', color: '#78716C', marginTop: 4 }}>

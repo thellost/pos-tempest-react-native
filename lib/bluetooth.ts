@@ -2,10 +2,14 @@
  * lib/bluetooth.ts
  *
  * Bluetooth thermal printer utility library.
- * Wraps react-native-esc-pos-printer (Epson ePOS SDK).
+ * Wraps react-native-esc-pos-printer (Epson ePOS SDK) for Epson printers.
+ * Falls back to raw SPP via react-native-bluetooth-classic for generic
+ * ESC/POS printers (e.g. Rongta, Xprinter) that reject the Epson SDK's
+ * proprietary UUID handshake (ERR_CONNECT).
  *
  * Bluetooth target address format: "BT:AA:BB:CC:DD:EE:FF"
  */
+import { Buffer } from 'buffer';
 import {
   Printer,
   PrintersDiscovery,
@@ -19,6 +23,9 @@ import { Linking, PermissionsAndroid, Platform } from 'react-native';
 
 import { Config } from '@/constants/config';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
+import { normalizeMac } from '@/lib/escpos/transport/bluetooth';
+
+const BT_ADDRESS_RE = /^BT:[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$/;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -174,12 +181,60 @@ export function stopBluetoothScan(): void {
  *     await p.addCut(PrinterAddCutType.CUT_FEED);
  *   });
  */
+/**
+ * Sends raw ESC/POS bytes to a generic Bluetooth printer via the standard
+ * SPP profile (react-native-bluetooth-classic).
+ *
+ * Use this for non-Epson printers (e.g. Rongta, Xprinter) that reject the
+ * Epson ePOS SDK connection — this goes straight over the standard SPP UUID.
+ *
+ * @param address  BT:AA:BB:CC:DD:EE:FF  or  raw MAC  AA:BB:CC:DD:EE:FF
+ * @param rawText  Plain-text content to print (ESC/POS init + cut appended)
+ */
+export async function runRawPrinterJob(
+  address: string,
+  rawText: string,
+): Promise<void> {
+  const mac = normalizeMac(address);
+  console.log(`[printer] runRawPrinterJob (SPP) — mac="${mac}"`);
+  addBreadcrumb('print', 'Raw SPP job started', { mac });
+
+  // Build payload: init + content + 5 line-feeds + GS V A 0 (partial cut)
+  const init  = Buffer.from([0x1B, 0x40]);                    // ESC @
+  const feeds = Buffer.from([0x0A, 0x0A, 0x0A, 0x0A, 0x0A]); // 5× LF
+  const cut   = Buffer.from([0x1D, 0x56, 0x41, 0x00]);        // GS V A 0
+  const text  = Buffer.from(rawText, 'utf8');
+  const payload = Buffer.concat([init, text, feeds, cut]);
+
+  const device = await BluetoothClassic.connectToDevice(mac);
+  console.log('[printer] Raw SPP connected');
+  try {
+    await device.write(payload);
+    console.log('[printer] Raw SPP write complete');
+    addBreadcrumb('print', 'Raw SPP job success', { mac });
+  } catch (err) {
+    console.error('[printer] runRawPrinterJob write error:', err);
+    captureError(err, { module: 'bluetooth', operation: 'runRawPrinterJob', extras: { mac } });
+    throw err;
+  } finally {
+    await device.disconnect().catch(() => {});
+  }
+}
+
 export async function runPrinterJob(
   address: string,
   name: string,
   buildFn: (printer: Printer) => Promise<void>,
+  /** Fallback plain-text used when the Epson SDK returns ERR_CONNECT (non-Epson printer). */
+  rawFallback?: string,
 ): Promise<void> {
-  addBreadcrumb('print', 'Printer job started', { address, name });
+  const isBtFormat = BT_ADDRESS_RE.test(address);
+  console.log(`[printer] runPrinterJob — target="${address}" name="${name}" btFormat=${isBtFormat}`);
+  addBreadcrumb('print', 'Printer job started', { address, name, isBtFormat });
+
+  if (!isBtFormat) {
+    console.warn(`[printer] Address "${address}" is NOT in BT:AA:BB:CC:DD:EE:FF format — connect will likely fail`);
+  }
 
   const printer = new Printer({
     target: address,
@@ -188,20 +243,54 @@ export async function runPrinterJob(
   });
 
   await printer.addQueueTask(async () => {
+    let usedFallback = false;
     try {
+      console.log(`[printer] Connecting… (timeout ${CONNECT_TIMEOUT_MS}ms)`);
       await printer.connect(CONNECT_TIMEOUT_MS);
+      console.log('[printer] Connected — building job');
       await buildFn(printer);
+      console.log(`[printer] Sending data… (timeout ${SEND_TIMEOUT_MS}ms)`);
       await printer.sendData(SEND_TIMEOUT_MS);
+      console.log('[printer] sendData complete');
       addBreadcrumb('print', 'Printer job success', { address });
     } catch (err) {
+      const status =
+        err != null && typeof err === 'object' && 'status' in err
+          ? (err as { status: string }).status
+          : null;
+      const methodName =
+        err != null && typeof err === 'object' && 'methodName' in err
+          ? (err as { methodName: string }).methodName
+          : null;
+
+      if (status != null) {
+        console.warn(
+          `[printer] PrinterError — status="${status}" methodName="${methodName}" address="${address}"`,
+        );
+      } else {
+        console.error('[printer] Non-PrinterError in runPrinterJob:', err);
+      }
+
+      // ERR_CONNECT means the Epson SDK couldn't open the BT socket — this
+      // happens with non-Epson printers that use a different SPP UUID.
+      // Fall back to raw SPP if the caller supplied fallback text.
+      if (status === 'ERR_CONNECT' && rawFallback != null) {
+        console.warn('[printer] ERR_CONNECT — falling back to raw SPP path');
+        usedFallback = true;
+        await runRawPrinterJob(address, rawFallback);
+        return;
+      }
+
       captureError(err, {
         module: 'bluetooth',
         operation: 'runPrinterJob',
-        extras: { address, name },
+        extras: { address, name, isBtFormat },
       });
       throw err;
     } finally {
-      await printer.disconnect().catch(() => {});
+      if (!usedFallback) {
+        await printer.disconnect().catch(() => {});
+      }
     }
   });
 }
@@ -234,7 +323,9 @@ export async function pingBluetoothPrinter(
   address: string,
   name: string,
 ): Promise<boolean> {
-  addBreadcrumb('print', 'Bluetooth ping', { address });
+  const isBtFormat = BT_ADDRESS_RE.test(address);
+  console.log(`[printer] ping — target="${address}" btFormat=${isBtFormat}`);
+  addBreadcrumb('print', 'Bluetooth ping', { address, isBtFormat });
 
   const printer = new Printer({
     target: address,
@@ -245,11 +336,21 @@ export async function pingBluetoothPrinter(
   try {
     await printer.connect(PING_TIMEOUT_MS);
     await printer.getStatus();
+    console.log('[printer] ping success');
     addBreadcrumb('print', 'Bluetooth ping success', { address });
     return true;
   } catch (err) {
+    const isPrinterError = err != null && typeof err === 'object' && 'status' in err && 'methodName' in err;
+    if (isPrinterError) {
+      const pe = err as { status: string; methodName: string; message: string };
+      console.warn(
+        `[printer] ping failed — message="${pe.message}" status="${pe.status}" methodName="${pe.methodName}" address="${address}"`,
+      );
+    } else {
+      console.warn('[printer] ping failed (non-PrinterError):', err);
+    }
     addBreadcrumb('print', 'Bluetooth ping failed', { address }, 'warning');
-    captureError(err, { module: 'bluetooth', operation: 'pingBluetoothPrinter', extras: { address, name }, level: 'warning' });
+    captureError(err, { module: 'bluetooth', operation: 'pingBluetoothPrinter', extras: { address, name, isBtFormat }, level: 'warning' });
     return false;
   } finally {
     await printer.disconnect().catch(() => {});

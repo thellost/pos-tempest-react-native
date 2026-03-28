@@ -269,6 +269,7 @@ export interface OrderItem {
 	voided_by: EntityId | null;
 	void_reason: string | null;
 	round_number: number | null;
+	weight: number | null;
 	created_at: Timestamp;
 }
 
