@@ -15,11 +15,13 @@ import {
   space,
   text,
   total,
+  wrapText,
   type PrinterProfile,
   type ReceiptElement,
 } from '@/lib/escpos';
 import { TEST_IMAGE_BITMAP } from '@/lib/escpos/test-image-data';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
+import { formatReceiptDate } from '@/utils/date';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -136,7 +138,7 @@ export function formatKOT(params: {
   const L = '─'.repeat(w);
   const lines: string[] = [
     H,
-    center('KITCHEN ORDER TICKET', w),
+    center('Order Ticket', w),
     H,
     `KOT   : ${params.ticketNumber}`,
     `Order : ${params.orderNumber}`,
@@ -171,11 +173,15 @@ export function formatBill(params: {
     unitPrice: number;
     total: number;
     modifiers: string[];
+    weight: number | null;
+    unitOfMeasure: string;
   }>;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
+  taxRate: number;
   serviceCharge: number;
+  serviceChargeRate: number;
   roundingAmount: number;
   total: number;
   payments?: Array<{ method: string; amount: number; changeAmount: number }>;
@@ -186,6 +192,7 @@ export function formatBill(params: {
   const L = '─'.repeat(w);
   const rowFn = (label: string, value: string) =>
     `${pad(label, w - value.length)}${value}`;
+  const isPaid = (params.payments?.length ?? 0) > 0;
 
   const lines: string[] = [
     H,
@@ -198,21 +205,30 @@ export function formatBill(params: {
     `Order : ${params.orderNumber}`,
     `Table : ${params.tableLabel}`,
     `Staff : ${params.cashierName}`,
-    `Time  : ${params.printedAt}`,
+    `Time  : ${formatReceiptDate(params.printedAt)}`,
     L,
   );
 
   for (const item of params.items) {
+    const prefix = `${item.quantity}x `;
     const priceStr = idr(item.total);
-    lines.push(`${item.quantity}x ${pad(item.name, w - priceStr.length - 3)} ${priceStr}`);
+    const nameWidth = w - prefix.length - priceStr.length - 1;
+    const nameLines = wrapText(item.name, nameWidth > 0 ? nameWidth : 1);
+    lines.push(`${prefix}${pad(nameLines[0], nameWidth)} ${priceStr}`);
+    for (let i = 1; i < nameLines.length; i++) lines.push(nameLines[i]);
     for (const mod of item.modifiers) lines.push(`   ${mod}`);
+    if (item.weight) {
+      const pricePerUnit = Math.round(item.unitPrice / item.weight);
+      const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+      lines.push(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`);
+    }
   }
 
   lines.push(L, rowFn('Subtotal', idr(params.subtotal)));
-  if (params.discountAmount > 0)    lines.push(rowFn('Diskon',      `-${idr(params.discountAmount)}`));
-  if (params.taxAmount > 0)         lines.push(rowFn('Pajak (11%)', idr(params.taxAmount)));
-  if (params.serviceCharge > 0)     lines.push(rowFn('Servis',      idr(params.serviceCharge)));
-  if (params.roundingAmount !== 0)  lines.push(rowFn('Pembulatan',  idr(params.roundingAmount)));
+  if (params.discountAmount > 0)    lines.push(rowFn('Diskon',                            `-${idr(params.discountAmount)}`));
+  if (params.taxAmount > 0)         lines.push(rowFn(`Pajak (${params.taxRate}%)`,          idr(params.taxAmount)));
+  if (params.serviceCharge > 0)     lines.push(rowFn(`Servis (${params.serviceChargeRate}%)`, idr(params.serviceCharge)));
+  if (params.roundingAmount !== 0)  lines.push(rowFn('Pembulatan',                          idr(params.roundingAmount)));
 
   lines.push(H, rowFn('TOTAL', idr(params.total)), H);
 
@@ -225,6 +241,7 @@ export function formatBill(params: {
     lines.push(L);
   }
 
+  lines.push(H, center(isPaid ? 'LUNAS' : 'BELUM BAYAR', w), H);
   lines.push('', center('Terima kasih! 🙏', w), center('Sampai jumpa kembali', w), H);
   return lines.join('\n');
 }
@@ -236,7 +253,7 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
   const profile = getProfile(params.paperWidth);
   const els: ReceiptElement[] = [
     header(),
-    text('KITCHEN ORDER TICKET', { align: 'center', bold: true, size: { width: 1, height: 2 } }),
+    text('Order Ticket', { align: 'center', bold: true }),
     header(),
     text(`KOT   : ${params.ticketNumber}`),
     text(`Order : ${params.orderNumber}`),
@@ -248,7 +265,7 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
   ];
 
   for (const item of params.items) {
-    els.push(text(`${item.quantity}x ${item.name}`, { bold: true }));
+    els.push(text(`${item.quantity}x ${item.name}`, { bold: true, size: { width: 1, height: 2 } }));
     for (const mod of item.modifiers) {
       els.push(text(`   \u2022 ${mod}`));
     }
@@ -263,6 +280,7 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
 
 function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
   const profile = getProfile(params.paperWidth);
+  const isPaid = (params.payments?.length ?? 0) > 0;
   const els: ReceiptElement[] = [
     header(),
     text(params.branchName.toUpperCase(), { align: 'center', bold: true, size: { width: 1, height: 2 } }),
@@ -276,7 +294,7 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     text(`Order : ${params.orderNumber}`),
     text(`Table : ${params.tableLabel}`),
     text(`Staff : ${params.cashierName}`),
-    text(`Time  : ${params.printedAt}`),
+    text(`Time  : ${formatReceiptDate(params.printedAt)}`),
     divider(),
   );
 
@@ -284,7 +302,7 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     els.push(
       columns(
         [
-          { text: `${item.quantity}x ${item.name}`, width: 0.65 },
+          { text: `${item.quantity}x ${item.name}`, width: 0.65, overflow: 'wrap' },
           { text: idr(item.total), width: 0.35, align: 'right' },
         ],
         { bold: true },
@@ -293,12 +311,17 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     for (const mod of item.modifiers) {
       els.push(text(`   ${mod}`));
     }
+    if (item.weight) {
+      const pricePerUnit = Math.round(item.unitPrice / item.weight);
+      const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+      els.push(text(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`));
+    }
   }
 
   els.push(divider(), row('Subtotal', idr(params.subtotal)));
-  if (params.discountAmount > 0)    els.push(row('Diskon',      `-${idr(params.discountAmount)}`));
-  if (params.taxAmount > 0)         els.push(row('Pajak (11%)', idr(params.taxAmount)));
-  if (params.serviceCharge > 0)     els.push(row('Servis',      idr(params.serviceCharge)));
+  if (params.discountAmount > 0)    els.push(row('Diskon',                              `-${idr(params.discountAmount)}`));
+  if (params.taxAmount > 0)         els.push(row(`Pajak (${params.taxRate}%)`,            idr(params.taxAmount)));
+  if (params.serviceCharge > 0)     els.push(row(`Servis (${params.serviceChargeRate}%)`, idr(params.serviceCharge)));
   if (params.roundingAmount !== 0)  els.push(row('Pembulatan',  idr(params.roundingAmount)));
 
   els.push(header(), total('TOTAL', idr(params.total)), header());
@@ -313,6 +336,9 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
   }
 
   els.push(
+    header(),
+    text(isPaid ? 'LUNAS' : 'BELUM BAYAR', { align: 'center', bold: true, size: { width: 1, height: 2 } }),
+    header(),
     space(),
     text('Terima kasih!',        { align: 'center' }),
     text('Sampai jumpa kembali', { align: 'center' }),

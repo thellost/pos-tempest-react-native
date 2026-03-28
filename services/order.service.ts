@@ -243,8 +243,8 @@ export async function addItemToOrder(
     `INSERT INTO order_items (
       id, order_id, menu_item_id, menu_item_name, quantity, unit_of_measure,
       unit_price, modifier_total, subtotal, discount_amount, total, notes,
-      is_voided, round_number, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_voided, round_number, weight, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId,
       orderId,
@@ -260,6 +260,7 @@ export async function addItemToOrder(
       notes,
       0, // is_voided
       roundNumber,
+      weight,
       now,
     ]
   );
