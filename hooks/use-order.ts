@@ -662,10 +662,12 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         time:        new Date(kot.created_at).toLocaleString('id-ID'),
         isTakeaway:  kot.order_type === ORDER_TYPE.TAKEAWAY,
         items:       kot.items.map(item => ({
-          name:      item.menu_item_name,
-          quantity:  item.quantity,
-          modifiers: item.modifier_names,
-          notes:     item.notes,
+          name:          item.menu_item_name,
+          quantity:      item.quantity,
+          unitOfMeasure: item.unit_of_measure,
+          weight:        item.weight,
+          modifiers:     item.modifier_names,
+          notes:         item.notes,
         })),
       }).catch(() => {});
 

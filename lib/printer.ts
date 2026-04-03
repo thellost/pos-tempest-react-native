@@ -26,35 +26,49 @@ import { formatReceiptDate } from '@/utils/date';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PrinterType = 'kitchen' | 'cashier';
-export type PaperWidth = '58mm' | '80mm';
+/** Paper width in millimetres, e.g. 58, 72, 76, 80 */
+export type PaperWidth = number;
 
 export interface PrinterConfig {
   address: string;
   name?: string;
   type: PrinterType;
+  /** Paper width in mm for this specific printer */
+  paperWidth: PaperWidth;
 }
 
 export interface PrinterSettings {
   kitchenPrinter: PrinterConfig | null;
   cashierPrinter: PrinterConfig | null;
-  paperWidth: PaperWidth;
 }
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = Config.STORAGE_KEY_PRINTER_SETTINGS;
 
+const DEFAULT_PAPER_WIDTH: PaperWidth = 80;
+
 const DEFAULTS: PrinterSettings = {
   kitchenPrinter: null,
   cashierPrinter: null,
-  paperWidth: '80mm',
 };
+
+function normalizePrinterConfig(cfg: PrinterConfig | null): PrinterConfig | null {
+  if (!cfg) return null;
+  return { ...cfg, paperWidth: cfg.paperWidth ?? DEFAULT_PAPER_WIDTH };
+}
 
 export async function getPrinterSettings(): Promise<PrinterSettings> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<PrinterSettings>;
+    return {
+      ...DEFAULTS,
+      ...parsed,
+      kitchenPrinter: normalizePrinterConfig(parsed.kitchenPrinter ?? null),
+      cashierPrinter: normalizePrinterConfig(parsed.cashierPrinter ?? null),
+    };
   } catch {
     return { ...DEFAULTS };
   }
@@ -85,22 +99,25 @@ export async function clearPrinter(type: PrinterType): Promise<void> {
   await setPrinter(type, null);
 }
 
-export async function setPaperWidth(width: PaperWidth): Promise<void> {
-  await savePrinterSettings({ paperWidth: width });
+export async function setPrinterPaperWidth(type: PrinterType, width: PaperWidth): Promise<void> {
+  const settings = await getPrinterSettings();
+  const cfg = type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
+  if (!cfg) return;
+  await setPrinter(type, { ...cfg, paperWidth: width });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// 80 mm at standard font = 42 chars; 58 mm = 32 chars
-function charWidth(paperWidth: PaperWidth): number {
-  return paperWidth === '80mm' ? 42 : 32;
+// Linear interpolation: 58mm→32 chars, 80mm→42 chars
+function charWidth(mm: number): number {
+  return Math.max(20, Math.round(32 + (mm - 58) * (10 / 22)));
 }
 
-// 80mm uses charWidth 42 to match existing receipt layout
-function getProfile(paperWidth: PaperWidth): PrinterProfile {
-  return paperWidth === '80mm'
-    ? { ...GENERIC_PROFILE_80, charWidth: 42 }
-    : GENERIC_PROFILE_58;
+// Use 80mm profile for >60mm paper, 58mm profile otherwise; override charWidth
+function getProfile(mm: number): PrinterProfile {
+  return mm > 60
+    ? { ...GENERIC_PROFILE_80, charWidth: charWidth(mm) }
+    : { ...GENERIC_PROFILE_58, charWidth: charWidth(mm) };
 }
 
 const idr = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
@@ -128,6 +145,8 @@ export function formatKOT(params: {
   items: Array<{
     name: string;
     quantity: number;
+    unitOfMeasure: string;
+    weight: number | null;
     modifiers: string[];
     notes: string | null;
   }>;
@@ -150,7 +169,14 @@ export function formatKOT(params: {
   ];
 
   for (const item of params.items) {
-    lines.push(`${item.quantity}x ${item.name}`);
+    const isWeightBased = item.unitOfMeasure !== 'piece';
+    const qtyLabel = isWeightBased
+      ? `${item.quantity.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`
+      : `${item.quantity % 1 === 0 ? item.quantity.toFixed(0) : item.quantity.toFixed(2)}x`;
+    lines.push(`${qtyLabel} ${item.name}`);
+    if (item.weight != null) {
+      lines.push(`   Berat: ${item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`);
+    }
     for (const mod of item.modifiers) lines.push(`   \u2022 ${mod}`);
     if (item.notes) lines.push(`   * ${item.notes}`);
   }
@@ -265,7 +291,14 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
   ];
 
   for (const item of params.items) {
-    els.push(text(`${item.quantity}x ${item.name}`, { bold: true, size: { width: 1, height: 2 } }));
+    const isWeightBased = item.unitOfMeasure !== 'piece';
+    const qtyLabel = isWeightBased
+      ? `${item.quantity.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`
+      : `${item.quantity % 1 === 0 ? item.quantity.toFixed(0) : item.quantity.toFixed(2)}x`;
+    els.push(text(`${qtyLabel} ${item.name}`, { bold: true, size: { width: 1, height: 2 } }));
+    if (item.weight != null) {
+      els.push(text(`   Berat: ${item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`));
+    }
     for (const mod of item.modifiers) {
       els.push(text(`   \u2022 ${mod}`));
     }
@@ -359,14 +392,14 @@ export async function printKOT(
   type: PrinterType,
   params: Omit<Parameters<typeof formatKOT>[0], 'paperWidth'>,
 ): Promise<void> {
-  const [cfg, settings] = await Promise.all([getConfig(type), getPrinterSettings()]);
+  const cfg = await getConfig(type);
   if (!cfg) {
     addBreadcrumb('print', 'KOT print skipped — no printer configured', { type }, 'warning');
     return;
   }
   try {
     await new BluetoothTransport(cfg.address).send(
-      buildKOTBytes({ ...params, paperWidth: settings.paperWidth }),
+      buildKOTBytes({ ...params, paperWidth: cfg.paperWidth }),
     );
     addBreadcrumb('print', 'KOT printed', {
       type,
@@ -388,14 +421,14 @@ export async function printBill(
   type: PrinterType,
   params: Omit<Parameters<typeof formatBill>[0], 'paperWidth'>,
 ): Promise<void> {
-  const [cfg, settings] = await Promise.all([getConfig(type), getPrinterSettings()]);
+  const cfg = await getConfig(type);
   if (!cfg) {
     addBreadcrumb('print', 'Bill print skipped — no printer configured', { type }, 'warning');
     return;
   }
   try {
     await new BluetoothTransport(cfg.address).send(
-      buildBillBytes({ ...params, paperWidth: settings.paperWidth }),
+      buildBillBytes({ ...params, paperWidth: cfg.paperWidth }),
     );
     addBreadcrumb('print', 'Bill printed', {
       type,
@@ -417,14 +450,14 @@ export async function sendToPrinter(
   type: PrinterType,
   data: string,
 ): Promise<void> {
-  const [cfg, settings] = await Promise.all([getConfig(type), getPrinterSettings()]);
+  const cfg = await getConfig(type);
   if (!cfg) {
     addBreadcrumb('print', 'Print skipped — no printer configured', { type }, 'warning');
     console.warn(`[Printer] No ${type} printer configured — skipping print`);
     return;
   }
   try {
-    const profile = getProfile(settings.paperWidth);
+    const profile = getProfile(cfg.paperWidth);
     const bytes = new CommandBuilder(profile).init().text(data).cut().build();
     await new BluetoothTransport(cfg.address).send(bytes);
     addBreadcrumb('print', 'Raw print sent', { type, address: cfg.address });
@@ -439,23 +472,20 @@ export async function sendToPrinter(
 }
 
 
-export async function printTestPage(
-  type: PrinterType,
-  paperWidth: PaperWidth,
-): Promise<void> {
+export async function printTestPage(type: PrinterType): Promise<void> {
   const cfg = await getConfig(type);
   if (!cfg) {
     addBreadcrumb('print', 'Test print skipped — no printer configured', { type }, 'warning');
     return;
   }
-  const profile = getProfile(paperWidth);
+  const profile = getProfile(cfg.paperWidth);
   const now = new Date().toLocaleString('id-ID');
   const bytes = receipt([
     header(),
     text('TEST PRINT', { align: 'center', bold: true, size: { width: 1, height: 2 } }),
     header(),
     row('Printer', type),
-    row('Paper',   paperWidth),
+    row('Paper',   `${cfg.paperWidth}mm`),
     row('Time',    now),
     // ── Image ──────────────────────────────────────────────────────
     divider(),
