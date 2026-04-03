@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
@@ -69,10 +70,7 @@ export async function createOrder(
 
   const orderNumber = await generateOrderNumber();
 
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM orders`
-  );
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  const newId = Crypto.randomUUID();
 
   await powersync.execute(
     `INSERT INTO orders (
@@ -122,7 +120,7 @@ export async function createOrder(
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'orders',
-    recordId: toInt(order.id),
+    recordId: order.id,
     userId: cashierId,
     branchId: branchId,
     newValues: { order_number: orderNumber, order_type: orderType, table_id: tableId, shift_id: shiftId },
@@ -138,7 +136,7 @@ export async function createOrder(
 /**
  * Confirms an order (moves from pending to confirmed)
  */
-export async function confirmOrder(orderId: number, cashierId: number): Promise<void> {
+export async function confirmOrder(orderId: string, cashierId: number): Promise<void> {
   return startSpan({ name: 'order.confirm', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
 
@@ -173,7 +171,7 @@ export async function confirmOrder(orderId: number, cashierId: number): Promise<
  * Adds an item to an order
  */
 export async function addItemToOrder(
-  orderId: number,
+  orderId: string,
   menuItem: MenuItem,
   quantity: number,
   modifiers: SelectedModifier[],
@@ -287,7 +285,7 @@ export async function addItemToOrder(
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'order_items',
-    recordId: parseInt(newId, 10),
+    recordId: parseInt(newId, 10),  // order_items.id is still INTEGER
     newValues: {
       order_id: orderId,
       menu_item_name: menuItem.name,
@@ -493,7 +491,7 @@ export async function updateItemModifiers(
 /**
  * Calculates and updates order totals (subtotal, tax, service charge, total)
  */
-export async function calculateOrderTotals(orderId: number): Promise<void> {
+export async function calculateOrderTotals(orderId: string): Promise<void> {
   const now = new Date().toISOString();
 
   // Get the order
@@ -571,7 +569,7 @@ export async function calculateOrderTotals(orderId: number): Promise<void> {
 /**
  * Voids an entire order
  */
-export async function voidOrder(orderId: number, voidedBy: number, reason: string): Promise<void> {
+export async function voidOrder(orderId: string, voidedBy: number, reason: string): Promise<void> {
   const now = new Date().toISOString();
 
   const existingOrder = await powersync.getOptional<Order>(
@@ -595,12 +593,10 @@ export async function voidOrder(orderId: number, voidedBy: number, reason: strin
     [orderId]
   );
 
-  const normalizedOrderId = toInt(existingOrder.id);
-
   void insertAuditLog({
     action: AUDIT_ACTION.VOID,
     tableName: 'orders',
-    recordId: Number.isNaN(normalizedOrderId) ? null : normalizedOrderId,
+    recordId: existingOrder.id,
     userId: voidedBy,
     oldValues: {
       status: existingOrder.status,
@@ -664,7 +660,7 @@ export async function voidItem(orderItemId: number, voidedBy: number, reason: st
 /**
  * Gets an order by ID with all its items and modifiers
  */
-export async function getOrderWithItems(orderId: number): Promise<{
+export async function getOrderWithItems(orderId: string): Promise<{
   order: Order;
   items: (OrderItem & { modifiers: OrderItemModifier[] })[];
 } | null> {
@@ -701,7 +697,7 @@ export async function getOrderWithItems(orderId: number): Promise<{
  * @param orderId - The order ID
  * @returns OrderTotals object or null if the order does not exist
  */
-export async function getOrderTotals(orderId: number): Promise<OrderTotals | null> {
+export async function getOrderTotals(orderId: string): Promise<OrderTotals | null> {
   const order = await powersync.getOptional<Order>(
     `SELECT subtotal, discount_amount, tax_amount, service_charge, rounding_amount, total
      FROM orders WHERE id = ?`,
@@ -759,7 +755,7 @@ export async function getActiveOrdersForTable(tableId: number): Promise<Order[]>
  * @param orderId - The order ID
  * @returns The next round number to use
  */
-export async function getCurrentRound(orderId: number): Promise<number> {
+export async function getCurrentRound(orderId: string): Promise<number> {
   const result = await powersync.getOptional<{ max_round: number }>(
     `SELECT MAX(round_number) as max_round FROM order_items WHERE order_id = ?`,
     [orderId]
@@ -774,7 +770,7 @@ export async function getCurrentRound(orderId: number): Promise<number> {
  * @param orderId - The order ID
  * @returns Map of round number to items
  */
-export async function getOrderItemsByRound(orderId: number): Promise<Map<number, (OrderItem & { modifiers: OrderItemModifier[] })[]>> {
+export async function getOrderItemsByRound(orderId: string): Promise<Map<number, (OrderItem & { modifiers: OrderItemModifier[] })[]>> {
   const items = await powersync.getAll<OrderItem>(
     `SELECT * FROM order_items WHERE order_id = ? AND is_voided = 0 ORDER BY round_number ASC, created_at ASC`,
     [orderId]
@@ -809,7 +805,7 @@ export async function getOrderItemsByRound(orderId: number): Promise<Map<number,
  * @param customerId - Customer ID to assign, or null to clear
  */
 export async function assignCustomerToOrder(
-  orderId: number,
+  orderId: string,
   customerId: number | null
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -825,7 +821,7 @@ export async function assignCustomerToOrder(
  * @param orderId - The order ID
  * @returns Map of round number to sent timestamp
  */
-export async function getRoundSentTimestamps(orderId: number): Promise<Map<number, string>> {
+export async function getRoundSentTimestamps(orderId: string): Promise<Map<number, string>> {
   const tickets = await powersync.getAll<{ round_number: number; printed_at: string }>(
     `SELECT round_number, MIN(printed_at) AS printed_at FROM kitchen_order_tickets WHERE order_id = ? GROUP BY round_number`,
     [orderId]

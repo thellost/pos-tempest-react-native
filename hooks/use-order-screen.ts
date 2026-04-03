@@ -19,7 +19,7 @@ interface OrderTableData {
   id: number | string;
   table_number: string;
   floor_area_name: string;
-  active_order_id: number | null;
+  active_order_id: string | null;
   active_order_number: string | null;
   guest_count: number | null;
   order_total: number | null;
@@ -56,7 +56,7 @@ async function getOrderTableById(tableId: number): Promise<OrderTableData | null
 export interface UseOrderScreenOptions {
   orderType: 'dine-in' | 'takeaway';
   tableId: number | null;
-  orderId: number | null;
+  orderId: string | null;
 }
 
 export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOptions) {
@@ -209,7 +209,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   }, [order?.customer_id]);
 
   const handleAssignCustomer = useCallback(async (customer: AssignedCustomer) => {
-    const currentOrderId = order ? toInt(order.id) : null;
+    const currentOrderId = order ? order.id : null;
     if (currentOrderId) {
       try {
         await assignCustomerToOrder(currentOrderId, customer.id);
@@ -221,7 +221,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   }, [order, screenLabel]);
 
   const handleClearCustomer = useCallback(async () => {
-    const currentOrderId = order ? toInt(order.id) : null;
+    const currentOrderId = order ? order.id : null;
     if (currentOrderId) {
       try {
         await assignCustomerToOrder(currentOrderId, null);
@@ -302,7 +302,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     try {
       if (order) {
         if (!user) throw new Error('Cashier id is not provided');
-        await confirmOrderService(toInt(order.id), toInt(user.id));
+        await confirmOrderService(order.id, toInt(user.id));
         await reload();
       } else {
         await confirmOrderHook();

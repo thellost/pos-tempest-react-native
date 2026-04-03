@@ -49,10 +49,10 @@ function CheckoutContent({
   const router = useRouter();
   const { user } = useAuth();
   const { activeShift } = useShift();
-  const orderId = parseInt(orderIdStr, 10);
+  const orderId = orderIdStr;
 
   const { data: orderRows } = useQuery<OrderRow>(
-    `SELECT o.*, t.table_number, b.name AS branch_name
+    `SELECT o.*, t.table_number, b.name AS branch_name, b.tax_rate, b.service_charge_rate
      FROM orders o
      LEFT JOIN tables t ON o.table_id = t.id
      LEFT JOIN branches b ON o.branch_id = b.id

@@ -9,7 +9,7 @@ import {
   removeOrderDiscount,
 } from '@/services/payment.service';
 
-export function useOrderDiscount(orderId: number, userId?: number) {
+export function useOrderDiscount(orderId: string, userId?: number) {
   const [showDiscountPicker, setShowDiscountPicker] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState<OrderDiscount | null>(null);
   const [availableDiscounts, setAvailableDiscounts] = useState<Discount[]>([]);

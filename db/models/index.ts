@@ -19,6 +19,7 @@ import type {
 } from '@/constants/enums';
 
 export type EntityId = number;
+export type OrderId = string;
 export type Timestamp = string;
 
 export interface Role {
@@ -227,7 +228,7 @@ export interface MenuItemIngredient {
 }
 
 export interface Order {
-	id: EntityId;
+	id: OrderId;
 	order_number: string;
 	branch_id: EntityId;
 	table_id: EntityId | null;
@@ -254,7 +255,7 @@ export interface Order {
 
 export interface OrderItem {
 	id: EntityId;
-	order_id: EntityId;
+	order_id: OrderId;
 	menu_item_id: EntityId;
 	menu_item_name: string;
 	quantity: number;
@@ -284,7 +285,7 @@ export interface OrderItemModifier {
 
 export interface KitchenOrderTicket {
 	id: EntityId;
-	order_id: EntityId;
+	order_id: OrderId;
 	ticket_number: string;
 	status: KotStatus;
 	priority: number;
@@ -306,7 +307,7 @@ export interface KotItem {
 
 export interface Payment {
 	id: EntityId;
-	order_id: EntityId;
+	order_id: OrderId;
 	shift_id: EntityId | null;
 	payment_method: PaymentMethodType;
 	amount: number;
@@ -332,7 +333,7 @@ export interface Discount {
 
 export interface OrderDiscount {
 	id: EntityId;
-	order_id: EntityId;
+	order_id: OrderId;
 	discount_id: EntityId | null;
 	discount_name: string;
 	discount_type: DiscountType;

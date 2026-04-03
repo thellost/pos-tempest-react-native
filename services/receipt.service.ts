@@ -101,7 +101,7 @@ type PaymentBillRow = {
  *   pre-payment bill
  */
 export async function getBillData(
-  orderId: number,
+  orderId: string,
   includePayments = false,
 ): Promise<BillData> {
   const orderRow = await powersync.getOptional<OrderBillRow>(

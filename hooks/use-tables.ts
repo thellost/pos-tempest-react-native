@@ -14,7 +14,7 @@ import { useDevice } from './use-device';
  */
 export interface TableWithOrder extends DiningTable {
   floor_area_name: string;
-  active_order_id: number | null;
+  active_order_id: string | null;
   active_order_number: string | null;
   guest_count: number | null;
   order_total: number | null;

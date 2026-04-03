@@ -51,7 +51,7 @@ export default function FloorScreen() {
 
   const currentTables = selectedAreaId ? getTablesForArea(selectedAreaId) : [];
 
-  const handleTablePress = (tableId: number, activeOrderId: number | null, status: string) => {
+  const handleTablePress = (tableId: number, activeOrderId: string | null, status: string) => {
     if (status === TABLE_STATUS.MAINTENANCE) {
       return;
     }

@@ -23,7 +23,7 @@ export interface KOTItemDetail {
 
 export interface KOTWithItems {
   id: number;
-  order_id: number;
+  order_id: string;
   ticket_number: string;
   status: KotStatus;
   priority: number;
@@ -47,7 +47,7 @@ export interface KOTWithItems {
  * @returns The created KOTWithItems (used to show the ticket preview)
  */
 export async function createKOT(
-  orderId: number,
+  orderId: string,
   roundNumber: number
 ): Promise<KOTWithItems> {
   return startSpan({ name: 'kitchen.sendKOT', op: 'db.powersync' }, async () => {
@@ -280,7 +280,7 @@ export async function updateKOTItemStatus(
  * Used for the order history / print-again flow.
  */
 export async function getKOTsForOrder(
-  orderId: number
+  orderId: string
 ): Promise<KOTWithItems[]> {
   const rows = await powersync.getAll<{
     id: number | string;

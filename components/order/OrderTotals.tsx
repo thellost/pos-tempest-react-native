@@ -11,6 +11,9 @@ export function OrderTotals({ order }: OrderTotalsProps) {
   const showDiscount = order.discount_amount > 0;
   const showServiceCharge = order.service_charge > 0;
   const showRounding = order.rounding_amount !== 0;
+  const taxBase = Math.max(1, order.subtotal - order.discount_amount);
+  const taxRate = order.tax_amount > 0 ? Math.round((order.tax_amount / taxBase) * 100) : 0;
+  const serviceChargeRate = order.service_charge > 0 ? Math.round((order.service_charge / taxBase) * 100) : 0;
 
   return (
     <View className="rounded-sm bg-surface-card p-2">
@@ -31,7 +34,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
       )}
 
       <View className="flex-row justify-between py-0.5">
-        <Text className="text-pos-xs text-pos-text-muted">Tax (11%)</Text>
+        <Text className="text-pos-xs text-pos-text-muted">Tax ({taxRate}%)</Text>
         <Text className="font-mono text-pos-xs font-medium text-pos-text">
           {formatIDR(order.tax_amount)}
         </Text>
@@ -39,7 +42,7 @@ export function OrderTotals({ order }: OrderTotalsProps) {
 
       {showServiceCharge && (
         <View className="flex-row justify-between py-0.5">
-          <Text className="text-pos-xs text-pos-text-muted">Service</Text>
+          <Text className="text-pos-xs text-pos-text-muted">Service ({serviceChargeRate}%)</Text>
           <Text className="font-mono text-pos-xs font-medium text-pos-text">
             {formatIDR(order.service_charge)}
           </Text>

@@ -34,7 +34,7 @@ import { getBillData } from '@/services/receipt.service';
 
 interface UseOrderOptions {
   tableId: number | null;
-  orderId?: number | null;
+  orderId?: string | null;
   orderType?: 'dine-in' | 'takeaway';
   menuItems?: MenuItemWithInventory[];
   /** When false, adding items and confirming orders is blocked */
@@ -150,7 +150,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const [lastKOT, setLastKOT] = useState<KOTWithItems | null>(null);
   const [lastBill, setLastBill] = useState<BillData | null>(null);
 
-  const lastLoadedOrderIdRef = useRef<number | null | undefined>(undefined);
+  const lastLoadedOrderIdRef = useRef<string | null | undefined>(undefined);
 
   // Calculate current round from order items
   const currentRound = useMemo(() => {
@@ -200,7 +200,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   }, [orderId]);
 
   // Reload order from database
-  const currentOrderId = order ? toInt(order.id) : null;
+  const currentOrderId = order ? order.id : null;
 
   const reload = useCallback(async () => {
     if (currentOrderId === null) return;
@@ -271,7 +271,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       } else {
         // Order exists but not confirmed yet - add directly to DB
         try {
-          const orderIdNum = toInt(order.id);
+          const orderIdNum = order.id;
           const menuItem: MenuItem = {
             id: item.id,
             category_id: item.category_id,
@@ -518,7 +518,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         guestCount || 0
       );
 
-      const orderIdNum = toInt(newOrder.id);
+      const orderIdNum = newOrder.id;
 
       const orderFailures: string[] = [];
       for (const cartItem of cartItems) {
@@ -558,7 +558,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     try {
-      const orderIdNum = toInt(order.id);
+      const orderIdNum = order.id;
       const newRound = currentRound + 1;
 
       const roundFailures: string[] = [];
@@ -607,7 +607,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     try {
-      const orderIdNum = toInt(order.id);
+      const orderIdNum = order.id;
       await voidOrder(orderIdNum, user.id, reason);
 
       // Clear current order state from UI after cancel
@@ -639,7 +639,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     const roundToPrint = roundNumber ?? currentRound;
-    const orderIdNum = toInt(order.id);
+    const orderIdNum = order.id;
 
     try {
       const kot = await createKOT(orderIdNum, roundToPrint);
@@ -671,7 +671,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
       await reload();
     } catch (error) {
-      captureError(error, { module: 'order', operation: 'sendToKitchen', level: 'error', extras: { orderId: toInt(order?.id) } });
+      captureError(error, { module: 'order', operation: 'sendToKitchen', level: 'error', extras: { orderId: order?.id } });
       Alert.alert(
         'Kitchen Error',
         error instanceof Error ? error.message : 'Failed to send to kitchen.'
@@ -691,12 +691,12 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       return;
     }
     try {
-      const orderIdNum = toInt(order.id);
+      const orderIdNum = order.id;
       const bill = await getBillData(orderIdNum, false);
       setLastBill(bill);
       printBillToPrinter('cashier', bill).catch(() => {});
     } catch (error) {
-      captureError(error, { module: 'order', operation: 'printBill', level: 'warning', extras: { orderId: toInt(order?.id) } });
+      captureError(error, { module: 'order', operation: 'printBill', level: 'warning', extras: { orderId: order?.id } });
       Alert.alert(
         'Print Error',
         error instanceof Error ? error.message : 'Failed to generate bill.',
@@ -712,8 +712,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   // Go to payment
   const goToPayment = useCallback(() => {
     if (!order) return;
-    const orderIdNum = toInt(order.id);
-    router.push({ pathname: '/(app)/checkout/[orderId]', params: { orderId: String(orderIdNum) } });
+    router.push({ pathname: '/(app)/checkout/[orderId]', params: { orderId: order.id } });
   }, [order, router]);
 
   // Cart item management (for modifier picker)
