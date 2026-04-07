@@ -153,8 +153,8 @@ export function formatKOT(params: {
   paperWidth: PaperWidth;
 }): string {
   const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w);
-  const L = '─'.repeat(w);
+  const H = '='.repeat(w);
+  const L = '-'.repeat(w);
   const lines: string[] = [
     H,
     center('Order Ticket', w),
@@ -214,8 +214,8 @@ export function formatBill(params: {
   paperWidth: PaperWidth;
 }): string {
   const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w);
-  const L = '─'.repeat(w);
+  const H = '='.repeat(w);
+  const L = '-'.repeat(w);
   const rowFn = (label: string, value: string) =>
     `${pad(label, w - value.length)}${value}`;
   const isPaid = (params.payments?.length ?? 0) > 0;

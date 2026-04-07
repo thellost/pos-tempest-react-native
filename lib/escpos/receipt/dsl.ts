@@ -178,7 +178,7 @@ function renderDivider(
   el: DividerEl,
   lineWidth: number,
 ): void {
-  const char = el.char ?? '\u2500'; // '─' BOX DRAWINGS LIGHT HORIZONTAL
+  const char = el.char ?? '-'; // ASCII dash — safe across all codepages
   b.text(repeatFill(char, lineWidth));
   b.newline();
 }
@@ -190,7 +190,7 @@ function renderHeader(
   el: HeaderEl,
   lineWidth: number,
 ): void {
-  const char = el.char ?? '\u2550'; // '═' BOX DRAWINGS DOUBLE HORIZONTAL
+  const char = el.char ?? '='; // ASCII equals — safe across all codepages
   b.text(repeatFill(char, lineWidth));
   b.newline();
 }
