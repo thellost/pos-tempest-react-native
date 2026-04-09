@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
+import { getNextAutoId } from '@/db/utils';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
@@ -231,10 +232,7 @@ export async function addItemToOrder(
   }
 
   // Get the next order item ID
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_items`
-  );
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  const newId = (await getNextAutoId('order_items')).toString();
 
   // Insert order item
   await powersync.execute(
@@ -265,10 +263,7 @@ export async function addItemToOrder(
 
   // Insert order item modifiers
   for (const modifier of modifiers) {
-    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
-    );
-    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+    const modId = (await getNextAutoId('order_item_modifiers')).toString();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (
@@ -452,10 +447,7 @@ export async function updateItemModifiers(
   );
 
   for (const modifier of modifiers) {
-    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
-    );
-    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+    const modId = (await getNextAutoId('order_item_modifiers')).toString();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (

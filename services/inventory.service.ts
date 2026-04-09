@@ -1,4 +1,5 @@
 import { MOVEMENT_TYPE } from '@/constants/enums';
+import { getNextAutoId } from '@/db/utils';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
 
@@ -60,10 +61,7 @@ export async function deductStockForItems(
       );
 
       // Get next movement ID
-      const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-        `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM inventory_movements`
-      );
-      const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+      const newId = (await getNextAutoId('inventory_movements')).toString();
 
       // Create movement record
       await powersync.execute(

@@ -1,10 +1,11 @@
 import type { KotStatus } from '@/constants/enums';
 import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
+import { getNextAutoId } from '@/db/utils';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { generateTicketNumber } from '@/utils/order-number';
-import { toInt } from '@/utils/coerce';
+import { toFloat, toInt } from '@/utils/coerce';
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -94,11 +95,7 @@ export async function createKOT(
 
   // Generate identifiers
   const ticketNumber = await generateTicketNumber();
-
-  const maxKotRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM kitchen_order_tickets`
-  );
-  const kotId = (maxKotRow?.max_id ?? 0) + 1;
+  const kotId = await getNextAutoId('kitchen_order_tickets');
 
   // Insert KOT header
   await powersync.execute(
@@ -118,10 +115,7 @@ export async function createKOT(
   );
 
   // Insert KOT items
-  const maxItemRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM kot_items`
-  );
-  let itemIdCounter = (maxItemRow?.max_id ?? 0) + 1;
+  let itemIdCounter = await getNextAutoId('kot_items');
 
   const itemDetails: KOTItemDetail[] = [];
 
@@ -154,10 +148,7 @@ export async function createKOT(
       kot_id: kotId,
       order_item_id: orderItemId,
       menu_item_name: oi.menu_item_name,
-      quantity:
-        typeof oi.quantity === 'string'
-          ? parseFloat(oi.quantity)
-          : oi.quantity,
+      quantity: toFloat(oi.quantity),
       unit_of_measure: oi.unit_of_measure,
       weight: oi.weight != null ? Number(oi.weight) : null,
       notes: oi.notes,
@@ -360,10 +351,7 @@ async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
     kot_id: kotId,
     order_item_id: toInt(row.order_item_id),
     menu_item_name: row.menu_item_name,
-    quantity:
-      typeof row.quantity === 'string'
-        ? parseFloat(row.quantity)
-        : row.quantity,
+    quantity: toFloat(row.quantity),
     unit_of_measure: row.unit_of_measure,
     weight: row.weight != null ? Number(row.weight) : null,
     notes: row.notes,

@@ -241,10 +241,6 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     setSelectedSubCategoryId(subCategoryId);
   }, []);
 
-  const handleSendToKitchen = useCallback(async (round: number) => {
-    await sendToKitchen(round);
-  }, [sendToKitchen]);
-
   const handlePayment = useCallback(() => {
     if (!order) {
       Alert.alert('Payment', 'No active order found. Please add items first.');
@@ -284,10 +280,6 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       ]
     );
   }, [order, cancelOrder, orderType, screenLabel]);
-
-  const handlePrintBill = useCallback(async () => {
-    await printBill();
-  }, [printBill]);
 
   // For takeaway: confirm existing draft via DB service, or delegate new order to hook.
   // For dine-in: delegate directly to hook's confirmOrder.
@@ -528,10 +520,10 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     itemsForPanel,
     pendingRoundItemsDisplay,
     // Actions
-    handleSendToKitchen,
+    handleSendToKitchen: sendToKitchen,
     handlePayment,
     handleCancelOrder,
-    handlePrintBill,
+    handlePrintBill: printBill,
     handleConfirmOrder,
     handleMenuItemDecrement,
     // Dine-in specific

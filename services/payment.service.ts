@@ -1,5 +1,6 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
+import { getNextAutoId } from '@/db/utils';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
@@ -71,10 +72,7 @@ export async function applyOrderDiscount(
   // Replace any existing discount first
   await removeOrderDiscount(orderId);
 
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_discounts`,
-  );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = (await getNextAutoId('order_discounts')).toString();
 
   await powersync.execute(
     `INSERT INTO order_discounts (
@@ -223,10 +221,7 @@ export async function processPayment(
   try {
   const now = new Date().toISOString();
 
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM payments`,
-  );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = (await getNextAutoId('payments')).toString();
 
   await powersync.execute(
     `INSERT INTO payments (

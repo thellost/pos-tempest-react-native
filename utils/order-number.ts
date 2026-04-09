@@ -21,26 +21,34 @@ async function getShortDeviceId(): Promise<string> {
 }
 
 /**
- * Generate a new order number with device-scoped auto-incrementing sequence.
- * Format: ORD-YYMMDD-{deviceId6}-{seq}
- * @example generateOrderNumber() // "ORD-260223-A1B2C3-001"
+ * Builds a device-scoped date prefix for order/ticket numbers.
+ * Format: {type}-YYMMDD-{deviceId6}
+ *
+ * @param type - 'ORD' for orders, 'KOT' for kitchen tickets
+ * @returns e.g. "ORD-260223-A1B2C3"
+ * @internal
  */
-export async function generateOrderNumber(): Promise<string> {
+async function buildDatePrefix(type: 'ORD' | 'KOT'): Promise<string> {
   const today = nowAppLocalDate();
   const year = String(today.getFullYear()).slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   const deviceShortId = await getShortDeviceId();
-  const datePrefix = `ORD-${year}${month}${day}-${deviceShortId}`;
-  
+  return `${type}-${year}${month}${day}-${deviceShortId}`;
+}
+
+/**
+ * Generate a new order number with device-scoped auto-incrementing sequence.
+ * Format: ORD-YYMMDD-{deviceId6}-{seq}
+ * @example generateOrderNumber() // "ORD-260223-A1B2C3-001"
+ */
+export async function generateOrderNumber(): Promise<string> {
+  const datePrefix = await buildDatePrefix('ORD');
   const result = await powersync.getOptional<{ count: number }>(
     `SELECT COUNT(*) as count FROM orders WHERE order_number LIKE ?`,
     [`${datePrefix}%`]
   );
-  
-  const sequenceNumber = (result?.count || 0) + 1;
-  const seq = String(sequenceNumber).padStart(3, '0');
-  
+  const seq = String((result?.count || 0) + 1).padStart(3, '0');
   return `${datePrefix}-${seq}`;
 }
 
@@ -50,20 +58,11 @@ export async function generateOrderNumber(): Promise<string> {
  * @example generateTicketNumber() // "KOT-260223-A1B2C3-001"
  */
 export async function generateTicketNumber(): Promise<string> {
-  const today = nowAppLocalDate();
-  const year = String(today.getFullYear()).slice(-2);
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const deviceShortId = await getShortDeviceId();
-  const datePrefix = `KOT-${year}${month}${day}-${deviceShortId}`;
-  
+  const datePrefix = await buildDatePrefix('KOT');
   const result = await powersync.getOptional<{ count: number }>(
     `SELECT COUNT(*) as count FROM kitchen_order_tickets WHERE ticket_number LIKE ?`,
     [`${datePrefix}%`]
   );
-  
-  const sequenceNumber = (result?.count || 0) + 1;
-  const seq = String(sequenceNumber).padStart(3, '0');
-  
+  const seq = String((result?.count || 0) + 1).padStart(3, '0');
   return `${datePrefix}-${seq}`;
 }

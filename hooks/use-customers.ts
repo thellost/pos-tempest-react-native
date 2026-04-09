@@ -2,6 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useCallback, useState } from 'react';
 
 import type { Customer } from '@/db/models';
+import { getNextAutoId } from '@/db/utils';
 import { captureError } from '@/lib/sentry';
 import { powersync } from '@/db/provider';
 
@@ -78,10 +79,7 @@ export function useCustomers() {
           throw new Error(`A customer with phone ${input.phone} already exists.`);
         }
 
-        const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-          `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM customers`
-        );
-        const newId = ((maxIdRow?.max_id ?? 0) + 1).toString();
+        const newId = (await getNextAutoId('customers')).toString();
         const now = new Date().toISOString();
 
         await powersync.execute(

@@ -1,5 +1,6 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
+import { getNextAutoId } from '@/db/utils';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
@@ -403,10 +404,7 @@ export async function addCashTransaction(
   const createdAt = new Date().toISOString();
 
   // Get next ID for the transaction
-  const maxIdRow = await powersync.getOptional<MaxIdRow>(
-    `SELECT MAX(CAST(id AS INTEGER)) AS max_id FROM shift_cash_transactions`,
-  );
-  const nextId = Math.max(toNumber(maxIdRow?.max_id ?? 0), 0) + 1;
+  const nextId = await getNextAutoId('shift_cash_transactions');
 
   await powersync.execute(
     `
