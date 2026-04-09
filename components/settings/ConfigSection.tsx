@@ -3,6 +3,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { type EditableConfigKey } from '@/hooks/use-config';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { RowDivider } from './primitives';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 export type ConfigRow = {
   key: EditableConfigKey;
@@ -94,7 +95,7 @@ export function ConfigSection({
                       delete next[row.key];
                       setDraft(next);
                     }}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+                    style={({ pressed }) => withPressedOpacity(pressed, 1, 0.5)}
                     hitSlop={8}
                   >
                     <Text style={{ color: C.danger.DEFAULT, fontSize: 10 }}>↺</Text>

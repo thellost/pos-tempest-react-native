@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Button, SelectButton } from '@/components/ui';
 import { RowDivider } from './primitives';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 const PAPER_WIDTH_PRESETS: PaperWidth[] = [48, 58, 72, 76, 80];
 
@@ -178,7 +179,7 @@ function PrinterCard({
                 </Text>
                 <Pressable
                   onPress={() => openBluetoothSettings()}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                  style={({ pressed }) => withPressedOpacity(pressed, 1, 0.6)}
                 >
                   <Text className="mt-1.5 text-pos-xs font-semibold text-brand">
                     Open Bluetooth Settings →
@@ -210,7 +211,7 @@ function PrinterCard({
                   <Pressable
                     key={p.target}
                     onPress={() => onSelectPrinter(p)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                    style={({ pressed }) => withPressedOpacity(pressed)}
                     className="flex-row items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
                   >
                     <View className="flex-1">

@@ -8,6 +8,7 @@ import { Tag, X } from 'lucide-react-native';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import type { Discount, OrderDiscount } from '@/db/models';
 import { formatIDR } from '@/utils/currency';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 interface DiscountSelectorProps {
   visible: boolean;
@@ -89,7 +90,7 @@ export const DiscountSelector = memo(function DiscountSelector({
                 <Pressable
                   onPress={handleRemove}
                   className="border-b border-border bg-pos-danger-muted px-5 py-3.5"
-                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  style={({ pressed }) => withPressedOpacity(pressed)}
                 >
                   <View className="flex-row items-center gap-1.5">
                     <X size={14} color={ThemeColors.danger.DEFAULT} />
@@ -125,9 +126,7 @@ export const DiscountSelector = memo(function DiscountSelector({
                     className={`border-b border-border px-5 py-3.5 ${
                       isApplied ? 'bg-accent-muted' : ''
                     }`}
-                    style={({ pressed }) => ({
-                      opacity: eligible ? (pressed ? 0.7 : 1) : 0.45,
-                    })}
+                    style={({ pressed }) => withPressedOpacity(pressed && eligible, eligible ? 1 : 0.45)}
                   >
                     <View className="flex-row items-start">
                       <View className="mr-3 flex-1">

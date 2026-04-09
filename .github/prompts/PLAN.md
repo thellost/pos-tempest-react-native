@@ -17,7 +17,7 @@ The codebase has significant code duplication, especially between the two order 
 | 3 — Order screen consolidation | ✅ Done |
 | 4 — Payment method config | ✅ Done |
 | 5 — Date formatting utils | ✅ Done |
-| 6 — Pressable style helper (optional) | ⬜ Pending |
+| 6 — Pressable style helper (optional) | ✅ Done |
 
 ---
 

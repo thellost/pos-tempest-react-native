@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { RowDivider } from './primitives';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -60,7 +61,7 @@ export function AccordionSection({
     >
       <Pressable
         onPress={toggle}
-        style={({ pressed }) => ({ opacity: pressed ? 0.70 : 1 })}
+        style={({ pressed }) => withPressedOpacity(pressed)}
         className="flex-row items-center gap-3 px-4 py-3.5"
       >
         <View

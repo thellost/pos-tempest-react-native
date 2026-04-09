@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHODS } from '@/constants/payment';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 interface PaymentMethodSelectorProps {
   selected: PaymentMethodType | null;
@@ -26,7 +27,7 @@ export const PaymentMethodSelector = memo(function PaymentMethodSelector({
               backgroundColor: isSelected ? `${color}22` : undefined,
               borderColor: isSelected ? color : undefined,
               borderWidth: isSelected ? 1.5 : 1,
-              opacity: pressed ? 0.7 : 1,
+              ...withPressedOpacity(pressed),
             })}
           >
             <Icon size={20} color={color} />

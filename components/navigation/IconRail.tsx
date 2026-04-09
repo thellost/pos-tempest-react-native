@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { NavItem } from '@/constants/navigation';
 import { ThemeColors } from '@/constants/theme';
 import type { UserRow } from '@/hooks/use-auth';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 interface IconRailProps {
   navItems: NavItem[];
@@ -62,7 +63,7 @@ export function IconRail({
               key={item.href}
               onPress={() => onNavigate(item.href)}
               className={`h-12 w-full items-center justify-center active:scale-95 active:bg-surface-raised ${isActive ? 'bg-accent-muted' : ''}`}
-              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              style={({ pressed }) => withPressedOpacity(pressed)}
             >
               {isActive && (
                 <View className="absolute left-0 h-8 w-[3px] rounded-r-full bg-accent" />
@@ -104,7 +105,7 @@ export function IconRail({
         <Pressable
           onPress={onLock}
           className="mb-1 h-10 w-full items-center justify-center active:scale-95 active:bg-surface-raised"
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={({ pressed }) => withPressedOpacity(pressed)}
         >
           <Lock size={18} color={ThemeColors.text.muted} />
         </Pressable>
@@ -113,7 +114,7 @@ export function IconRail({
         <Pressable
           onPress={onSignOut}
           className="h-10 w-full items-center justify-center active:scale-95 active:bg-surface-raised"
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={({ pressed }) => withPressedOpacity(pressed)}
         >
           <LogOut size={18} color={ThemeColors.danger.DEFAULT} />
         </Pressable>

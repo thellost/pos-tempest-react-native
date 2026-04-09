@@ -5,6 +5,7 @@ import { Delete } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 
 import { formatIDR } from '@/utils/currency';
+import { withPressedOpacity } from '@/utils/pressable-style';
 
 
 const QUICK_AMOUNTS_ROW1 = [1_000, 2_000, 5_000, 10_000, 20_000] as const;
@@ -112,7 +113,7 @@ export const CashPayment = memo(function CashPayment({
                     ? 'border-pos-danger/25 bg-pos-danger-muted'
                     : 'border-border bg-surface-raised'
                 }`}
-                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => withPressedOpacity(pressed)}
               >
                 {isBackspace
                   ? <Delete size={20} color={ThemeColors.danger.DEFAULT} />
