@@ -133,6 +133,22 @@ export function now(): Date {
 }
 
 /**
+ * Format date for receipt printing — fixed numeric format.
+ * @example formatReceiptDate(new Date()) // "01-01-2026, 16:30"
+ */
+export function formatReceiptDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(toUtcMs(date)) : date;
+  const tz = getAppTimezone();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d);
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
+  return `${get('day')}-${get('month')}-${get('year')}, ${get('hour')}:${get('minute')}`;
+}
+
+/**
  * Format date for display in the app timezone.
  * @example formatDate(new Date()) // "16 Feb 2026, 14:30"
  */

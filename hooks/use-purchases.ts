@@ -69,7 +69,7 @@ export function usePurchases() {
         let path = `/api/v1/purchases?branch_id=${branchId}&page_size=50`;
         if (statusFilter) path += `&status=${statusFilter}`;
         const data = await api.get<Purchase[]>(path);
-        setPurchases(data);
+        setPurchases(data ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load purchases');
       } finally {

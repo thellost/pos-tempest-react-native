@@ -10,7 +10,10 @@ interface KOTTicketPreviewProps {
   onDismiss: () => void;
 }
 
-function formatQty(qty: number): string {
+function formatQty(qty: number, uom: string): string {
+  if (uom !== 'piece') {
+    return `${qty.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${uom}`;
+  }
   return qty % 1 === 0 ? `${qty.toFixed(0)}x` : `${qty.toFixed(2)}x`;
 }
 
@@ -134,8 +137,15 @@ export function KOTTicketPreview({ kot, onDismiss }: KOTTicketPreviewProps) {
                 <Text
                   style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: '800', color: '#1C1917' }}
                 >
-                  {formatQty(item.quantity)} {item.menu_item_name}
+                  {formatQty(item.quantity, item.unit_of_measure)} {item.menu_item_name}
                 </Text>
+                {item.weight != null && (
+                  <Text
+                    style={{ fontFamily: 'monospace', fontSize: 11, color: '#57534E', marginLeft: 16 }}
+                  >
+                    Berat: {item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} {item.unit_of_measure}
+                  </Text>
+                )}
                 {item.modifier_names.map((mod, i) => (
                   <Text
                     key={i}

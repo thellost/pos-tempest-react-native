@@ -125,7 +125,6 @@ export const appSchema = new Schema({
 		sort_order: column.integer,
 		created_at: column.text,
 		updated_at: column.text,
-		branch_id: column.text,
 	}, {
 		indexes: {
 			by_sort: ['sort_order'],
@@ -187,7 +186,7 @@ export const appSchema = new Schema({
 		quantity_before: column.real,
 		quantity_after: column.real,
 		reference_type: column.text,
-		reference_id: column.integer,
+		reference_id: column.text,
 		reason: column.text,
 		created_at: column.text,
 	}),
@@ -221,7 +220,7 @@ export const appSchema = new Schema({
 		},
 	}),
 	order_items: new Table({
-		order_id: column.integer,
+		order_id: column.text,
 		menu_item_id: column.integer,
 		menu_item_name: column.text,
 		quantity: column.real,
@@ -236,6 +235,7 @@ export const appSchema = new Schema({
 		voided_by: column.integer,
 		void_reason: column.text,
 		round_number: column.integer,
+		weight: column.real,
 		created_at: column.text,
 	}, {
 		indexes: {
@@ -250,7 +250,7 @@ export const appSchema = new Schema({
 		extra_price: column.real,
 	}),
 	kitchen_order_tickets: new Table({
-		order_id: column.integer,
+		order_id: column.text,
 		ticket_number: column.text,
 		status: column.text,
 		priority: column.integer,
@@ -276,7 +276,7 @@ export const appSchema = new Schema({
 		},
 	}),
 	payments: new Table({
-		order_id: column.integer,
+		order_id: column.text,
 		shift_id: column.integer,
 		payment_method: column.text,
 		amount: column.real,
@@ -298,7 +298,7 @@ export const appSchema = new Schema({
 		updated_at: column.text,
 	}),
 	order_discounts: new Table({
-		order_id: column.integer,
+		order_id: column.text,
 		discount_id: column.integer,
 		discount_name: column.text,
 		discount_type: column.text,
@@ -306,15 +306,6 @@ export const appSchema = new Schema({
 		applied_amount: column.real,
 		applied_by: column.integer,
 		created_at: column.text,
-	}),
-	tax_configs: new Table({
-		branch_id: column.integer,
-		name: column.text,
-		rate: column.real,
-		is_inclusive: column.integer,
-		is_active: column.integer,
-		created_at: column.text,
-		updated_at: column.text,
 	}),
 	suppliers: new Table({
 		name: column.text,

@@ -7,7 +7,7 @@ import type { Order, OrderDiscount, OrderItem, OrderItemModifier } from '@/db/mo
 import { formatIDR } from '@/utils/currency';
 import { toFloat } from '@/utils/coerce';
 
-export type OrderRow = Order & { table_number: string | null; branch_name: string | null };
+export type OrderRow = Order & { table_number: string | null; branch_name: string | null; tax_rate: number; service_charge_rate: number };
 export interface OrderItemRow extends OrderItem { modifiers: OrderItemModifier[] }
 
 interface Props {
@@ -32,8 +32,8 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
   const serviceCharge  = toFloat(order.service_charge);
   const roundingAmount = toFloat(order.rounding_amount);
   const orderTotal     = toFloat(order.total);
-  const taxBase        = Math.max(1, subtotal - discountAmount);
-  const taxRateDisplay = Math.round((taxAmount / taxBase) * 100);
+  const taxRateDisplay = order.tax_rate;
+  const serviceChargeRateDisplay = order.service_charge_rate;
 
   return (
     <View className="border-r border-border" style={{ width: '50%' }}>
@@ -124,10 +124,10 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
           />
         )}
         {taxAmount > 0 && (
-          <TotalsRow label={`Tax (${taxRateDisplay || 11}%)`} value={formatIDR(taxAmount)} />
+          <TotalsRow label={`Tax (${taxRateDisplay}%)`} value={formatIDR(taxAmount)} />
         )}
         {serviceCharge > 0 && (
-          <TotalsRow label="Service Charge" value={formatIDR(serviceCharge)} />
+          <TotalsRow label={`Service Charge (${serviceChargeRateDisplay}%)`} value={formatIDR(serviceCharge)} />
         )}
         {roundingAmount !== 0 && (
           <TotalsRow

@@ -22,6 +22,7 @@ import type { KOTWithItems } from '@/services/kitchen.service';
 import { getKOTsForOrder } from '@/services/kitchen.service';
 import type { BillData } from '@/services/receipt.service';
 import { getBillData } from '@/services/receipt.service';
+import { printBill } from '@/lib/printer';
 
 
 export default function CheckoutScreen() {
@@ -48,10 +49,10 @@ function CheckoutContent({
   const router = useRouter();
   const { user } = useAuth();
   const { activeShift } = useShift();
-  const orderId = parseInt(orderIdStr, 10);
+  const orderId = orderIdStr;
 
   const { data: orderRows } = useQuery<OrderRow>(
-    `SELECT o.*, t.table_number, b.name AS branch_name
+    `SELECT o.*, t.table_number, b.name AS branch_name, b.tax_rate, b.service_charge_rate
      FROM orders o
      LEFT JOIN tables t ON o.table_id = t.id
      LEFT JOIN branches b ON o.branch_id = b.id
@@ -143,6 +144,7 @@ function CheckoutContent({
       await completeOrder(orderId);
       const receipt = await getBillData(orderId, true);
       setLastReceipt(receipt);
+      printBill('cashier', receipt).catch(() => {});
     } catch (err) {
       console.error('[Checkout] Payment error:', err);
       Alert.alert(

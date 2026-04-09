@@ -10,7 +10,7 @@ import { OrderPanel } from '@/components/order/OrderPanel';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { useOrderScreen } from '@/hooks/use-order-screen';
 import { PerfProfiler, useMountTimer } from '@/utils/perf-debug';
-import { toInt, toIntOrNull } from '@/utils/coerce';
+import { toInt } from '@/utils/coerce';
 
 export default function OrderScreen() {
   const { tableId, orderId } = useLocalSearchParams<{ tableId: string; orderId?: string }>();
@@ -32,7 +32,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
   const screen = useOrderScreen({
     orderType: 'dine-in',
     tableId: toInt(tableId),
-    orderId: toIntOrNull(orderId),
+    orderId: orderId ?? null,
   });
 
   if (screen.isLoading) {
@@ -74,7 +74,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
     <PerfProfiler id="OrderScreenContent">
       <View className="flex-1 bg-surface">
         <View className="flex-1 flex-row">
-          <View className="w-[30%]">
+          <View style={{ flex: 3 }}>
             <PerfProfiler id="OrderPanel">
               <OrderPanel
                 order={screen.order}
@@ -102,7 +102,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
             </PerfProfiler>
           </View>
 
-          <View className="w-[70%] flex-1">
+          <View style={{ flex: 7 }}>
             <View className="border-b border-border bg-surface-card px-4 py-3">
               <View className="flex-row items-center">
                 <View className="flex-1">

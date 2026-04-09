@@ -15,6 +15,7 @@ export interface KOTItemDetail {
   menu_item_name: string;
   quantity: number;
   unit_of_measure: string;
+  weight: number | null;
   notes: string | null;
   /** Modifier names, pre-joined from order_item_modifiers */
   modifier_names: string[];
@@ -23,7 +24,7 @@ export interface KOTItemDetail {
 
 export interface KOTWithItems {
   id: number;
-  order_id: number;
+  order_id: string;
   ticket_number: string;
   status: KotStatus;
   priority: number;
@@ -47,7 +48,7 @@ export interface KOTWithItems {
  * @returns The created KOTWithItems (used to show the ticket preview)
  */
 export async function createKOT(
-  orderId: number,
+  orderId: string,
   roundNumber: number
 ): Promise<KOTWithItems> {
   return startSpan({ name: 'kitchen.sendKOT', op: 'db.powersync' }, async () => {
@@ -76,9 +77,10 @@ export async function createKOT(
     menu_item_name: string;
     quantity: number | string;
     unit_of_measure: string;
+    weight: number | string | null;
     notes: string | null;
   }>(
-    `SELECT id, menu_item_name, quantity, unit_of_measure, notes
+    `SELECT id, menu_item_name, quantity, unit_of_measure, weight, notes
      FROM order_items
      WHERE order_id = ? AND round_number = ? AND is_voided = 0`,
     [orderId, roundNumber]
@@ -157,6 +159,7 @@ export async function createKOT(
           ? parseFloat(oi.quantity)
           : oi.quantity,
       unit_of_measure: oi.unit_of_measure,
+      weight: oi.weight != null ? Number(oi.weight) : null,
       notes: oi.notes,
       modifier_names: modRow?.names
         ? modRow.names.split(', ').filter(Boolean)
@@ -280,7 +283,7 @@ export async function updateKOTItemStatus(
  * Used for the order history / print-again flow.
  */
 export async function getKOTsForOrder(
-  orderId: number
+  orderId: string
 ): Promise<KOTWithItems[]> {
   const rows = await powersync.getAll<{
     id: number | string;
@@ -336,12 +339,13 @@ async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
     menu_item_name: string;
     quantity: number | string;
     unit_of_measure: string;
+    weight: number | string | null;
     notes: string | null;
     status: string;
     modifier_names: string | null;
   }>(
     `SELECT ki.id, ki.order_item_id, oi.menu_item_name,
-            oi.quantity, oi.unit_of_measure, ki.notes, ki.status,
+            oi.quantity, oi.unit_of_measure, oi.weight, ki.notes, ki.status,
             GROUP_CONCAT(oim.modifier_name, ', ') AS modifier_names
      FROM kot_items ki
      JOIN order_items oi ON oi.id = ki.order_item_id
@@ -361,6 +365,7 @@ async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
         ? parseFloat(row.quantity)
         : row.quantity,
     unit_of_measure: row.unit_of_measure,
+    weight: row.weight != null ? Number(row.weight) : null,
     notes: row.notes,
     modifier_names: row.modifier_names
       ? row.modifier_names.split(', ').filter(Boolean)

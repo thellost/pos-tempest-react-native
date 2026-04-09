@@ -1,48 +1,74 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Printer,
-  TextAlignType,
-  CommonParams,
-  PrinterAddCutType,
-} from 'react-native-esc-pos-printer';
-import type { TrueFalseParam } from 'react-native-esc-pos-printer';
 
 import { Config } from '@/constants/config';
+import {
+  barcode,
+  BluetoothTransport,
+  columns,
+  CommandBuilder,
+  divider,
+  GENERIC_PROFILE_58, GENERIC_PROFILE_80,
+  header,
+  image, qr,
+  receipt,
+  row,
+  space,
+  text,
+  total,
+  wrapText,
+  type PrinterProfile,
+  type ReceiptElement,
+} from '@/lib/escpos';
+import { TEST_IMAGE_BITMAP } from '@/lib/escpos/test-image-data';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
-import { runPrinterJob, openCashDrawerViaBluetooth } from '@/lib/bluetooth';
+import { formatReceiptDate } from '@/utils/date';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PrinterType = 'kitchen' | 'cashier';
-export type PaperWidth = '58mm' | '80mm';
+/** Paper width in millimetres, e.g. 58, 72, 76, 80 */
+export type PaperWidth = number;
 
 export interface PrinterConfig {
   address: string;
   name?: string;
   type: PrinterType;
+  /** Paper width in mm for this specific printer */
+  paperWidth: PaperWidth;
 }
 
 export interface PrinterSettings {
   kitchenPrinter: PrinterConfig | null;
   cashierPrinter: PrinterConfig | null;
-  paperWidth: PaperWidth;
 }
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = Config.STORAGE_KEY_PRINTER_SETTINGS;
 
+const DEFAULT_PAPER_WIDTH: PaperWidth = 80;
+
 const DEFAULTS: PrinterSettings = {
   kitchenPrinter: null,
   cashierPrinter: null,
-  paperWidth: '80mm',
 };
+
+function normalizePrinterConfig(cfg: PrinterConfig | null): PrinterConfig | null {
+  if (!cfg) return null;
+  return { ...cfg, paperWidth: cfg.paperWidth ?? DEFAULT_PAPER_WIDTH };
+}
 
 export async function getPrinterSettings(): Promise<PrinterSettings> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS };
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<PrinterSettings>;
+    return {
+      ...DEFAULTS,
+      ...parsed,
+      kitchenPrinter: normalizePrinterConfig(parsed.kitchenPrinter ?? null),
+      cashierPrinter: normalizePrinterConfig(parsed.cashierPrinter ?? null),
+    };
   } catch {
     return { ...DEFAULTS };
   }
@@ -73,19 +99,31 @@ export async function clearPrinter(type: PrinterType): Promise<void> {
   await setPrinter(type, null);
 }
 
-export async function setPaperWidth(width: PaperWidth): Promise<void> {
-  await savePrinterSettings({ paperWidth: width });
+export async function setPrinterPaperWidth(type: PrinterType, width: PaperWidth): Promise<void> {
+  const settings = await getPrinterSettings();
+  const cfg = type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
+  if (!cfg) return;
+  await setPrinter(type, { ...cfg, paperWidth: width });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function charWidth(paperWidth: PaperWidth): number {
-  return paperWidth === '80mm' ? 42 : 32;
+// Linear interpolation: 58mm→32 chars, 80mm→42 chars
+function charWidth(mm: number): number {
+  return Math.max(20, Math.round(32 + (mm - 58) * (10 / 22)));
+}
+
+// Use 80mm profile for >60mm paper, 58mm profile otherwise; override charWidth
+function getProfile(mm: number): PrinterProfile {
+  return mm > 60
+    ? { ...GENERIC_PROFILE_80, charWidth: charWidth(mm) }
+    : { ...GENERIC_PROFILE_58, charWidth: charWidth(mm) };
 }
 
 const idr = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
 
 // ── ESC/POS text formatters (used by ReceiptPreview) ─────────────────────────
+// These return plain text for on-screen display — not for sending to a printer.
 
 function pad(text: string, total: number, right = false): string {
   if (right) return text.slice(0, total).padStart(total);
@@ -97,9 +135,6 @@ function center(text: string, w: number): string {
   return ' '.repeat(spaces) + text;
 }
 
-/**
- * Returns a plain-text ESC/POS string for a KOT — used by ReceiptPreview.
- */
 export function formatKOT(params: {
   ticketNumber: string;
   orderNumber: string;
@@ -110,17 +145,19 @@ export function formatKOT(params: {
   items: Array<{
     name: string;
     quantity: number;
+    unitOfMeasure: string;
+    weight: number | null;
     modifiers: string[];
     notes: string | null;
   }>;
   paperWidth: PaperWidth;
 }): string {
   const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w);
-  const L = '─'.repeat(w);
+  const H = '='.repeat(w);
+  const L = '-'.repeat(w);
   const lines: string[] = [
     H,
-    center('KITCHEN ORDER TICKET', w),
+    center('Order Ticket', w),
     H,
     `KOT   : ${params.ticketNumber}`,
     `Order : ${params.orderNumber}`,
@@ -132,8 +169,15 @@ export function formatKOT(params: {
   ];
 
   for (const item of params.items) {
-    lines.push(`${item.quantity}x ${item.name}`);
-    for (const mod of item.modifiers) lines.push(`   • ${mod}`);
+    const isWeightBased = item.unitOfMeasure !== 'piece';
+    const qtyLabel = isWeightBased
+      ? `${item.quantity.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`
+      : `${item.quantity % 1 === 0 ? item.quantity.toFixed(0) : item.quantity.toFixed(2)}x`;
+    lines.push(`${qtyLabel} ${item.name}`);
+    if (item.weight != null) {
+      lines.push(`   Berat: ${item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`);
+    }
+    for (const mod of item.modifiers) lines.push(`   \u2022 ${mod}`);
     if (item.notes) lines.push(`   * ${item.notes}`);
   }
 
@@ -141,9 +185,6 @@ export function formatKOT(params: {
   return lines.join('\n');
 }
 
-/**
- * Returns a plain-text ESC/POS string for a bill — used by ReceiptPreview.
- */
 export function formatBill(params: {
   branchName: string;
   branchAddress: string | null;
@@ -158,21 +199,26 @@ export function formatBill(params: {
     unitPrice: number;
     total: number;
     modifiers: string[];
+    weight: number | null;
+    unitOfMeasure: string;
   }>;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
+  taxRate: number;
   serviceCharge: number;
+  serviceChargeRate: number;
   roundingAmount: number;
   total: number;
   payments?: Array<{ method: string; amount: number; changeAmount: number }>;
   paperWidth: PaperWidth;
 }): string {
   const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w);
-  const L = '─'.repeat(w);
-  const row = (label: string, value: string) =>
+  const H = '='.repeat(w);
+  const L = '-'.repeat(w);
+  const rowFn = (label: string, value: string) =>
     `${pad(label, w - value.length)}${value}`;
+  const isPaid = (params.payments?.length ?? 0) > 0;
 
   const lines: string[] = [
     H,
@@ -185,182 +231,154 @@ export function formatBill(params: {
     `Order : ${params.orderNumber}`,
     `Table : ${params.tableLabel}`,
     `Staff : ${params.cashierName}`,
-    `Time  : ${params.printedAt}`,
+    `Time  : ${formatReceiptDate(params.printedAt)}`,
     L,
   );
 
   for (const item of params.items) {
+    const prefix = `${item.quantity}x `;
     const priceStr = idr(item.total);
-    lines.push(`${item.quantity}x ${pad(item.name, w - priceStr.length - 3)} ${priceStr}`);
+    const nameWidth = w - prefix.length - priceStr.length - 1;
+    const nameLines = wrapText(item.name, nameWidth > 0 ? nameWidth : 1);
+    lines.push(`${prefix}${pad(nameLines[0], nameWidth)} ${priceStr}`);
+    for (let i = 1; i < nameLines.length; i++) lines.push(nameLines[i]);
     for (const mod of item.modifiers) lines.push(`   ${mod}`);
+    if (item.weight) {
+      const pricePerUnit = Math.round(item.unitPrice / item.weight);
+      const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+      lines.push(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`);
+    }
   }
 
-  lines.push(L, row('Subtotal', idr(params.subtotal)));
-  if (params.discountAmount > 0) lines.push(row('Diskon', `-${idr(params.discountAmount)}`));
-  if (params.taxAmount > 0)      lines.push(row('Pajak (11%)', idr(params.taxAmount)));
-  if (params.serviceCharge > 0)  lines.push(row('Servis', idr(params.serviceCharge)));
-  if (params.roundingAmount !== 0) lines.push(row('Pembulatan', idr(params.roundingAmount)));
+  lines.push(L, rowFn('Subtotal', idr(params.subtotal)));
+  if (params.discountAmount > 0)    lines.push(rowFn('Diskon',                            `-${idr(params.discountAmount)}`));
+  if (params.taxAmount > 0)         lines.push(rowFn(`Pajak (${params.taxRate}%)`,          idr(params.taxAmount)));
+  if (params.serviceCharge > 0)     lines.push(rowFn(`Servis (${params.serviceChargeRate}%)`, idr(params.serviceCharge)));
+  if (params.roundingAmount !== 0)  lines.push(rowFn('Pembulatan',                          idr(params.roundingAmount)));
 
-  lines.push(H, row('TOTAL', idr(params.total)), H);
+  lines.push(H, rowFn('TOTAL', idr(params.total)), H);
 
   if (params.payments && params.payments.length > 0) {
     lines.push(L);
     for (const p of params.payments) {
-      lines.push(row(`Bayar (${p.method})`, idr(p.amount)));
-      if (p.changeAmount > 0) lines.push(row('Kembalian', idr(p.changeAmount)));
+      lines.push(rowFn(`Bayar (${p.method})`, idr(p.amount)));
+      if (p.changeAmount > 0) lines.push(rowFn('Kembalian', idr(p.changeAmount)));
     }
     lines.push(L);
   }
 
+  lines.push(H, center(isPaid ? 'LUNAS' : 'BELUM BAYAR', w), H);
   lines.push('', center('Terima kasih! 🙏', w), center('Sampai jumpa kembali', w), H);
   return lines.join('\n');
 }
 
-// ── Print job builders ────────────────────────────────────────────────────────
-// These build the actual hardware print job using the ePOS SDK formatting API
-// instead of raw text strings.
+// ── Byte builders ─────────────────────────────────────────────────────────────
+// These produce the ESC/POS Uint8Array that is actually sent to the printer.
 
-async function buildKOTJob(
-  printer: Printer,
-  params: Parameters<typeof formatKOT>[0],
-): Promise<void> {
-  const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w) + '\n';
-  const L = '─'.repeat(w) + '\n';
+function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
+  const profile = getProfile(params.paperWidth);
+  const els: ReceiptElement[] = [
+    header(),
+    text('Order Ticket', { align: 'center', bold: true }),
+    header(),
+    text(`KOT   : ${params.ticketNumber}`),
+    text(`Order : ${params.orderNumber}`),
+    text(`Round : ${params.roundNumber}`),
+    text(`Table : ${params.tableLabel}`),
+    text(`Time  : ${params.time}`),
+    text(`Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}`),
+    divider(),
+  ];
 
-  // ── Header ──
-  await printer.addText(H);
-  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
-  await printer.addTextSize({ width: 1, height: 2 });
-  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
-  await printer.addText('KITCHEN ORDER TICKET\n');
-  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
-  await printer.addTextSize({ width: 1, height: 1 });
-  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
-  await printer.addText(H);
-
-  // ── Meta ──
-  await printer.addText(`KOT   : ${params.ticketNumber}\n`);
-  await printer.addText(`Order : ${params.orderNumber}\n`);
-  await printer.addText(`Round : ${params.roundNumber}\n`);
-  await printer.addText(`Table : ${params.tableLabel}\n`);
-  await printer.addText(`Time  : ${params.time}\n`);
-  await printer.addText(`Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}\n`);
-  await printer.addText(L);
-
-  // ── Items ──
   for (const item of params.items) {
-    await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
-    await printer.addText(`${item.quantity}x ${item.name}\n`);
-    await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+    const isWeightBased = item.unitOfMeasure !== 'piece';
+    const qtyLabel = isWeightBased
+      ? `${item.quantity.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`
+      : `${item.quantity % 1 === 0 ? item.quantity.toFixed(0) : item.quantity.toFixed(2)}x`;
+    els.push(text(`${qtyLabel} ${item.name}`, { bold: true, size: { width: 1, height: 2 } }));
+    if (item.weight != null) {
+      els.push(text(`   Berat: ${item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 })} ${item.unitOfMeasure}`));
+    }
     for (const mod of item.modifiers) {
-      await printer.addText(`   \u2022 ${mod}\n`);
+      els.push(text(`   \u2022 ${mod}`));
     }
     if (item.notes) {
-      await printer.addText(`   * ${item.notes}\n`);
+      els.push(text(`   * ${item.notes}`));
     }
   }
 
-  await printer.addText(H);
-  await printer.addFeedLine(3);
-  await printer.addCut(PrinterAddCutType.CUT_FEED);
+  els.push(header());
+  return receipt(els, { profile });
 }
 
-async function buildBillJob(
-  printer: Printer,
-  params: Parameters<typeof formatBill>[0],
-): Promise<void> {
-  const w = charWidth(params.paperWidth);
-  const H = '═'.repeat(w) + '\n';
-  const L = '─'.repeat(w) + '\n';
+function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
+  const profile = getProfile(params.paperWidth);
+  const isPaid = (params.payments?.length ?? 0) > 0;
+  const els: ReceiptElement[] = [
+    header(),
+    text(params.branchName.toUpperCase(), { align: 'center', bold: true, size: { width: 1, height: 2 } }),
+  ];
 
-  // ── Branch header ──
-  await printer.addText(H);
-  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
-  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
-  await printer.addTextSize({ width: 1, height: 2 });
-  await printer.addText(`${params.branchName.toUpperCase()}\n`);
-  await printer.addTextSize({ width: 1, height: 1 });
-  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
-  if (params.branchAddress) await printer.addText(`${params.branchAddress}\n`);
-  if (params.branchPhone)   await printer.addText(`${params.branchPhone}\n`);
-  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
-  await printer.addText(H);
+  if (params.branchAddress) els.push(text(params.branchAddress, { align: 'center' }));
+  if (params.branchPhone)   els.push(text(params.branchPhone,   { align: 'center' }));
 
-  // ── Order meta ──
-  await printer.addText(`Order : ${params.orderNumber}\n`);
-  await printer.addText(`Table : ${params.tableLabel}\n`);
-  await printer.addText(`Staff : ${params.cashierName}\n`);
-  await printer.addText(`Time  : ${params.printedAt}\n`);
-  await printer.addText(L);
+  els.push(
+    header(),
+    text(`Order : ${params.orderNumber}`),
+    text(`Table : ${params.tableLabel}`),
+    text(`Staff : ${params.cashierName}`),
+    text(`Time  : ${formatReceiptDate(params.printedAt)}`),
+    divider(),
+  );
 
-  // ── Items ──
   for (const item of params.items) {
-    await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
-    await Printer.addTextLine(printer, {
-      left: `${item.quantity}x ${item.name}`,
-      right: idr(item.total),
-    });
-    await printer.addText('\n');
-    await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
+    els.push(
+      columns(
+        [
+          { text: `${item.quantity}x ${item.name}`, width: 0.65, overflow: 'wrap' },
+          { text: idr(item.total), width: 0.35, align: 'right' },
+        ],
+        { bold: true },
+      ),
+    );
     for (const mod of item.modifiers) {
-      await printer.addText(`   ${mod}\n`);
+      els.push(text(`   ${mod}`));
+    }
+    if (item.weight) {
+      const pricePerUnit = Math.round(item.unitPrice / item.weight);
+      const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+      els.push(text(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`));
     }
   }
 
-  await printer.addText(L);
+  els.push(divider(), row('Subtotal', idr(params.subtotal)));
+  if (params.discountAmount > 0)    els.push(row('Diskon',                              `-${idr(params.discountAmount)}`));
+  if (params.taxAmount > 0)         els.push(row(`Pajak (${params.taxRate}%)`,            idr(params.taxAmount)));
+  if (params.serviceCharge > 0)     els.push(row(`Servis (${params.serviceChargeRate}%)`, idr(params.serviceCharge)));
+  if (params.roundingAmount !== 0)  els.push(row('Pembulatan',  idr(params.roundingAmount)));
 
-  // ── Totals ──
-  await Printer.addTextLine(printer, { left: 'Subtotal', right: idr(params.subtotal) });
-  await printer.addText('\n');
-  if (params.discountAmount > 0) {
-    await Printer.addTextLine(printer, { left: 'Diskon', right: `-${idr(params.discountAmount)}` });
-    await printer.addText('\n');
-  }
-  if (params.taxAmount > 0) {
-    await Printer.addTextLine(printer, { left: 'Pajak (11%)', right: idr(params.taxAmount) });
-    await printer.addText('\n');
-  }
-  if (params.serviceCharge > 0) {
-    await Printer.addTextLine(printer, { left: 'Servis', right: idr(params.serviceCharge) });
-    await printer.addText('\n');
-  }
-  if (params.roundingAmount !== 0) {
-    await Printer.addTextLine(printer, { left: 'Pembulatan', right: idr(params.roundingAmount) });
-    await printer.addText('\n');
-  }
+  els.push(header(), total('TOTAL', idr(params.total)), header());
 
-  // ── Grand total ──
-  await printer.addText(H);
-  await printer.addTextStyle({ em: CommonParams.TRUE as TrueFalseParam });
-  await printer.addTextSize({ width: 1, height: 2 });
-  await Printer.addTextLine(printer, { left: 'TOTAL', right: idr(params.total) });
-  await printer.addText('\n');
-  await printer.addTextSize({ width: 1, height: 1 });
-  await printer.addTextStyle({ em: CommonParams.FALSE as TrueFalseParam });
-  await printer.addText(H);
-
-  // ── Payments ──
   if (params.payments && params.payments.length > 0) {
-    await printer.addText(L);
+    els.push(divider());
     for (const p of params.payments) {
-      await Printer.addTextLine(printer, { left: `Bayar (${p.method})`, right: idr(p.amount) });
-      await printer.addText('\n');
-      if (p.changeAmount > 0) {
-        await Printer.addTextLine(printer, { left: 'Kembalian', right: idr(p.changeAmount) });
-        await printer.addText('\n');
-      }
+      els.push(row(`Bayar (${p.method})`, idr(p.amount)));
+      if (p.changeAmount > 0) els.push(row('Kembalian', idr(p.changeAmount)));
     }
-    await printer.addText(L);
+    els.push(divider());
   }
 
-  // ── Footer ──
-  await printer.addTextAlign(TextAlignType.ALIGN_CENTER);
-  await printer.addText('\nTerima kasih!\nSampai jumpa kembali\n');
-  await printer.addTextAlign(TextAlignType.ALIGN_LEFT);
-  await printer.addText(H);
-  await printer.addFeedLine(3);
-  await printer.addCut(PrinterAddCutType.CUT_FEED);
+  els.push(
+    header(),
+    text(isPaid ? 'LUNAS' : 'BELUM BAYAR', { align: 'center', bold: true, size: { width: 1, height: 2 } }),
+    header(),
+    space(),
+    text('Terima kasih!',        { align: 'center' }),
+    text('Sampai jumpa kembali', { align: 'center' }),
+    header(),
+  );
+
+  return receipt(els, { profile });
 }
 
 // ── Public print functions ────────────────────────────────────────────────────
@@ -370,12 +388,9 @@ async function getConfig(type: PrinterType): Promise<PrinterConfig | null> {
   return type === 'kitchen' ? settings.kitchenPrinter : settings.cashierPrinter;
 }
 
-/**
- * Prints a Kitchen Order Ticket to the configured printer.
- */
 export async function printKOT(
   type: PrinterType,
-  params: Parameters<typeof formatKOT>[0],
+  params: Omit<Parameters<typeof formatKOT>[0], 'paperWidth'>,
 ): Promise<void> {
   const cfg = await getConfig(type);
   if (!cfg) {
@@ -383,7 +398,9 @@ export async function printKOT(
     return;
   }
   try {
-    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildKOTJob(p, params));
+    await new BluetoothTransport(cfg.address).send(
+      buildKOTBytes({ ...params, paperWidth: cfg.paperWidth }),
+    );
     addBreadcrumb('print', 'KOT printed', {
       type,
       address: cfg.address,
@@ -400,12 +417,9 @@ export async function printKOT(
   }
 }
 
-/**
- * Prints a customer bill to the configured printer.
- */
 export async function printBill(
   type: PrinterType,
-  params: Parameters<typeof formatBill>[0],
+  params: Omit<Parameters<typeof formatBill>[0], 'paperWidth'>,
 ): Promise<void> {
   const cfg = await getConfig(type);
   if (!cfg) {
@@ -413,7 +427,9 @@ export async function printBill(
     return;
   }
   try {
-    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, (p) => buildBillJob(p, params));
+    await new BluetoothTransport(cfg.address).send(
+      buildBillBytes({ ...params, paperWidth: cfg.paperWidth }),
+    );
     addBreadcrumb('print', 'Bill printed', {
       type,
       address: cfg.address,
@@ -430,10 +446,6 @@ export async function printBill(
   }
 }
 
-/**
- * Sends a raw text string to the configured printer.
- * Use for simple test prints; prefer printKOT / printBill for real jobs.
- */
 export async function sendToPrinter(
   type: PrinterType,
   data: string,
@@ -444,13 +456,10 @@ export async function sendToPrinter(
     console.warn(`[Printer] No ${type} printer configured — skipping print`);
     return;
   }
-
   try {
-    await runPrinterJob(cfg.address, cfg.name ?? cfg.address, async (printer) => {
-      await printer.addText(data);
-      await printer.addFeedLine(3);
-      await printer.addCut(PrinterAddCutType.CUT_FEED);
-    });
+    const profile = getProfile(cfg.paperWidth);
+    const bytes = new CommandBuilder(profile).init().text(data).cut().build();
+    await new BluetoothTransport(cfg.address).send(bytes);
     addBreadcrumb('print', 'Raw print sent', { type, address: cfg.address });
   } catch (err) {
     captureError(err, {
@@ -462,9 +471,51 @@ export async function sendToPrinter(
   }
 }
 
-/**
- * Opens the cash drawer via an ESC/POS kick command sent to the cashier printer.
- */
+
+export async function printTestPage(type: PrinterType): Promise<void> {
+  const cfg = await getConfig(type);
+  if (!cfg) {
+    addBreadcrumb('print', 'Test print skipped — no printer configured', { type }, 'warning');
+    return;
+  }
+  const profile = getProfile(cfg.paperWidth);
+  const now = new Date().toLocaleString('id-ID');
+  const bytes = receipt([
+    header(),
+    text('TEST PRINT', { align: 'center', bold: true, size: { width: 1, height: 2 } }),
+    header(),
+    row('Printer', type),
+    row('Paper',   `${cfg.paperWidth}mm`),
+    row('Time',    now),
+    // ── Image ──────────────────────────────────────────────────────
+    divider(),
+    text('Image Test', { align: 'center', bold: true }),
+    space(1),
+    image(TEST_IMAGE_BITMAP),
+    // ── QR Code ────────────────────────────────────────────────────
+    divider(),
+    text('QR Code Test', { align: 'center', bold: true }),
+    space(1),
+    qr('https://wikipedia.org', { size: 4, correction: 'M' }),
+    // ── Barcode ────────────────────────────────────────────────────
+    divider(),
+    text('Barcode Test', { align: 'center', bold: true }),
+    space(1),
+    barcode('CODE128', 'POS-TEMPEST', { height: 60, hri: 'below' }),
+    // ── Footer ─────────────────────────────────────────────────────
+    divider(),
+    text('POS Tempest', { align: 'center' }),
+    header(),
+  ], { profile });
+  try {
+    await new BluetoothTransport(cfg.address).send(bytes);
+    addBreadcrumb('print', 'Test print sent', { type, address: cfg.address });
+  } catch (err) {
+    captureError(err, { module: 'printer', operation: 'printTestPage', extras: { type, address: cfg.address } });
+    throw err;
+  }
+}
+
 export async function openCashDrawer(): Promise<void> {
   const cfg = await getConfig('cashier');
   if (!cfg) {
@@ -472,7 +523,9 @@ export async function openCashDrawer(): Promise<void> {
     return;
   }
   try {
-    await openCashDrawerViaBluetooth(cfg.address, cfg.name ?? cfg.address);
+    // ESC p — cash drawer pulse; no init needed (avoids paper advance)
+    const bytes = new CommandBuilder(GENERIC_PROFILE_80).cashDrawer().build();
+    await new BluetoothTransport(cfg.address).send(bytes);
     addBreadcrumb('print', 'Cash drawer opened', { address: cfg.address });
   } catch (err) {
     captureError(err, {

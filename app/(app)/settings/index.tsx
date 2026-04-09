@@ -37,9 +37,8 @@ export default function SettingsScreen() {
   const {
     kitchenPrinter,
     cashierPrinter,
-    paperWidth,
     updatePrinter,
-    updatePaperWidth,
+    updatePrinterPaperWidth,
     isLoading: printerLoading,
   } = usePrinter();
 
@@ -230,9 +229,8 @@ export default function SettingsScreen() {
         <PrinterSection
           kitchenPrinter={kitchenPrinter}
           cashierPrinter={cashierPrinter}
-          paperWidth={paperWidth}
           updatePrinter={updatePrinter}
-          updatePaperWidth={updatePaperWidth}
+          updatePrinterPaperWidth={updatePrinterPaperWidth}
         />
       </AccordionSection>
 

@@ -2,7 +2,7 @@ import { Config } from '@/constants/config';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://api.zidan.id';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.zidan.id';
 const TIMEOUT_MS = Config.API_TIMEOUT_MS;
 
 export class ApiError extends Error {

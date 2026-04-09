@@ -25,7 +25,7 @@ interface InventoryRow {
 export async function deductStockForItems(
   items: OrderItemForDeduction[],
   userId: number,
-  orderId: number
+  orderId: string
 ): Promise<void> {
   try {
   const now = new Date().toISOString();

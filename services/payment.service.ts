@@ -23,7 +23,7 @@ import { calculateOrderTotals } from '@/services/order.service';
  * @param appliedBy  - User ID of the staff member applying the discount
  */
 export async function applyOrderDiscount(
-  orderId: number,
+  orderId: string,
   discountId: number,
   appliedBy: number,
 ): Promise<void> {
@@ -126,7 +126,7 @@ export async function applyOrderDiscount(
  * Removes any applied discount from an order.
  * Resets discount_amount to 0 and recalculates totals.
  */
-export async function removeOrderDiscount(orderId: number): Promise<void> {
+export async function removeOrderDiscount(orderId: string): Promise<void> {
   const now = new Date().toISOString();
 
   await powersync.execute(`DELETE FROM order_discounts WHERE order_id = ?`, [orderId]);
@@ -151,7 +151,7 @@ export async function removeOrderDiscount(orderId: number): Promise<void> {
 /**
  * Gets the currently applied discount for an order, if any.
  */
-export async function getOrderDiscount(orderId: number): Promise<OrderDiscount | null> {
+export async function getOrderDiscount(orderId: string): Promise<OrderDiscount | null> {
   return powersync.getOptional<OrderDiscount>(
     `SELECT * FROM order_discounts WHERE order_id = ? ORDER BY created_at DESC LIMIT 1`,
     [orderId],
@@ -180,7 +180,7 @@ export async function getActiveDiscounts(): Promise<Discount[]> {
 /**
  * Gets all recorded payments for an order, ordered by time.
  */
-export async function getOrderPayments(orderId: number): Promise<Payment[]> {
+export async function getOrderPayments(orderId: string): Promise<Payment[]> {
   return powersync.getAll<Payment>(
     `SELECT * FROM payments WHERE order_id = ? ORDER BY paid_at ASC`,
     [orderId],
@@ -212,7 +212,7 @@ export function calculateChange(totalDue: number, cashReceived: number): number 
  * @param referenceNumber - Receipt/ref number for card/QRIS payments
  */
 export async function processPayment(
-  orderId: number,
+  orderId: string,
   shiftId: number | null,
   method: string,
   amount: number,
@@ -300,7 +300,7 @@ export async function processPayment(
  *
  * @param orderId - The order to complete
  */
-export async function completeOrder(orderId: number): Promise<void> {
+export async function completeOrder(orderId: string): Promise<void> {
   return startSpan({ name: 'order.complete', op: 'db.powersync' }, async () => {
   try {
   const now = new Date().toISOString();

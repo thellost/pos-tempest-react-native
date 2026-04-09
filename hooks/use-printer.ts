@@ -8,8 +8,8 @@ import {
     type PrinterType,
     clearPrinter,
     getPrinterSettings,
-    setPaperWidth,
     setPrinter,
+    setPrinterPaperWidth,
 } from '@/lib/printer';
 
 export type { PaperWidth, PrinterConfig, PrinterType };
@@ -23,7 +23,6 @@ export function usePrinter() {
   const [settings, setSettings] = useState<PrinterSettings>({
     kitchenPrinter: null,
     cashierPrinter: null,
-    paperWidth: '80mm',
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -62,15 +61,15 @@ export function usePrinter() {
     [load],
   );
 
-  /** Change paper width (58mm / 80mm). */
-  const updatePaperWidth = useCallback(
-    async (width: PaperWidth) => {
+  /** Change paper width for a specific printer. */
+  const updatePrinterPaperWidth = useCallback(
+    async (type: PrinterType, width: PaperWidth) => {
       try {
-        await setPaperWidth(width);
-        addBreadcrumb('print', 'Paper width changed', { width });
+        await setPrinterPaperWidth(type, width);
+        addBreadcrumb('print', 'Paper width changed', { type, width });
         await load();
       } catch (error) {
-        captureError(error, { module: 'printer', operation: 'updatePaperWidth', extras: { width } });
+        captureError(error, { module: 'printer', operation: 'updatePrinterPaperWidth', extras: { type, width } });
         throw error;
       }
     },
@@ -82,9 +81,8 @@ export function usePrinter() {
     isLoading,
     refresh: load,
     updatePrinter,
-    updatePaperWidth,
+    updatePrinterPaperWidth,
     kitchenPrinter: settings.kitchenPrinter,
     cashierPrinter: settings.cashierPrinter,
-    paperWidth: settings.paperWidth,
   };
 }
