@@ -97,7 +97,7 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
     <View className="absolute inset-0 z-50 items-center justify-center" style={{ backgroundColor: ThemeColors.surfaces.overlay }}>
       <View
         className="overflow-hidden rounded-2xl border border-border bg-surface-card"
-        style={{ width: 520, maxHeight: '85%' }}
+        style={{ width: 520, maxWidth: '95%', maxHeight: '85%' }}
       >
         {/* Header */}
         <View className="border-b border-border p-5">

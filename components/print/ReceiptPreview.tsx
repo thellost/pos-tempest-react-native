@@ -66,7 +66,7 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
       >
         <View
           className="w-[380px] overflow-hidden rounded-2xl"
-          style={{ maxHeight: '90%' }}
+          style={{ maxHeight: '90%', maxWidth: '95%' }}
         >
           {/* ── Modal header ── */}
           <View className="flex-row items-center justify-between border-b border-border bg-surface-card px-5 py-4">

@@ -11,7 +11,7 @@ export function SecondaryButton({ size = 'md', className, ...rest }: SecondaryBu
     <Button
       className={clsx(
         'items-center justify-center rounded-sm border border-border bg-surface-raised',
-        size === 'lg' ? 'h-12' : 'h-10',
+        size === 'lg' ? 'h-12' : 'min-h-[44px]',
         className,
       )}
       {...rest}

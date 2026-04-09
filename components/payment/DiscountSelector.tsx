@@ -60,7 +60,7 @@ export const DiscountSelector = memo(function DiscountSelector({
       >
         <Pressable
           className="overflow-hidden rounded-xl border border-border bg-surface-card"
-          style={{ width: 420, maxHeight: '78%' }}
+          style={{ width: 420, maxWidth: '95%', maxHeight: '78%' }}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Header */}

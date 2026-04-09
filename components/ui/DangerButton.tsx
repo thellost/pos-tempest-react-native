@@ -11,7 +11,7 @@ export function DangerButton({ size = 'md', className, ...rest }: DangerButtonPr
     <Button
       className={clsx(
         'items-center justify-center rounded-sm border border-pos-danger bg-pos-danger-muted',
-        size === 'lg' ? 'h-12' : 'h-10',
+        size === 'lg' ? 'h-12' : 'min-h-[44px]',
         className,
       )}
       {...rest}

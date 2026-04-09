@@ -55,7 +55,7 @@ export function KOTTicketPreview({ kot, onDismiss }: KOTTicketPreviewProps) {
       >
         <View
           className="w-[380px] overflow-hidden rounded-2xl"
-          style={{ maxHeight: '85%' }}
+          style={{ maxHeight: '85%', maxWidth: '95%' }}
         >
           {/* ── Modal header ── */}
           <View className="flex-row items-center justify-between border-b border-border bg-surface-card px-5 py-4">

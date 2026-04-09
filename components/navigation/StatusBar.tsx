@@ -10,6 +10,8 @@ interface StatusBarProps {
   activeOrdersCount: number;
   deviceName: string;
   branchName: string;
+  /** Compact mode for phones: reduced height, hides secondary info */
+  compact?: boolean;
 }
 
 function formatTime(): string {
@@ -30,6 +32,7 @@ export function AppStatusBar({
   activeOrdersCount,
   deviceName,
   branchName,
+  compact = false,
 }: StatusBarProps) {
   const [time, setTime] = useState(formatTime);
 
@@ -46,6 +49,36 @@ export function AppStatusBar({
         .join('')
         .toUpperCase()
     : '??';
+
+  if (compact) {
+    return (
+      <View className="h-9 flex-row items-center border-b border-border bg-surface-card px-3">
+        {/* LEFT — avatar + name */}
+        <View className="flex-row items-center gap-1.5" style={{ flexShrink: 0 }}>
+          <View className="h-6 w-6 items-center justify-center rounded-full bg-accent" style={{ flexShrink: 0 }}>
+            <Text className="text-[9px] font-bold text-white">{initials}</Text>
+          </View>
+          <Text className="text-pos-xs font-medium text-pos-text" numberOfLines={1} style={{ maxWidth: 80 }}>
+            {user?.name ?? 'Unknown'}
+          </Text>
+        </View>
+
+        {/* CENTER — clock */}
+        <View className="flex-1 items-center">
+          <Text className="font-mono text-pos-sm font-bold text-pos-text-muted">
+            {time}
+          </Text>
+        </View>
+
+        {/* RIGHT — shift status dot */}
+        <View className="items-center justify-center" style={{ flexShrink: 0 }}>
+          <View
+            className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-danger'}`}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="h-11 flex-row items-center border-b border-border bg-surface-card px-4">

@@ -5,6 +5,7 @@ import { IconButton } from '@/components/ui';
 import { PRICING_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
+import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 
 const DEFAULT_BUTTON_COLOR = ThemeColors.category.default;
@@ -31,6 +32,8 @@ function MenuItemCardComponent({
   const isLowStock = item.isLowStock;
   const accentColor = categoryColor || DEFAULT_BUTTON_COLOR;
   const displayCategory = categoryName || 'Food & Drink';
+  const { isPhone } = useLayout();
+  const iconSize = isPhone ? 'md' : 'sm' as const;
 
   const handleAdd = useCallback(() => {
     if (isAvailable) {
@@ -73,7 +76,7 @@ function MenuItemCardComponent({
 
       <View className="flex-row items-center justify-end gap-1.5 border-t border-border px-2 py-1.5">
         <IconButton
-          size="sm"
+          size={iconSize}
           onPress={handleDecrement}
           disabled={!isAvailable || quantity <= 0}
           className="border border-border bg-surface-raised"
@@ -86,7 +89,7 @@ function MenuItemCardComponent({
         </Text>
 
         <IconButton
-          size="sm"
+          size={iconSize}
           onPress={handleAdd}
           disabled={!isAvailable}
           className="border border-border bg-surface-raised"
