@@ -171,23 +171,36 @@ export async function getDeviceRegistration(
   deviceUid: string
 ): Promise<DeviceRegistrationResult> {
   try {
-    // ORDER BY ensures we prefer the active record, then most recently inserted,
-    // in case duplicate device_uid rows exist from a previous bug.
-    const device = await powersync.getOptional<Device>(
+    let device = await powersync.getOptional<Device>(
       `SELECT * FROM devices WHERE id = ?`,
       [deviceUid]
     );
-    
+
+    // Local DB has no record — check Supabase directly in case the device was
+    // previously registered but the local DB hasn't synced yet (e.g. after logout
+    // when PowerSync reconnects and the devices table is briefly stale).
+    if (!device) {
+      const { data: serverDevice } = await supabase
+        .from('devices')
+        .select('*')
+        .eq('device_uid', deviceUid)
+        .maybeSingle();
+
+      if (serverDevice) {
+        device = serverDevice as unknown as Device;
+      }
+    }
+
     if (!device) {
       return { registered: false, device: null, branch: null };
     }
-    
+
     // Get associated branch
     const branch = await powersync.getOptional<Branch>(
       `SELECT * FROM branches WHERE id = ?`,
       [device.branch_id]
     );
-    
+
     return {
       registered: device.status === DEVICE_STATUS.ACTIVE,
       device,

@@ -384,6 +384,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         // Security checks
         if (!userWithPin) {
+          // If PowerSync is re-syncing after a long idle (full checkpoint clear),
+          // the users table is temporarily empty. Detect this and prompt the user
+          // to wait rather than treating it as a wrong PIN.
+          const isSyncing = !powersync.currentStatus.hasSynced || !!powersync.currentStatus.dataFlowStatus?.downloading;
+          if (isSyncing) {
+            return {
+              success: false,
+              isLocked: true,
+              remainingAttempts: -1, // sentinel: means "syncing, not a failed attempt"
+              resetInMs: 0,
+            };
+          }
           logAuditEvent({
             type: AuditEventType.PIN_UNLOCK_FAILED,
             userId: authUserId,

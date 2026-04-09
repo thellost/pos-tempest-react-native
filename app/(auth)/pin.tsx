@@ -72,6 +72,13 @@ export default function PinScreen() {
       const result = await unlockWithPin(candidate);
 
       if (!result.success) {
+        if (result.remainingAttempts === -1) {
+          // Sentinel: PowerSync is re-syncing after a long idle — local DB temporarily empty.
+          // Don't count this as a failed attempt.
+          setError('Data is syncing. Please wait a moment and try again.');
+          setPin('');
+          return;
+        }
         if (result.isLocked) {
           const minutes = Math.ceil(result.resetInMs / 60000);
           setError(`Too many attempts. Locked for ${minutes} minutes.`);
