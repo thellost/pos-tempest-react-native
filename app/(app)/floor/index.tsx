@@ -1,12 +1,15 @@
-import { Button } from '@/components/ui';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+
 import { router } from 'expo-router';
 import { Armchair, MapPin, ShoppingBag } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs';
+import { FloorStatsHeader } from '@/components/floor/FloorStatsHeader';
 import { ReservationModal } from '@/components/floor/ReservationModal';
 import { TableCard } from '@/components/floor/TableCard';
+import { TakeawayOrderCard } from '@/components/floor/TakeawayOrderCard';
+import { Button } from '@/components/ui';
 import { TABLE_STATUS } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
 import { useLayout } from '@/hooks/use-layout';
@@ -19,7 +22,6 @@ import { toInt } from '@/utils/coerce';
 export default function FloorScreen() {
   const { isPhone } = useLayout();
   const cardWidth = isPhone ? 'w-[48%]' : 'w-[31%]';
-  const statCardWidth = isPhone ? 'flex-1' : 'w-24';
 
   const {
     floorAreas,
@@ -170,45 +172,14 @@ export default function FloorScreen() {
 
   return (
     <View className="flex-1 bg-surface">
-      <View className="border-b border-border bg-surface-card px-4 py-3">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-pos-2xl font-bold text-pos-text">Tables & Orders</Text>
-          <Button
-            onPress={handleTakeawayPress}
-            className="flex-row items-center rounded-sm bg-amber-500 px-5 py-3"
-          >
-            <ShoppingBag size={18} color="white" />
-            <Text className="ml-2 text-pos-base font-bold text-white">Takeaway</Text>
-          </Button>
-        </View>
-        <View className="mt-3 flex-row items-center gap-2">
-          <View className={`${statCardWidth} rounded-sm bg-status-available-muted px-3 py-2 items-center`}>
-            <View className="flex-row items-center gap-1">
-              <View className="h-2 w-2 rounded-full bg-status-available" />
-              <Text className="text-pos-xs text-pos-text-muted">Available</Text>
-            </View>
-            <Text className="font-mono text-pos-xl font-bold text-status-available text-center">{availableTablesCount}</Text>
-          </View>
-          <View className={`${statCardWidth} rounded-sm bg-status-occupied-muted px-3 py-2 items-center`}>
-            <View className="flex-row items-center gap-1">
-              <View className="h-2 w-2 rounded-full bg-status-occupied" />
-              <Text className="text-pos-xs text-pos-text-muted">Occupied</Text>
-            </View>
-            <Text className="font-mono text-pos-xl font-bold text-status-occupied text-center">{occupiedTablesCount}</Text>
-          </View>
-          <View className={`${statCardWidth} rounded-sm bg-status-reserved-muted px-3 py-2 items-center`}>
-            <View className="flex-row items-center gap-1">
-              <View className="h-2 w-2 rounded-full bg-status-reserved" />
-              <Text className="text-pos-xs text-pos-text-muted">Reserved</Text>
-            </View>
-            <Text className="font-mono text-pos-xl font-bold text-status-reserved text-center">{reservedTablesCount}</Text>
-          </View>
-          <View className={`${statCardWidth} rounded-sm bg-surface-raised px-3 py-2 items-center`}>
-            <Text className="text-pos-xs text-pos-text-muted">Total</Text>
-            <Text className="font-mono text-pos-xl font-bold text-pos-text text-center">{totalTablesCount}</Text>
-          </View>
-        </View>
-      </View>
+      <FloorStatsHeader
+        availableTablesCount={availableTablesCount}
+        occupiedTablesCount={occupiedTablesCount}
+        reservedTablesCount={reservedTablesCount}
+        totalTablesCount={totalTablesCount}
+        onTakeawayPress={handleTakeawayPress}
+        isPhone={isPhone}
+      />
 
       <FloorAreaTabs
         floorAreas={floorAreas}
@@ -240,34 +211,13 @@ export default function FloorScreen() {
           ) : (
             <View className="flex-row flex-wrap gap-3">
               {takeawayOrders.map((order) => (
-                <Pressable
+                <TakeawayOrderCard
                   key={`takeaway-${order.id}`}
+                  order={order}
+                  cardWidth={cardWidth}
+                  elapsedMinutes={`${getTakeawayElapsedMinutes(order.created_at)}m`}
                   onPress={() => handleTakeawayOrderPress(order)}
-                  className={`${cardWidth} rounded-sm border border-border bg-surface-card px-3 py-2 active:bg-surface-raised`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-1.5">
-                      <ShoppingBag size={14} color={ThemeColors.text.primary} />
-                      <Text className="font-mono text-pos-lg font-bold text-pos-text">{order.order_number}</Text>
-                    </View>
-                    <Text className="font-mono text-pos-xs text-pos-text-muted">
-                      {getTakeawayElapsedMinutes(order.created_at)}m
-                    </Text>
-                  </View>
-                  {order.customer_name && (
-                    <Text className="mt-1 text-pos-sm text-pos-text-muted" numberOfLines={1}>
-                      {order.customer_name}
-                    </Text>
-                  )}
-                  <View className="mt-1 flex-row items-center justify-between">
-                    <Text className="font-mono text-pos-base font-semibold text-pos-text">
-                      Rp {order.total.toLocaleString('id-ID')}
-                    </Text>
-                    <View className="rounded px-2 py-0.5 bg-amber-500/20">
-                      <Text className="text-pos-xs font-bold text-amber-500">{order.status}</Text>
-                    </View>
-                  </View>
-                </Pressable>
+                />
               ))}
             </View>
           )
