@@ -1,11 +1,14 @@
 import { ThemeColors } from '@/constants/theme';
 import { CheckCircle, ChefHat, Clock } from 'lucide-react-native';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import type { ReactElement } from 'react';
 
 import { KOTCard } from '@/components/kitchen/KOTCard';
 import type { KotStatus } from '@/constants/enums';
 import type { KOTRow } from '@/hooks/use-kitchen';
 import { useKitchen } from '@/hooks/use-kitchen';
+import { useLayout } from '@/hooks/use-layout';
 
 // ─── Column header ────────────────────────────────────────────────────────────
 
@@ -88,16 +91,80 @@ function KDSColumn({
   );
 }
 
+// ─── Phone tab bar ────────────────────────────────────────────────────────────
+
+type TabKey = 'pending' | 'preparing' | 'ready';
+
+interface PhoneTabBarProps {
+  activeTab: TabKey;
+  onSelect: (tab: TabKey) => void;
+  pendingCount: number;
+  preparingCount: number;
+  readyCount: number;
+}
+
+function PhoneTabBar({
+  activeTab,
+  onSelect,
+  pendingCount,
+  preparingCount,
+  readyCount,
+}: PhoneTabBarProps) {
+  const tabs: { key: TabKey; label: string; count: number; color: string }[] = [
+    { key: 'pending', label: 'Pending', count: pendingCount, color: ThemeColors.warning.DEFAULT },
+    { key: 'preparing', label: 'Preparing', count: preparingCount, color: ThemeColors.info.DEFAULT },
+    { key: 'ready', label: 'Ready', count: readyCount, color: ThemeColors.success.DEFAULT },
+  ];
+
+  return (
+    <View className="flex-row border-b border-border bg-surface-card">
+      {tabs.map(({ key, label, count, color }) => {
+        const isActive = activeTab === key;
+        return (
+          <Pressable
+            key={key}
+            onPress={() => onSelect(key)}
+            className="flex-1 items-center py-3"
+            style={isActive ? { borderBottomWidth: 2, borderBottomColor: color } : undefined}
+          >
+            <View className="flex-row items-center gap-1.5">
+              <Text
+                className="text-pos-sm font-semibold"
+                style={{ color: isActive ? color : ThemeColors.text.muted }}
+              >
+                {label}
+              </Text>
+              <View
+                className="min-w-[18px] items-center justify-center rounded px-1"
+                style={{ backgroundColor: isActive ? color + '33' : ThemeColors.surfaces.raised }}
+              >
+                <Text
+                  className="font-mono font-bold"
+                  style={{ fontSize: 10, color: isActive ? color : ThemeColors.text.muted }}
+                >
+                  {count}
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 // ─── Kitchen screen ───────────────────────────────────────────────────────────
 
 /**
- * Kitchen Display System — 3-column Kanban board.
- * Pending → In Progress → Ready
- * Each KOT card shows items, round badge, elapsed time, and an advance button.
+ * Kitchen Display System.
+ * Tablet: 3-column Kanban board (Pending → In Progress → Ready).
+ * Phone: tab-based single-column view with full-width KOT cards.
  */
 export default function KitchenScreen() {
   const { pendingKOTs, inProgressKOTs, readyKOTs, isLoading, advanceKOT } =
     useKitchen();
+  const { isPhone } = useLayout();
+  const [activeTab, setActiveTab] = useState<TabKey>('pending');
 
   if (isLoading) {
     return (
@@ -112,6 +179,25 @@ export default function KitchenScreen() {
 
   const totalActive =
     pendingKOTs.length + inProgressKOTs.length + readyKOTs.length;
+
+  const activeKOTs: KOTRow[] =
+    activeTab === 'pending'
+      ? pendingKOTs
+      : activeTab === 'preparing'
+        ? inProgressKOTs
+        : readyKOTs;
+
+  const emptyMessages: Record<TabKey, string> = {
+    pending: 'No tickets waiting',
+    preparing: 'Nothing cooking right now',
+    ready: 'Nothing ready to serve',
+  };
+
+  const emptyIcons: Record<TabKey, ReactElement> = {
+    pending: <Clock size={28} color={ThemeColors.text.faint} />,
+    preparing: <ChefHat size={28} color={ThemeColors.text.faint} />,
+    ready: <CheckCircle size={28} color={ThemeColors.text.faint} />,
+  };
 
   return (
     <View className="flex-1 flex-col bg-surface">
@@ -131,48 +217,80 @@ export default function KitchenScreen() {
           )}
         </View>
 
-        {/* Legend */}
-        <View className="flex-row items-center gap-4">
-          {[
-            { dot: ThemeColors.warning.DEFAULT, label: 'Pending' },
-            { dot: ThemeColors.info.DEFAULT, label: 'In Progress' },
-            { dot: ThemeColors.success.DEFAULT, label: 'Ready' },
-          ].map(({ dot, label }) => (
-            <View key={label} className="flex-row items-center gap-1.5">
-              <View
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: dot }}
-              />
-              <Text className="text-pos-xs text-pos-text-muted">{label}</Text>
-            </View>
-          ))}
-        </View>
+        {/* Legend — hidden on phone (tabs serve as legend) */}
+        {!isPhone && (
+          <View className="flex-row items-center gap-4">
+            {[
+              { dot: ThemeColors.warning.DEFAULT, label: 'Pending' },
+              { dot: ThemeColors.info.DEFAULT, label: 'In Progress' },
+              { dot: ThemeColors.success.DEFAULT, label: 'Ready' },
+            ].map(({ dot, label }) => (
+              <View key={label} className="flex-row items-center gap-1.5">
+                <View
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: dot }}
+                />
+                <Text className="text-pos-xs text-pos-text-muted">{label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
-      {/* ── Kanban columns ── */}
-      <View className="flex-1 flex-row">
-        <KDSColumn
-          label="Pending"
-          accentColor={ThemeColors.warning.DEFAULT}
-          kots={pendingKOTs}
-          onAdvance={advanceKOT}
-          emptyMessage="No tickets waiting"
-        />
-        <KDSColumn
-          label="In Progress"
-          accentColor={ThemeColors.info.DEFAULT}
-          kots={inProgressKOTs}
-          onAdvance={advanceKOT}
-          emptyMessage="Nothing cooking right now"
-        />
-        <KDSColumn
-          label="Ready"
-          accentColor={ThemeColors.success.DEFAULT}
-          kots={readyKOTs}
-          onAdvance={advanceKOT}
-          emptyMessage="Nothing ready to serve"
-        />
-      </View>
+      {isPhone ? (
+        /* ── Phone: tab-based layout ── */
+        <>
+          <PhoneTabBar
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+            pendingCount={pendingKOTs.length}
+            preparingCount={inProgressKOTs.length}
+            readyCount={readyKOTs.length}
+          />
+          <ScrollView
+            contentContainerStyle={{ padding: 12 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {activeKOTs.length === 0 ? (
+              <View className="items-center py-10">
+                <View className="mb-2">{emptyIcons[activeTab]}</View>
+                <Text className="text-pos-sm text-pos-text-faint text-center">
+                  {emptyMessages[activeTab]}
+                </Text>
+              </View>
+            ) : (
+              activeKOTs.map((kot) => (
+                <KOTCard key={String(kot.id)} kot={kot} onAdvance={advanceKOT} />
+              ))
+            )}
+          </ScrollView>
+        </>
+      ) : (
+        /* ── Tablet: 3-column Kanban ── */
+        <View className="flex-1 flex-row">
+          <KDSColumn
+            label="Pending"
+            accentColor={ThemeColors.warning.DEFAULT}
+            kots={pendingKOTs}
+            onAdvance={advanceKOT}
+            emptyMessage="No tickets waiting"
+          />
+          <KDSColumn
+            label="In Progress"
+            accentColor={ThemeColors.info.DEFAULT}
+            kots={inProgressKOTs}
+            onAdvance={advanceKOT}
+            emptyMessage="Nothing cooking right now"
+          />
+          <KDSColumn
+            label="Ready"
+            accentColor={ThemeColors.success.DEFAULT}
+            kots={readyKOTs}
+            onAdvance={advanceKOT}
+            emptyMessage="Nothing ready to serve"
+          />
+        </View>
+      )}
     </View>
   );
 }

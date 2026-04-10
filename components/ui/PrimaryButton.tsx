@@ -11,7 +11,7 @@ export function PrimaryButton({ size = 'md', className, ...rest }: PrimaryButton
     <Button
       className={clsx(
         'items-center justify-center rounded-sm border border-accent bg-accent',
-        size === 'lg' ? 'h-12' : 'h-10',
+        size === 'lg' ? 'h-12' : 'min-h-[44px]',
         className,
       )}
       {...rest}

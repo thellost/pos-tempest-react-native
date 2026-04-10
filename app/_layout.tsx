@@ -6,8 +6,9 @@ import { useFonts } from 'expo-font';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Modal, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ImmersiveMode from 'react-native-immersive-mode';
 import 'react-native-reanimated';
 
@@ -79,11 +80,18 @@ function ThemedApp() {
   });
 
   useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+    const { width, height } = Dimensions.get('window');
+    const minSide = Math.min(width, height);
+    if (minSide >= 600) {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+    }
   }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
+    const { width, height } = Dimensions.get('window');
+    const minSide = Math.min(width, height);
+    if (minSide < 600) return;
     ImmersiveMode.fullLayout(true);
     ImmersiveMode.setBarMode('FullSticky');
     const sub = ImmersiveMode.addEventListener(() => {
@@ -97,6 +105,7 @@ function ThemedApp() {
   }
 
   return (
+    <SafeAreaProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* themeVars applies CSS custom properties to all children */}
       <View style={[{ flex: 1 }, themeVars]} className="font-sans">
@@ -124,6 +133,7 @@ function ThemedApp() {
         </ConfigProvider>
       </View>
     </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 

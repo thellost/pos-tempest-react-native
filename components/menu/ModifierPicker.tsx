@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toInt } from '@/utils/coerce';
-import { Modal, ScrollView, Text, TextInput, View } from 'react-native';
-import { Button, IconButton } from '@/components/ui';
-import { X } from 'lucide-react-native';
-import { ThemeColors } from '@/constants/theme';
+import { Text, TextInput, View } from 'react-native';
+import { Button } from '@/components/ui';
+import { AdaptiveModal } from '@/components/ui/AdaptiveModal';
 
 import { PRICING_TYPE } from '@/constants/enums';
 import { ModifierGroupRow } from '@/components/menu/ModifierGroupRow';
@@ -155,105 +154,89 @@ export function ModifierPicker({
 
   const canSubmit = isSelectionValid && (!isWeightBased || (weight && parseFloat(weight) > 0));
 
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onCancel}
-    >
-      <View className="flex-1 bg-surface">
-        <View className="border-b border-border bg-surface-card px-6 py-4">
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-pos-2xl font-bold text-pos-text">
-                {menuItem.name}
-              </Text>
-              <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                {formatIDR(menuItem.price)}
-                {isWeightBased && ` per ${menuItem.unit_of_measure}`}
-              </Text>
-            </View>
-            <IconButton
-              size="lg"
-              onPress={onCancel}
-              className="rounded-full bg-surface-raised"
-            >
-              <X size={18} color={ThemeColors.text.muted} />
-            </IconButton>
-          </View>
+  const bottomBar = (
+    <View className="border-t border-border bg-surface-card px-6 py-4">
+      <View className="flex-row items-center justify-between">
+        <View>
+          <Text className="text-pos-xs text-pos-text-muted">Total</Text>
+          <Text className="text-pos-2xl font-bold text-pos-price">
+            {formatIDR(calculateTotal())}
+          </Text>
         </View>
+        <Button
+          onPress={handleConfirm}
+          disabled={!canSubmit}
+          className={`items-center justify-center rounded-xl px-8 py-4 ${
+            canSubmit ? 'bg-amber-500' : 'bg-surface-raised'
+          }`}
+        >
+          <Text className={`text-pos-base font-semibold ${canSubmit ? 'text-white' : 'text-pos-text-muted'}`}>
+            {submitLabel ?? 'Add to Order'}
+          </Text>
+        </Button>
+      </View>
+    </View>
+  );
 
-        <ScrollView className="flex-1 px-6 py-4" showsVerticalScrollIndicator={false}>
-          {isWeightBased && (
-            <View className="mb-6">
-              <Text className="mb-3 text-pos-base font-semibold text-pos-text">
-                Weight ({menuItem.unit_of_measure})
-              </Text>
-              <WeightInput
-                value={weight}
-                unitLabel={menuItem.unit_of_measure}
-                onChange={setWeight}
-              />
-            </View>
-          )}
+  const subtitle = `${formatIDR(menuItem.price)}${isWeightBased ? ` per ${menuItem.unit_of_measure}` : ''}`;
 
-          {sortedGroups.map((group) => {
-            const groupId = toInt(group.id);
-            const selectedIds = new Set(
-              Array.from(selectedModifiers.entries())
-                .filter(([, mod]) => mod.modifier_group_name === group.name)
-                .map(([id]) => id)
-            );
-
-            return (
-              <ModifierGroupRow
-                key={group.id}
-                group={group}
-                selectedModifierIds={selectedIds}
-                onToggle={(modifierId) => toggleModifier(groupId, group, modifierId)}
-              />
-            );
-          })}
-
+  return (
+    <AdaptiveModal
+      visible={visible}
+      onClose={onCancel}
+      title={menuItem.name}
+      tabletWidth={520}
+      footer={bottomBar}
+    >
+      <View className="px-6 py-4">
+        {isWeightBased && (
           <View className="mb-6">
-            <Text className="mb-2 text-pos-base font-semibold text-pos-text">
-              Special Instructions
+            <Text className="mb-3 text-pos-base font-semibold text-pos-text">
+              Weight ({menuItem.unit_of_measure})
             </Text>
-            <TextInput
-              className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
-              placeholder="e.g., Extra spicy, No ice"
-              placeholderTextColor="#64748B"
-              multiline
-              numberOfLines={3}
-              value={notes}
-              onChangeText={setNotes}
+            <WeightInput
+              value={weight}
+              unitLabel={menuItem.unit_of_measure}
+              onChange={setWeight}
             />
           </View>
-        </ScrollView>
+        )}
 
-        <View className="border-t border-border bg-surface-card px-6 py-4">
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-pos-xs text-pos-text-muted">Total</Text>
-              <Text className="text-pos-2xl font-bold text-pos-price">
-                {formatIDR(calculateTotal())}
-              </Text>
-            </View>
-            <Button
-              onPress={handleConfirm}
-              disabled={!canSubmit}
-              className={`items-center justify-center rounded-xl px-8 py-4 ${
-                canSubmit ? 'bg-amber-500' : 'bg-surface-raised'
-              }`}
-            >
-              <Text className={`text-pos-base font-semibold ${canSubmit ? 'text-white' : 'text-pos-text-muted'}`}>
-                {submitLabel ?? 'Add to Order'}
-              </Text>
-            </Button>
-          </View>
+        <Text className="mb-3 text-pos-sm text-pos-text-muted">{subtitle}</Text>
+
+        {sortedGroups.map((group) => {
+          const groupId = toInt(group.id);
+          const selectedIds = new Set(
+            Array.from(selectedModifiers.entries())
+              .filter(([, mod]) => mod.modifier_group_name === group.name)
+              .map(([id]) => id)
+          );
+
+          return (
+            <ModifierGroupRow
+              key={group.id}
+              group={group}
+              selectedModifierIds={selectedIds}
+              onToggle={(modifierId) => toggleModifier(groupId, group, modifierId)}
+            />
+          );
+        })}
+
+        <View className="mb-6">
+          <Text className="mb-2 text-pos-base font-semibold text-pos-text">
+            Special Instructions
+          </Text>
+          <TextInput
+            className="rounded-xl border border-border bg-surface-card px-4 py-3.5 text-pos-base text-pos-text"
+            placeholder="e.g., Extra spicy, No ice"
+            placeholderTextColor="#64748B"
+            multiline
+            numberOfLines={3}
+            value={notes}
+            onChangeText={setNotes}
+          />
         </View>
       </View>
-    </Modal>
+    </AdaptiveModal>
   );
 }

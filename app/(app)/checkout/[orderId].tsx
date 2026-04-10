@@ -13,6 +13,7 @@ import { ORDER_STATUS } from '@/constants/enums';
 import type { OrderItem, OrderItemModifier } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
 import { useCheckoutPayment } from '@/hooks/use-checkout-payment';
+import { useLayout } from '@/hooks/use-layout';
 import { useOrderDiscount } from '@/hooks/use-order-discount';
 import { useShift } from '@/hooks/use-shift';
 import { toFloat } from '@/utils/coerce';
@@ -50,6 +51,8 @@ function CheckoutContent({
   const { user } = useAuth();
   const { activeShift } = useShift();
   const orderId = orderIdStr;
+
+  const { isPhone } = useLayout();
 
   const { data: orderRows } = useQuery<OrderRow>(
     `SELECT o.*, t.table_number, b.name AS branch_name, b.tax_rate, b.service_charge_rate
@@ -189,13 +192,14 @@ function CheckoutContent({
   }
 
   return (
-    <View className="flex-1 flex-row bg-surface">
+    <View className={`flex-1 bg-surface ${isPhone ? 'flex-col' : 'flex-row'}`}>
       <OrderSummaryPanel
         order={order}
         items={itemsWithModifiers}
         viewOnly={viewOnly}
         appliedDiscount={discount.appliedDiscount}
         onBack={() => router.back()}
+        collapsible={isPhone}
       />
 
       {viewOnly ? (

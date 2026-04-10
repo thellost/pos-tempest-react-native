@@ -11,7 +11,7 @@ export function SuccessButton({ size = 'md', className, ...rest }: SuccessButton
     <Button
       className={clsx(
         'items-center justify-center rounded-sm border border-pos-success bg-pos-success',
-        size === 'lg' ? 'h-12' : 'h-10',
+        size === 'lg' ? 'h-12' : 'min-h-[44px]',
         className,
       )}
       {...rest}

@@ -3,7 +3,7 @@
     "name": "pos-tempest",
     "slug": "pos-tempest",
     "version": "1.0.3",
-    "orientation": "landscape",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "postempest",
     "userInterfaceStyle": "light",

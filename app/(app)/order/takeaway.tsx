@@ -2,12 +2,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { KOTTicketPreview } from '@/components/kitchen/KOTTicketPreview';
-import { CategoryTabs } from '@/components/menu/CategoryTabs';
-import { MenuGrid } from '@/components/menu/MenuGrid';
-import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
-import { OrderPanel } from '@/components/order/OrderPanel';
+import { OrderScreenPhone } from '@/components/order/OrderScreenPhone';
+import { OrderScreenTablet } from '@/components/order/OrderScreenTablet';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
+import { useLayout } from '@/hooks/use-layout';
 import { useOrderScreen } from '@/hooks/use-order-screen';
 import { PerfProfiler, useMountTimer } from '@/utils/perf-debug';
 
@@ -18,6 +17,8 @@ export default function TakeawayOrderScreen() {
 
 function TakeawayOrderContent({ orderId }: { orderId?: string }) {
   useMountTimer('TakeawayOrderContent');
+
+  const { isPhone } = useLayout();
 
   const screen = useOrderScreen({
     orderType: 'takeaway',
@@ -60,84 +61,53 @@ function TakeawayOrderContent({ orderId }: { orderId?: string }) {
     );
   }
 
+  const sharedProps = {
+    title: '🛍 Takeaway',
+    order: screen.order,
+    itemsForPanel: screen.itemsForPanel,
+    pendingRoundItemsDisplay: screen.pendingRoundItemsDisplay,
+    guestCount: null,
+    currentRound: screen.currentRound,
+    roundSentAt: screen.roundSentAt,
+    onGuestCountChange: () => {},
+    onUpdateQuantity: screen.updateQuantity,
+    onEditModifiers: screen.handleEditModifiers,
+    onConfirmOrder: screen.handleConfirmOrder,
+    onRemoveItem: screen.removeItem,
+    onSendToKitchen: screen.handleSendToKitchen,
+    onPayment: screen.handlePayment,
+    onCancelOrder: screen.handleCancelOrder,
+    onConfirmRound: screen.handleConfirmRound,
+    onCancelRound: screen.handleCancelRound,
+    onPrintBill: screen.handlePrintBill,
+    isShiftOpen: screen.isShiftOpen,
+    assignedCustomer: screen.assignedCustomer,
+    onAssignCustomer: screen.handleAssignCustomer,
+    onClearCustomer: screen.handleClearCustomer,
+    topLevelCategories: screen.topLevelCategories,
+    subCategories: screen.subCategories,
+    selectedCategoryId: screen.selectedCategoryId,
+    selectedSubCategoryId: screen.selectedSubCategoryId,
+    onSelectCategory: screen.handleSelectCategory,
+    onSelectSubCategory: screen.handleSelectSubCategory,
+    searchQuery: screen.searchQuery,
+    onSearchQueryChange: screen.setSearchQuery,
+    menuItemsList: screen.menuItemsList,
+    allItemsForGrid: screen.allItemsForGrid,
+    categoryById: screen.categoryById,
+    quantitiesByMenuItemId: screen.quantitiesByMenuItemId,
+    onMenuItemPress: screen.handleMenuItemPress,
+    onMenuItemDecrement: screen.handleMenuItemDecrement,
+  };
+
   return (
     <PerfProfiler id="TakeawayOrderContent">
       <View className="flex-1 bg-surface">
-        <View className="flex-1 flex-row">
-          <View style={{ flex: 3 }}>
-            <PerfProfiler id="OrderPanel">
-              <OrderPanel
-                order={screen.order}
-                items={screen.itemsForPanel}
-                guestCount={null}
-                onGuestCountChange={() => {}}
-                onUpdateQuantity={screen.updateQuantity}
-                onEditModifiers={screen.handleEditModifiers}
-                onConfirmOrder={screen.handleConfirmOrder}
-                onRemoveItem={screen.removeItem}
-                onSendToKitchen={screen.handleSendToKitchen}
-                onPayment={screen.handlePayment}
-                onCancelOrder={screen.handleCancelOrder}
-                pendingRoundItems={screen.pendingRoundItemsDisplay}
-                currentRound={screen.currentRound}
-                roundSentAt={screen.roundSentAt}
-                onConfirmRound={screen.handleConfirmRound}
-                onCancelRound={screen.handleCancelRound}
-                onPrintBill={screen.handlePrintBill}
-                isShiftOpen={screen.isShiftOpen}
-                assignedCustomer={screen.assignedCustomer}
-                onAssignCustomer={screen.handleAssignCustomer}
-                onClearCustomer={screen.handleClearCustomer}
-              />
-            </PerfProfiler>
-          </View>
-
-          <View style={{ flex: 7 }}>
-            <View className="border-b border-border bg-surface-card px-5 py-4">
-              <View className="flex-row items-center">
-                <View className="flex-1">
-                  <Text className="text-pos-2xl font-bold text-pos-text">🛍 Takeaway</Text>
-                  {screen.order && (
-                    <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                      {screen.order.order_number}
-                    </Text>
-                  )}
-                </View>
-                <View className="w-[52%]">
-                  <MenuSearchBar
-                    value={screen.searchQuery}
-                    onChangeText={screen.setSearchQuery}
-                    className="mx-0 my-0"
-                  />
-                </View>
-                <View className="flex-1" />
-              </View>
-            </View>
-
-            <PerfProfiler id="CategoryTabs">
-              <CategoryTabs
-                categories={screen.topLevelCategories}
-                subCategories={screen.subCategories}
-                selectedCategoryId={screen.selectedCategoryId}
-                selectedSubCategoryId={screen.selectedSubCategoryId}
-                onSelectCategory={screen.handleSelectCategory}
-                onSelectSubCategory={screen.handleSelectSubCategory}
-              />
-            </PerfProfiler>
-
-            <PerfProfiler id="MenuGrid">
-              <MenuGrid
-                items={screen.menuItemsList}
-                allItems={screen.allItemsForGrid}
-                categoryById={screen.categoryById}
-                quantitiesByMenuItemId={screen.quantitiesByMenuItemId}
-                onItemPress={screen.handleMenuItemPress}
-                onDecrementItem={screen.handleMenuItemDecrement}
-                disabled={!screen.isShiftOpen}
-              />
-            </PerfProfiler>
-          </View>
-        </View>
+        {isPhone ? (
+          <OrderScreenPhone {...sharedProps} />
+        ) : (
+          <OrderScreenTablet {...sharedProps} />
+        )}
 
         <KOTTicketPreview kot={screen.lastKOT} onDismiss={screen.dismissKOT} />
         <ReceiptPreview bill={screen.lastBill} onDismiss={screen.dismissBill} />

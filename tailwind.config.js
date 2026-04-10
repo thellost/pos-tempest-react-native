@@ -94,6 +94,10 @@ module.exports = {
         sans: ["Geist", "System"],
         mono: ["GeistMono", "monospace"],
       },
+      screens: {
+        phone: { max: '767px' },
+        tablet: '768px',
+      },
       spacing: {
         "pos-touch": "48px",
         "pos-2xs": "2px",

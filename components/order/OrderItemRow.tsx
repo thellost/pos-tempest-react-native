@@ -7,6 +7,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import { OrderItemBadge } from '@/components/order/OrderItemBadge';
 import type { OrderItemDisplay } from '@/components/order/types';
+import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 
 interface OrderItemRowProps {
@@ -27,6 +28,8 @@ export function OrderItemRow({
 }: OrderItemRowProps) {
   const itemId = item.id;
   const swipeableRef = useRef<Swipeable | null>(null);
+  const { isPhone } = useLayout();
+  const iconSize = isPhone ? 'md' : 'sm' as const;
 
   const displayQuantity = typeof item.quantity === 'string'
     ? parseInt(item.quantity as string, 10)
@@ -113,7 +116,7 @@ export function OrderItemRow({
             {!isDisabled ? (
               <View className="flex-row items-center gap-1.5">
                 <IconButton
-                  size="sm"
+                  size={iconSize}
                   onPress={() => onUpdateQuantity(itemId, displayQuantity - 1)}
                   className="bg-surface-raised"
                 >
@@ -123,7 +126,7 @@ export function OrderItemRow({
                   {displayQuantity}
                 </Text>
                 <IconButton
-                  size="sm"
+                  size={iconSize}
                   onPress={() => onUpdateQuantity(itemId, displayQuantity + 1)}
                   className="bg-surface-raised"
                 >

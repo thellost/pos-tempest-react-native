@@ -4,6 +4,7 @@ import { IconButton } from '@/components/ui';
 
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_COLOR, PAYMENT_METHOD_LABEL } from '@/constants/payment';
+import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 
 export interface PendingPayment {
@@ -27,6 +28,8 @@ export const SplitPayment = memo(function SplitPayment({
   const totalTendered = payments.reduce((sum, p) => sum + p.amount, 0);
   const remaining = Math.max(0, orderTotal - totalTendered);
   const change = Math.max(0, totalTendered - orderTotal);
+  const { isPhone } = useLayout();
+  const iconSize = isPhone ? 'md' : 'sm' as const;
 
   if (payments.length === 0) return null;
 
@@ -69,7 +72,7 @@ export const SplitPayment = memo(function SplitPayment({
 
             {/* Remove */}
             <IconButton
-              size="sm"
+              size={iconSize}
               onPress={() => onRemove(payment.id)}
               hitSlop={8}
               className="bg-transparent"

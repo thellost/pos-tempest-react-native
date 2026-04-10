@@ -21,6 +21,7 @@ import type { CreatePurchaseInput, CreatePurchaseItem, Purchase } from '@/hooks/
 import { usePurchases } from '@/hooks/use-purchases';
 import type { Supplier } from '@/hooks/use-suppliers';
 import { useSuppliers } from '@/hooks/use-suppliers';
+import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 
 import { EmptyState, formatQty } from './shared';
@@ -151,6 +152,7 @@ interface CreatePOModalProps {
 }
 
 function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: CreatePOModalProps) {
+  const { isPhone } = useLayout();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [supplierSearch, setSupplierSearch] = useState('');
   const [notes, setNotes] = useState('');
@@ -310,7 +312,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
               </View>
 
               {/* Notes + Tax */}
-              <View className="flex-row gap-4">
+              <View className={isPhone ? 'gap-3' : 'flex-row gap-4'}>
                 <View className="flex-1">
                   <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Notes</Text>
                   <TextInput
@@ -322,7 +324,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                     style={{ height: 52 }}
                   />
                 </View>
-                <View style={{ width: 160 }}>
+                <View style={isPhone ? undefined : { width: 160 }}>
                   <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Tax (Rp)</Text>
                   <TextInput
                     value={tax}
@@ -382,7 +384,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                           </Pressable>
                         </View>
 
-                        <View className="flex-row gap-3">
+                        <View className={isPhone ? 'gap-3' : 'flex-row gap-3'}>
                           <View className="flex-1">
                             <Text className="mb-1 text-pos-sm text-pos-text-muted">Quantity</Text>
                             <TextInput
@@ -395,7 +397,7 @@ function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate }: Crea
                               style={{ height: 52 }}
                             />
                           </View>
-                          <View style={{ width: 90 }}>
+                          <View style={isPhone ? undefined : { width: 90 }}>
                             <Text className="mb-1 text-pos-sm text-pos-text-muted">Unit</Text>
                             <UomDropdown
                               value={it.unit_of_measure}

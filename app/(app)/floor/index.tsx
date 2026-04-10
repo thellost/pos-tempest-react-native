@@ -9,6 +9,7 @@ import { ReservationModal } from '@/components/floor/ReservationModal';
 import { TableCard } from '@/components/floor/TableCard';
 import { TABLE_STATUS } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
+import { useLayout } from '@/hooks/use-layout';
 import { useReservations } from '@/hooks/use-reservations';
 import { useShift } from '@/hooks/use-shift';
 import { useTables, type TableWithOrder } from '@/hooks/use-tables';
@@ -16,6 +17,10 @@ import { useTakeaway, type TakeawayOrder } from '@/hooks/use-takeaway';
 import { toInt } from '@/utils/coerce';
 
 export default function FloorScreen() {
+  const { isPhone } = useLayout();
+  const cardWidth = isPhone ? 'w-[48%]' : 'w-[31%]';
+  const statCardWidth = isPhone ? 'flex-1' : 'w-24';
+
   const {
     floorAreas,
     getTablesForArea,
@@ -176,28 +181,28 @@ export default function FloorScreen() {
           </Button>
         </View>
         <View className="mt-3 flex-row items-center gap-2">
-          <View className="w-24 rounded-sm bg-status-available-muted px-3 py-2 items-center">
+          <View className={`${statCardWidth} rounded-sm bg-status-available-muted px-3 py-2 items-center`}>
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-available" />
               <Text className="text-pos-xs text-pos-text-muted">Available</Text>
             </View>
             <Text className="font-mono text-pos-xl font-bold text-status-available text-center">{availableTablesCount}</Text>
           </View>
-          <View className="w-24 rounded-sm bg-status-occupied-muted px-3 py-2 items-center">
+          <View className={`${statCardWidth} rounded-sm bg-status-occupied-muted px-3 py-2 items-center`}>
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-occupied" />
               <Text className="text-pos-xs text-pos-text-muted">Occupied</Text>
             </View>
             <Text className="font-mono text-pos-xl font-bold text-status-occupied text-center">{occupiedTablesCount}</Text>
           </View>
-          <View className="w-24 rounded-sm bg-status-reserved-muted px-3 py-2 items-center">
+          <View className={`${statCardWidth} rounded-sm bg-status-reserved-muted px-3 py-2 items-center`}>
             <View className="flex-row items-center gap-1">
               <View className="h-2 w-2 rounded-full bg-status-reserved" />
               <Text className="text-pos-xs text-pos-text-muted">Reserved</Text>
             </View>
             <Text className="font-mono text-pos-xl font-bold text-status-reserved text-center">{reservedTablesCount}</Text>
           </View>
-          <View className="w-24 rounded-sm bg-surface-raised px-3 py-2 items-center">
+          <View className={`${statCardWidth} rounded-sm bg-surface-raised px-3 py-2 items-center`}>
             <Text className="text-pos-xs text-pos-text-muted">Total</Text>
             <Text className="font-mono text-pos-xl font-bold text-pos-text text-center">{totalTablesCount}</Text>
           </View>
@@ -237,7 +242,7 @@ export default function FloorScreen() {
                 <Pressable
                   key={`takeaway-${order.id}`}
                   onPress={() => handleTakeawayOrderPress(order)}
-                  className="w-[31%] rounded-sm border border-border bg-surface-card px-3 py-2 active:bg-surface-raised"
+                  className={`${cardWidth} rounded-sm border border-border bg-surface-card px-3 py-2 active:bg-surface-raised`}
                 >
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center gap-1.5">
@@ -277,7 +282,7 @@ export default function FloorScreen() {
         ) : (
           <View className="flex-row flex-wrap gap-3">
             {currentTables.map((table) => (
-              <View key={`table-${table.id}`} className="w-[31%]">
+              <View key={`table-${table.id}`} className={cardWidth}>
                 <TableCard
                   table={table}
                   elapsedMinutes={getOrderElapsedMinutes(table.order_created_at)}

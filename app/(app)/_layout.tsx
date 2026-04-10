@@ -4,6 +4,7 @@ import { AppErrorBoundary } from '@/components/ErrorBoundary';
 
 import { Redirect, router, Stack, usePathname } from 'expo-router';
 
+import { BottomTabBar } from '@/components/navigation/BottomTabBar';
 import { IconRail } from '@/components/navigation/IconRail';
 import { AppStatusBar } from '@/components/navigation/StatusBar';
 import { MAIN_NAV, SYSTEM_NAV } from '@/constants/navigation';
@@ -12,6 +13,7 @@ import { AlertTriangle, Ban } from 'lucide-react-native';
 import { useAppTimezone } from '@/hooks/use-app-timezone';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
+import { useLayout } from '@/hooks/use-layout';
 import { useShift } from '@/hooks/use-shift';
 
 export default function AppLayout() {
@@ -19,6 +21,7 @@ export default function AppLayout() {
   const { loading, profileLoading, isAuthenticated, isLocked, markActivity, user, signOut, lock, refreshProfile } = useAuth();
   const { loading: deviceLoading, isRegistered, registration } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
+  const { isPhone } = useLayout();
   const pathname = usePathname();
 
   if (loading) {
@@ -147,88 +150,84 @@ export default function AppLayout() {
         activeOrdersCount={0}
         deviceName={registration?.device?.device_name ?? ''}
         branchName={registration?.branch?.name ?? ''}
+        compact={isPhone}
       />
 
-      <View className="flex-1 flex-row">
-        {/* Persistent icon rail */}
-        <IconRail
-          navItems={[...MAIN_NAV, ...SYSTEM_NAV]}
-          currentPath={pathname}
-          onNavigate={(href) => router.push(href as Parameters<typeof router.push>[0])}
-          user={user}
-          userRole={user?.role_name?.toLowerCase() ?? ''}
-          isShiftOpen={isShiftOpen}
-          onLock={lock}
-          onSignOut={signOut}
-        />
-
-        {/* Main content area */}
-        <View
-          className="flex-1"
-          onTouchStart={markActivity}
-          onTouchMove={markActivity}
-          onResponderGrant={markActivity}
-          onResponderMove={markActivity}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'none',
-            }}>
-            <Stack.Screen
-              name="floor/index"
-              options={{ title: 'Floor View' }}
-            />
-            <Stack.Screen
-              name="order/[tableId]"
-              options={{ title: 'Order' }}
-            />
-            <Stack.Screen
-              name="menu/index"
-              options={{ title: 'Menu' }}
-            />
-            <Stack.Screen
-              name="kitchen/index"
-              options={{ title: 'Kitchen Display' }}
-            />
-            <Stack.Screen
-              name="checkout/[orderId]"
-              options={{ title: 'Checkout' }}
-            />
-            <Stack.Screen
-              name="settings/index"
-              options={{ title: 'Settings' }}
-            />
-            <Stack.Screen
-              name="shifts/index"
-              options={{ title: 'Shifts' }}
-            />
-            <Stack.Screen
-              name="cash/index"
-              options={{ title: 'Cash Management' }}
-            />
-            <Stack.Screen
-              name="inventory/index"
-              options={{ title: 'Inventory' }}
-            />
-            <Stack.Screen
-              name="daily-orders/index"
-              options={{ title: 'Daily Orders' }}
-            />
-            <Stack.Screen
-              name="reservations/index"
-              options={{ title: 'Reservations' }}
-            />
-            <Stack.Screen
-              name="customers/index"
-              options={{ title: 'Customers' }}
-            />
-            <Stack.Screen
-              name="device-setup"
-              options={{ title: 'Device Setup' }}
-            />
-          </Stack>
+      {isPhone ? (
+        /* Phone layout: full-width content + bottom tab bar */
+        <View className="flex-1">
+          <View
+            className="flex-1"
+            onTouchStart={markActivity}
+            onTouchMove={markActivity}
+            onResponderGrant={markActivity}
+            onResponderMove={markActivity}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'none',
+              }}>
+              <Stack.Screen name="floor/index"        options={{ title: 'Floor View' }} />
+              <Stack.Screen name="order/[tableId]"    options={{ title: 'Order' }} />
+              <Stack.Screen name="menu/index"         options={{ title: 'Menu' }} />
+              <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
+              <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
+              <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
+              <Stack.Screen name="shifts/index"       options={{ title: 'Shifts' }} />
+              <Stack.Screen name="cash/index"         options={{ title: 'Cash Management' }} />
+              <Stack.Screen name="inventory/index"    options={{ title: 'Inventory' }} />
+              <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
+              <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
+              <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
+              <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
+            </Stack>
+          </View>
+          <BottomTabBar isShiftOpen={isShiftOpen} />
         </View>
-      </View>
+      ) : (
+        /* Tablet layout: icon rail on left + content on right */
+        <View className="flex-1 flex-row">
+          {/* Persistent icon rail */}
+          <IconRail
+            navItems={[...MAIN_NAV, ...SYSTEM_NAV]}
+            currentPath={pathname}
+            onNavigate={(href) => router.push(href as Parameters<typeof router.push>[0])}
+            user={user}
+            userRole={user?.role_name?.toLowerCase() ?? ''}
+            isShiftOpen={isShiftOpen}
+            onLock={lock}
+            onSignOut={signOut}
+          />
+
+          {/* Main content area */}
+          <View
+            className="flex-1"
+            onTouchStart={markActivity}
+            onTouchMove={markActivity}
+            onResponderGrant={markActivity}
+            onResponderMove={markActivity}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'none',
+              }}>
+              <Stack.Screen name="floor/index"        options={{ title: 'Floor View' }} />
+              <Stack.Screen name="order/[tableId]"    options={{ title: 'Order' }} />
+              <Stack.Screen name="menu/index"         options={{ title: 'Menu' }} />
+              <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
+              <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
+              <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
+              <Stack.Screen name="shifts/index"       options={{ title: 'Shifts' }} />
+              <Stack.Screen name="cash/index"         options={{ title: 'Cash Management' }} />
+              <Stack.Screen name="inventory/index"    options={{ title: 'Inventory' }} />
+              <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
+              <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
+              <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
+              <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
+            </Stack>
+          </View>
+        </View>
+      )}
     </View>
     </AppErrorBoundary>
   );

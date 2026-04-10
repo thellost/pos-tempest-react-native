@@ -1,3 +1,4 @@
+export { AdaptiveModal } from './AdaptiveModal';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { PrimaryButton } from './PrimaryButton';
