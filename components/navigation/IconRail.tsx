@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { NavItem } from '@/constants/navigation';
 import { ThemeColors } from '@/constants/theme';
 import type { UserRow } from '@/hooks/use-auth';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface IconRailProps {
   navItems: NavItem[];
@@ -22,20 +23,21 @@ export function IconRail({
   currentPath,
   onNavigate,
   user,
-  userRole,
   isShiftOpen,
   onLock,
   onSignOut,
 }: IconRailProps) {
+  const { can } = usePermissions();
+
   const visibleItems = useMemo(() => {
     return navItems.filter((item) => {
-      // Hide Cash when shift is closed
+      // Cash is only relevant while a shift is open
       if (item.href === '/(app)/cash' && !isShiftOpen) return false;
-      // Role-gate
-      if (item.roles && !item.roles.includes(userRole)) return false;
+      // Permission gate
+      if (item.permission && !can(item.permission)) return false;
       return true;
     });
-  }, [navItems, userRole, isShiftOpen]);
+  }, [navItems, isShiftOpen, can]);
 
   const initials = user?.name
     ? user.name

@@ -1,5 +1,6 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
+import { hasPermission, PERMISSION } from '@/constants/permissions';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
@@ -204,7 +205,11 @@ export async function getShiftCashSummary(shiftId: number, openingCash: number):
   };
 }
 
-export async function openShift(userId: number, branchId: number, openingCash: number, deviceId: number | null = null): Promise<ShiftRecord> {
+export async function openShift(callerRole: string, userId: number, branchId: number, openingCash: number, deviceId: number | null = null): Promise<ShiftRecord> {
+  if (!hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
+    throw new Error('[ShiftService] Permission denied: manage_shift required');
+  }
+
   return startSpan({ name: 'shift.open', op: 'db.powersync' }, async () => {
   if (!Number.isFinite(openingCash) || openingCash < 0) {
     throw new Error('Opening cash must be a valid positive amount');
@@ -267,7 +272,11 @@ export async function openShift(userId: number, branchId: number, openingCash: n
   }); // end shift.open span
 }
 
-export async function closeShift(shiftId: number, closingCash: number): Promise<ShiftRecord> {
+export async function closeShift(callerRole: string, shiftId: number, closingCash: number): Promise<ShiftRecord> {
+  if (!hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
+    throw new Error('[ShiftService] Permission denied: manage_shift required');
+  }
+
   return startSpan({ name: 'shift.close', op: 'db.powersync' }, async () => {
   if (!Number.isFinite(closingCash) || closingCash < 0) {
     throw new Error('Closing cash must be a valid positive amount');

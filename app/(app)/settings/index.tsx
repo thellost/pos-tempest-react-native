@@ -4,10 +4,10 @@ import { DeviceList } from '@/components/settings/DeviceList';
 import { InfoRow, RowDivider } from '@/components/settings/primitives';
 import { PrinterSection } from '@/components/settings/PrinterSection';
 import { Button, SelectButton } from '@/components/ui';
-import { ROLE_TYPE } from '@/constants/enums';
+import { PermissionGate } from '@/components/ui/PermissionGate';
+import { PERMISSION } from '@/constants/permissions';
 import { Brand } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useAuth } from '@/hooks/use-auth';
 import { useConfig } from '@/hooks/use-config';
 import { useDevice } from '@/hooks/use-device';
 import { usePrinter } from '@/hooks/use-printer';
@@ -32,7 +32,6 @@ if (Platform.OS === 'android') {
 export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useAppTheme();
   const { config, overrides, updateConfig, resetConfig } = useConfig();
-  const { user } = useAuth();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
   const {
     kitchenPrinter,
@@ -44,10 +43,7 @@ export default function SettingsScreen() {
 
   const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
 
-  const isAdmin = user?.role_name === ROLE_TYPE.ADMIN;
-  const canManageDevices = isAdmin || user?.role_name === ROLE_TYPE.MANAGER;
-
-  const handleResetDevice = () => {
+  const handleResetDevice= () => {
     Alert.alert(
       'Reset Device Registration',
       'Are you sure you want to reset the device registration? This will require re-registering the device.',
@@ -218,24 +214,26 @@ export default function SettingsScreen() {
       </AccordionSection>
 
       {/* Branch Devices */}
-      {canManageDevices && (
+      <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
         <AccordionSection icon={Users} title="Branch Devices">
-          <DeviceList canManageDevices={canManageDevices} />
+          <DeviceList canManageDevices />
         </AccordionSection>
-      )}
+      </PermissionGate>
 
       {/* Printers */}
-      <AccordionSection icon={Printer} title="Printers" summary={printerSummary}>
-        <PrinterSection
-          kitchenPrinter={kitchenPrinter}
-          cashierPrinter={cashierPrinter}
-          updatePrinter={updatePrinter}
-          updatePrinterPaperWidth={updatePrinterPaperWidth}
-        />
-      </AccordionSection>
+      <PermissionGate permission={PERMISSION.PRINTER_SETTINGS}>
+        <AccordionSection icon={Printer} title="Printers" summary={printerSummary}>
+          <PrinterSection
+            kitchenPrinter={kitchenPrinter}
+            cashierPrinter={cashierPrinter}
+            updatePrinter={updatePrinter}
+            updatePrinterPaperWidth={updatePrinterPaperWidth}
+          />
+        </AccordionSection>
+      </PermissionGate>
 
       {/* Configuration */}
-      {isAdmin && (
+      <PermissionGate permission={PERMISSION.SYSTEM_CONFIG}>
         <AccordionSection icon={Settings2} title="Configuration" summary={configSummary}>
           <ConfigSection
             title="Session"
@@ -271,10 +269,11 @@ export default function SettingsScreen() {
             </Button>
           )}
         </AccordionSection>
-      )}
+      </PermissionGate>
 
       {/* Danger Zone */}
-      <AccordionSection icon={AlertTriangle} title="Danger Zone" danger>
+      <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
+        <AccordionSection icon={AlertTriangle} title="Danger Zone" danger>
         <View className="gap-3">
           <View>
             <Text className="text-pos-sm font-semibold text-pos-text">Reset Device Registration</Text>
@@ -289,7 +288,8 @@ export default function SettingsScreen() {
             <Text className="text-center text-pos-sm font-semibold text-white">Reset Registration</Text>
           </Button>
         </View>
-      </AccordionSection>
+        </AccordionSection>
+      </PermissionGate>
     </ScrollView>
   );
 }

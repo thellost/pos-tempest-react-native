@@ -2,7 +2,8 @@ CREATE TYPE "role_type" AS ENUM (
   'admin',
   'manager',
   'cashier',
-  'chef'
+  'chef',
+  'waiter'
 );
 
 CREATE TYPE "pricing_type" AS ENUM (
@@ -698,7 +699,7 @@ CREATE INDEX ON "audit_logs" ("branch_id", "action", "created_at");
 
 COMMENT ON TABLE "roles" IS 'System roles controlling access and permissions';
 
-COMMENT ON TABLE "users" IS 'All staff: admins, managers, cashiers, chefs.
+COMMENT ON TABLE "users" IS 'All staff: admins, managers, cashiers, chefs, waiters.
 Authentication is handled by Supabase Auth — supabase_auth_id links to auth.users.id.
 PIN code is used for quick POS terminal access without full re-authentication.
 ';

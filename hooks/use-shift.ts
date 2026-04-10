@@ -93,8 +93,9 @@ export function useShift(): UseShiftReturn {
 
       try {
         setError(null);
-        const deviceId = registration?.device?.id ?? null;
-        const shift = await openShiftService(user.id, user.branch_id, openingCash, deviceId);
+        const rawDeviceId = registration?.device?.id ?? null;
+        const deviceId = rawDeviceId !== null ? Number(rawDeviceId) : null;
+        const shift = await openShiftService(user.role_name, user.id, user.branch_id, openingCash, deviceId);
         setActiveShift(shift);
 
         const nextSummary = await getShiftCashSummary(shift.id, shift.opening_cash);
@@ -119,7 +120,7 @@ export function useShift(): UseShiftReturn {
 
       try {
         setError(null);
-        const closed = await closeShiftService(activeShift.id, closingCash);
+        const closed = await closeShiftService(user?.role_name ?? '', activeShift.id, closingCash);
         setLastClosedShift(closed);
         setActiveShift(null);
         setSummary(null);
@@ -132,7 +133,7 @@ export function useShift(): UseShiftReturn {
         throw new Error(message);
       }
     },
-    [activeShift],
+    [activeShift, user?.role_name],
   );
 
   const addCashTransaction = useCallback(

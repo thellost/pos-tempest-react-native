@@ -2,6 +2,8 @@ export const ROLE_TYPE = {
 	ADMIN: 'admin',
 	MANAGER: 'manager',
 	CASHIER: 'cashier',
+	WAITER: 'waiter',
+	/** @deprecated CHEF is no longer used for login roles. Kitchen display does not require user login. */
 	CHEF: 'chef',
 } as const;
 

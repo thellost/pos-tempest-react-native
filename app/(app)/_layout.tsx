@@ -1,24 +1,55 @@
+import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { Button } from '@/components/ui';
+
+import { Redirect, router, Stack, usePathname, useSegments } from 'expo-router';
+import { AlertTriangle, Ban } from 'lucide-react-native';
+
 import { AppErrorBoundary } from '@/components/ErrorBoundary';
-
-import { Redirect, router, Stack, usePathname } from 'expo-router';
-
 import { BottomTabBar } from '@/components/navigation/BottomTabBar';
 import { IconRail } from '@/components/navigation/IconRail';
 import { AppStatusBar } from '@/components/navigation/StatusBar';
+import { Button } from '@/components/ui';
 import { MAIN_NAV, SYSTEM_NAV } from '@/constants/navigation';
+import { PERMISSION } from '@/constants/permissions';
+import type { Permission } from '@/constants/permissions';
 import { Brand, ThemeColors } from '@/constants/theme';
-import { AlertTriangle, Ban } from 'lucide-react-native';
 import { useAppTimezone } from '@/hooks/use-app-timezone';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { useLayout } from '@/hooks/use-layout';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useShift } from '@/hooks/use-shift';
+
+/** Route segments that require a specific permission to access. */
+const ROUTE_PERMISSIONS: Record<string, Permission> = {
+  inventory: PERMISSION.VIEW_INVENTORY,
+  reports: PERMISSION.VIEW_REPORTS,
+  'daily-orders': PERMISSION.VIEW_REPORTS,
+  shifts: PERMISSION.MANAGE_SHIFT,
+  cash: PERMISSION.MANAGE_SHIFT,
+  reservations: PERMISSION.VIEW_RESERVATIONS,
+  users: PERMISSION.MANAGE_USERS,
+};
 
 export default function AppLayout() {
   useAppTimezone();
   const { loading, profileLoading, isAuthenticated, isLocked, markActivity, user, signOut, lock, refreshProfile } = useAuth();
+  const { can } = usePermissions();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Find the first segment after "(app)" that matches a guarded route.
+    const routeSegment = segments.find((s) => s in ROUTE_PERMISSIONS);
+    if (!routeSegment) return;
+
+    const required = ROUTE_PERMISSIONS[routeSegment];
+    if (!can(required)) {
+      router.replace('/(app)/floor');
+    }
+  }, [segments, user, can]);
+
   const { loading: deviceLoading, isRegistered, registration } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
   const { isPhone } = useLayout();
@@ -179,6 +210,7 @@ export default function AppLayout() {
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
               <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
               <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
+              <Stack.Screen name="users/index"        options={{ title: 'Staff Management' }} />
               <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
             </Stack>
           </View>
@@ -223,6 +255,7 @@ export default function AppLayout() {
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
               <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
               <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
+              <Stack.Screen name="users/index"        options={{ title: 'Staff Management' }} />
               <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
             </Stack>
           </View>

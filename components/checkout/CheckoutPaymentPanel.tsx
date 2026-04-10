@@ -2,9 +2,11 @@ import type React from 'react';
 import { Receipt, Tag, X } from 'lucide-react-native';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button, IconButton, PrimaryButton } from '@/components/ui';
+import { PermissionGate } from '@/components/ui/PermissionGate';
 import { CashPayment } from '@/components/payment/CashPayment';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { SplitPayment } from '@/components/payment/SplitPayment';
+import { PERMISSION } from '@/constants/permissions';
 import { ThemeColors } from '@/constants/theme';
 import type { CheckoutPayment } from '@/hooks/use-checkout-payment';
 import type { OrderDiscountState } from '@/hooks/use-order-discount';
@@ -125,49 +127,60 @@ export function CheckoutPaymentPanel({
         )}
       </ScrollView>
 
-      <View className="border-t border-border bg-surface-card px-4 py-3" style={{ gap: 8 }}>
-        {payment.pendingPayments.length > 0 && (
-          <View className="flex-row items-center justify-between">
-            {payment.remainingBalance > 0 ? (
-              <>
-                <Text className="text-pos-sm text-pos-text-muted">Remaining</Text>
-                <Text className="text-pos-base font-extrabold text-pos-warning">
-                  {formatIDR(payment.remainingBalance)}
-                </Text>
-              </>
+      <PermissionGate
+        permission={PERMISSION.PROCESS_PAYMENT}
+        fallback={
+          <View className="border-t border-border bg-surface-card px-4 py-4">
+            <Text className="text-center text-pos-sm text-pos-warning">
+              Only cashiers and above can process payments.
+            </Text>
+          </View>
+        }
+      >
+        <View className="border-t border-border bg-surface-card px-4 py-3" style={{ gap: 8 }}>
+          {payment.pendingPayments.length > 0 && (
+            <View className="flex-row items-center justify-between">
+              {payment.remainingBalance > 0 ? (
+                <>
+                  <Text className="text-pos-sm text-pos-text-muted">Remaining</Text>
+                  <Text className="text-pos-base font-extrabold text-pos-warning">
+                    {formatIDR(payment.remainingBalance)}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text className="text-pos-sm text-pos-text-muted">Change to give</Text>
+                  <Text className="text-pos-base font-extrabold text-pos-success">
+                    {formatIDR(payment.changeAmount)}
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+
+          <Button
+            onPress={onComplete}
+            disabled={!canComplete}
+            className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
+              canComplete ? 'bg-accent' : 'bg-accent/40'
+            }`}
+          >
+            {isProcessing ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
-                <Text className="text-pos-sm text-pos-text-muted">Change to give</Text>
-                <Text className="text-pos-base font-extrabold text-pos-success">
-                  {formatIDR(payment.changeAmount)}
+                <Text
+                  className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
+                  style={{ fontSize: 15, letterSpacing: 0.3 }}
+                >
+                  Complete &amp; Print Receipt
                 </Text>
+                <Receipt size={18} color={ThemeColors.text.primary} />
               </>
             )}
-          </View>
-        )}
-
-        <Button
-          onPress={onComplete}
-          disabled={!canComplete}
-          className={`h-[52px] flex-row items-center justify-center gap-2 rounded-xl ${
-            canComplete ? 'bg-accent' : 'bg-accent/40'
-          }`}
-        >
-          {isProcessing ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <>
-              <Text
-                className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
-                style={{ fontSize: 15, letterSpacing: 0.3 }}
-              >
-                Complete &amp; Print Receipt
-              </Text>
-              <Receipt size={18} color={ThemeColors.text.primary} />
-            </>
-          )}
-        </Button>
-      </View>
+          </Button>
+        </View>
+      </PermissionGate>
     </View>
   );
 }

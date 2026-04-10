@@ -608,7 +608,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
     try {
       const orderIdNum = order.id;
-      await voidOrder(orderIdNum, user.id, reason);
+      await voidOrder(orderIdNum, user.id, reason, user.role_name);
 
       // Clear current order state from UI after cancel
       setOrder(null);

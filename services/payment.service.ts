@@ -1,4 +1,5 @@
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
+import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
@@ -216,9 +217,13 @@ export async function processPayment(
   shiftId: number | null,
   method: string,
   amount: number,
+  callerRole: string,
   changeAmount: number = 0,
   referenceNumber: string | null = null,
 ): Promise<Payment> {
+  if (!hasPermission(callerRole, PERMISSION.PROCESS_PAYMENT)) {
+    throw new Error('[PaymentService] Permission denied: process_payment required');
+  }
   return startSpan({ name: 'payment.process', op: 'db.powersync' }, async () => {
   try {
   const now = new Date().toISOString();
@@ -300,7 +305,10 @@ export async function processPayment(
  *
  * @param orderId - The order to complete
  */
-export async function completeOrder(orderId: string): Promise<void> {
+export async function completeOrder(orderId: string, callerRole: string): Promise<void> {
+  if (!hasPermission(callerRole, PERMISSION.PROCESS_PAYMENT)) {
+    throw new Error('[PaymentService] Permission denied: process_payment required');
+  }
   return startSpan({ name: 'order.complete', op: 'db.powersync' }, async () => {
   try {
   const now = new Date().toISOString();

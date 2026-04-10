@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
+import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
@@ -569,7 +570,11 @@ export async function calculateOrderTotals(orderId: string): Promise<void> {
 /**
  * Voids an entire order
  */
-export async function voidOrder(orderId: string, voidedBy: number, reason: string): Promise<void> {
+export async function voidOrder(orderId: string, voidedBy: number, reason: string, callerRole: string): Promise<void> {
+  if (!hasPermission(callerRole, PERMISSION.CANCEL_ORDER)) {
+    throw new Error('[OrderService] Permission denied: cancel_order required');
+  }
+
   const now = new Date().toISOString();
 
   const existingOrder = await powersync.getOptional<Order>(

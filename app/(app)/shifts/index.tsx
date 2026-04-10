@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui';
+import { PermissionGate } from '@/components/ui/PermissionGate';
+import { PERMISSION } from '@/constants/permissions';
 import { ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useShift } from '@/hooks/use-shift';
@@ -123,14 +125,16 @@ export default function ShiftsScreen() {
             Opening Cash: <Text className="font-mono">{formatIDR(activeShift.opening_cash)}</Text>
           </Text>
 
-          <Button
-            className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
-            onPress={() => router.push('/(app)/cash')}>
-            <View className="flex-row items-center justify-center gap-2">
-              <Banknote size={16} color={ThemeColors.accent.primary} />
-              <Text className="text-pos-base font-semibold text-accent">Manage Cash</Text>
-            </View>
-          </Button>
+          <PermissionGate permission={PERMISSION.CASH_MANAGEMENT}>
+            <Button
+              className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
+              onPress={() => router.push('/(app)/cash')}>
+              <View className="flex-row items-center justify-center gap-2">
+                <Banknote size={16} color={ThemeColors.accent.primary} />
+                <Text className="text-pos-base font-semibold text-accent">Manage Cash</Text>
+              </View>
+            </Button>
+          </PermissionGate>
 
           <Text className="mt-4 text-pos-sm font-semibold text-pos-text">Closing Cash Input</Text>
           <View className="mt-2 rounded-sm border border-border bg-surface px-4 py-3">
@@ -162,45 +166,49 @@ export default function ShiftsScreen() {
             ))}
           </View>
 
-          <Button
-            className="mt-2 items-center justify-center rounded-sm border border-pos-danger/30 bg-pos-danger-muted p-4"
-            disabled={submitting || closingInput.length === 0}
-            onPress={onCloseShift}>
-            <Text className="text-center text-pos-base font-semibold text-pos-danger">
-              {submitting ? 'Closing Shift...' : 'Close Shift'}
-            </Text>
-          </Button>
+          <PermissionGate permission={PERMISSION.MANAGE_SHIFT}>
+            <Button
+              className="mt-2 items-center justify-center rounded-sm border border-pos-danger/30 bg-pos-danger-muted p-4"
+              disabled={submitting || closingInput.length === 0}
+              onPress={onCloseShift}>
+              <Text className="text-center text-pos-base font-semibold text-pos-danger">
+                {submitting ? 'Closing Shift...' : 'Close Shift'}
+              </Text>
+            </Button>
+          </PermissionGate>
         </View>
       ) : (
-        <View className="mt-4 rounded-sm border border-border bg-surface-card p-5">
-          <Text className="text-pos-lg font-semibold text-pos-text">Open New Shift</Text>
-          <Text className="mt-2 text-pos-sm text-pos-text-muted">Enter opening cash amount</Text>
+        <PermissionGate permission={PERMISSION.MANAGE_SHIFT}>
+          <View className="mt-4 rounded-sm border border-border bg-surface-card p-5">
+            <Text className="text-pos-lg font-semibold text-pos-text">Open New Shift</Text>
+            <Text className="mt-2 text-pos-sm text-pos-text-muted">Enter opening cash amount</Text>
 
-          <View className="mt-3 rounded-sm border border-border bg-surface px-4 py-3">
-            <Text className="font-mono text-pos-xl font-bold text-accent">{formatIDR(openingAmount)}</Text>
+            <View className="mt-3 rounded-sm border border-border bg-surface px-4 py-3">
+              <Text className="font-mono text-pos-xl font-bold text-accent">{formatIDR(openingAmount)}</Text>
+            </View>
+
+            <View className="mt-4 flex-row flex-wrap justify-between">
+              {keypad.map((key) => (
+                <Pressable
+                  key={`open-${key}`}
+                  className="mb-3 h-14 w-[31%] items-center justify-center rounded-sm border border-border bg-surface-card"
+                  disabled={submitting}
+                  onPress={() => applyKey(key, openingInput, setOpeningInput)}>
+                  <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Button
+              className="items-center justify-center rounded-sm bg-accent p-4"
+              disabled={submitting || openingInput.length === 0}
+              onPress={onOpenShift}>
+              <Text className="text-center text-pos-base font-semibold text-white">
+                {submitting ? 'Opening Shift...' : 'Open Shift'}
+              </Text>
+            </Button>
           </View>
-
-          <View className="mt-4 flex-row flex-wrap justify-between">
-            {keypad.map((key) => (
-              <Pressable
-                key={`open-${key}`}
-                className="mb-3 h-14 w-[31%] items-center justify-center rounded-sm border border-border bg-surface-card"
-                disabled={submitting}
-                onPress={() => applyKey(key, openingInput, setOpeningInput)}>
-                <Text className="text-pos-lg font-semibold text-pos-text">{key}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Button
-            className="items-center justify-center rounded-sm bg-accent p-4"
-            disabled={submitting || openingInput.length === 0}
-            onPress={onOpenShift}>
-            <Text className="text-center text-pos-base font-semibold text-white">
-              {submitting ? 'Opening Shift...' : 'Open Shift'}
-            </Text>
-          </Button>
-        </View>
+        </PermissionGate>
       )}
 
       {lastClosedShift && (

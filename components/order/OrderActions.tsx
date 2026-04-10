@@ -9,6 +9,8 @@ import {
   SecondaryButton,
   SuccessButton,
 } from '@/components/ui';
+import { PermissionGate } from '@/components/ui/PermissionGate';
+import { PERMISSION } from '@/constants/permissions';
 
 interface OrderActionsProps {
   orderStatus: OrderStatus;
@@ -122,19 +124,21 @@ export function OrderActions({
     return (
       <View className="border-t border-border bg-surface-card p-2">
         <View className="flex-row gap-1">
-          {hasItems ? (
-            <DangerButton onPress={handleCancelOrder} className="flex-1">
-              <Text className="text-pos-xs font-semibold text-pos-danger">
-                Cancel Order
-              </Text>
-            </DangerButton>
-          ) : (
-            <SecondaryButton onPress={handleCancelOrder} disabled className="flex-1">
-              <Text className="text-pos-xs font-semibold text-pos-text-faint">
-                Cancel Order
-              </Text>
-            </SecondaryButton>
-          )}
+          <PermissionGate permission={PERMISSION.CANCEL_ORDER}>
+            {hasItems ? (
+              <DangerButton onPress={handleCancelOrder} className="flex-1">
+                <Text className="text-pos-xs font-semibold text-pos-danger">
+                  Cancel Order
+                </Text>
+              </DangerButton>
+            ) : (
+              <SecondaryButton onPress={handleCancelOrder} disabled className="flex-1">
+                <Text className="text-pos-xs font-semibold text-pos-text-faint">
+                  Cancel Order
+                </Text>
+              </SecondaryButton>
+            )}
+          </PermissionGate>
 
           {canSend ? (
             <PrimaryButton onPress={handleSendToKitchen} className="flex-1">

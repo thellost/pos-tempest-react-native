@@ -1,12 +1,14 @@
 import { CashTransactionList } from '@/components/shift/CashTransactionList';
 import { CashTransactionModal } from '@/components/shift/CashTransactionModal';
+import { Button } from '@/components/ui';
+import { PermissionGate } from '@/components/ui/PermissionGate';
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import { PERMISSION } from '@/constants/permissions';
 import { useShift } from '@/hooks/use-shift';
 import { formatIDR } from '@/utils/currency';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { Button } from '@/components/ui';
 
 function formatTimestamp(value: string | null): string {
   if (!value) {
@@ -91,11 +93,13 @@ export default function CashScreen() {
           </View>
         )}
 
-        <Button
-          className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
-          onPress={() => setShowCashTxModal(true)}>
-          <Text className="text-center text-pos-base font-semibold text-accent">Cash In / Out</Text>
-        </Button>
+        <PermissionGate permission={PERMISSION.CASH_MANAGEMENT}>
+          <Button
+            className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
+            onPress={() => setShowCashTxModal(true)}>
+            <Text className="text-center text-pos-base font-semibold text-accent">Cash In / Out</Text>
+          </Button>
+        </PermissionGate>
 
         <CashTransactionList transactions={cashTransactions} openingCash={activeShift.opening_cash} />
       </ScrollView>

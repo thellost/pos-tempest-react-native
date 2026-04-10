@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import { AlertTriangle, ChevronRight, Package, X } from 'lucide-react-native';
 
+import { PERMISSION } from '@/constants/permissions';
 import { ThemeColors } from '@/constants/theme';
 import type { AdjustmentType, InventoryItem, InventoryMovement } from '@/hooks/use-inventory';
 import { useInventory } from '@/hooks/use-inventory';
+import { PermissionGate } from '@/components/ui/PermissionGate';
 
 import { EmptyState, SectionHeader, formatQty } from './shared';
 
@@ -152,81 +154,85 @@ function StockDetailModal({ item, onClose, onAdjust, onThreshold, getMovements }
               </View>
 
               {/* Update threshold */}
-              <View>
-                <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Update Threshold</Text>
-                <View className="flex-row items-center gap-2">
-                  <TextInput
-                    value={newThreshold}
-                    onChangeText={setNewThreshold}
-                    keyboardType="decimal-pad"
-                    placeholder="Threshold qty"
-                    placeholderTextColor={ThemeColors.text.faint}
-                    className="flex-1 rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text font-mono"
-                    style={{ height: 40 }}
-                  />
-                  <Pressable
-                    onPress={handleThreshold}
-                    disabled={savingThreshold}
-                    className="rounded-sm px-4"
-                    style={{ height: 40, justifyContent: 'center', backgroundColor: ThemeColors.accent.primaryMuted }}
-                  >
-                    {savingThreshold
-                      ? <ActivityIndicator size="small" color={ThemeColors.accent.primary} />
-                      : <Text className="text-pos-sm font-bold" style={{ color: ThemeColors.accent.primary }}>Save</Text>}
-                  </Pressable>
+              <PermissionGate permission={PERMISSION.ADJUST_STOCK}>
+                <View>
+                  <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Update Threshold</Text>
+                  <View className="flex-row items-center gap-2">
+                    <TextInput
+                      value={newThreshold}
+                      onChangeText={setNewThreshold}
+                      keyboardType="decimal-pad"
+                      placeholder="Threshold qty"
+                      placeholderTextColor={ThemeColors.text.faint}
+                      className="flex-1 rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text font-mono"
+                      style={{ height: 40 }}
+                    />
+                    <Pressable
+                      onPress={handleThreshold}
+                      disabled={savingThreshold}
+                      className="rounded-sm px-4"
+                      style={{ height: 40, justifyContent: 'center', backgroundColor: ThemeColors.accent.primaryMuted }}
+                    >
+                      {savingThreshold
+                        ? <ActivityIndicator size="small" color={ThemeColors.accent.primary} />
+                        : <Text className="text-pos-sm font-bold" style={{ color: ThemeColors.accent.primary }}>Save</Text>}
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
+              </PermissionGate>
 
               {/* Adjust stock */}
-              <View>
-                <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Adjust Stock</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10 }}>
-                  {ADJUSTMENT_TYPES.map((t) => (
-                    <Pressable
-                      key={t.value}
-                      onPress={() => setAdjustType(t.value)}
-                      className="rounded-sm px-3 py-1"
-                      style={{ backgroundColor: adjustType === t.value ? ThemeColors.accent.primary : ThemeColors.surfaces.raised }}
-                    >
-                      <Text
-                        className="text-pos-xs font-bold"
-                        style={{ color: adjustType === t.value ? ThemeColors.text.strong : ThemeColors.text.muted }}
+              <PermissionGate permission={PERMISSION.ADJUST_STOCK}>
+                <View>
+                  <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Adjust Stock</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10 }}>
+                    {ADJUSTMENT_TYPES.map((t) => (
+                      <Pressable
+                        key={t.value}
+                        onPress={() => setAdjustType(t.value)}
+                        className="rounded-sm px-3 py-1"
+                        style={{ backgroundColor: adjustType === t.value ? ThemeColors.accent.primary : ThemeColors.surfaces.raised }}
                       >
-                        {t.label}
-                      </Text>
+                        <Text
+                          className="text-pos-xs font-bold"
+                          style={{ color: adjustType === t.value ? ThemeColors.text.strong : ThemeColors.text.muted }}
+                        >
+                          {t.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  <View className="gap-2">
+                    <TextInput
+                      value={adjustQty}
+                      onChangeText={setAdjustQty}
+                      keyboardType="decimal-pad"
+                      placeholder="Qty change (e.g. -5 to remove, 20 to add)"
+                      placeholderTextColor={ThemeColors.text.faint}
+                      className="rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text font-mono"
+                      style={{ height: 40 }}
+                    />
+                    <TextInput
+                      value={adjustReason}
+                      onChangeText={setAdjustReason}
+                      placeholder="Reason (optional)"
+                      placeholderTextColor={ThemeColors.text.faint}
+                      className="rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text"
+                      style={{ height: 40 }}
+                    />
+                    <Pressable
+                      onPress={handleAdjust}
+                      disabled={adjusting || !adjustQty}
+                      className="rounded-sm items-center justify-center"
+                      style={{ height: 42, backgroundColor: adjusting ? ThemeColors.surfaces.disabled : ThemeColors.accent.primary }}
+                    >
+                      {adjusting
+                        ? <ActivityIndicator size="small" color={ThemeColors.text.strong} />
+                        : <Text className="text-pos-base font-bold text-white">Apply Adjustment</Text>}
                     </Pressable>
-                  ))}
-                </ScrollView>
-                <View className="gap-2">
-                  <TextInput
-                    value={adjustQty}
-                    onChangeText={setAdjustQty}
-                    keyboardType="decimal-pad"
-                    placeholder="Qty change (e.g. -5 to remove, 20 to add)"
-                    placeholderTextColor={ThemeColors.text.faint}
-                    className="rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text font-mono"
-                    style={{ height: 40 }}
-                  />
-                  <TextInput
-                    value={adjustReason}
-                    onChangeText={setAdjustReason}
-                    placeholder="Reason (optional)"
-                    placeholderTextColor={ThemeColors.text.faint}
-                    className="rounded-sm border border-border bg-surface-raised px-3 text-pos-base text-pos-text"
-                    style={{ height: 40 }}
-                  />
-                  <Pressable
-                    onPress={handleAdjust}
-                    disabled={adjusting || !adjustQty}
-                    className="rounded-sm items-center justify-center"
-                    style={{ height: 42, backgroundColor: adjusting ? ThemeColors.surfaces.disabled : ThemeColors.accent.primary }}
-                  >
-                    {adjusting
-                      ? <ActivityIndicator size="small" color={ThemeColors.text.strong} />
-                      : <Text className="text-pos-base font-bold text-white">Apply Adjustment</Text>}
-                  </Pressable>
+                  </View>
                 </View>
-              </View>
+              </PermissionGate>
 
               {/* Movement history */}
               <View>

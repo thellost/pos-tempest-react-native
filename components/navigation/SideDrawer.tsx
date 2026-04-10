@@ -24,7 +24,10 @@ import type { LucideIcon } from 'lucide-react-native';
 
 import type { UserRow } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useShift } from '@/hooks/use-shift';
+import { PERMISSION } from '@/constants/permissions';
+import type { Permission } from '@/constants/permissions';
 import { ThemeColors } from '@/constants/theme';
 
 const DRAWER_WIDTH = 280;
@@ -35,26 +38,22 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   href: string;
-  roles?: string[]; // if set, only shown to these roles
+  /** If set, the item is only shown when the current user has this permission. */
+  permission?: Permission;
 }
 
 const MAIN_NAV: NavItem[] = [
   { label: 'Tables & Orders', icon: LayoutGrid,   href: '/(app)/floor' },
-  { label: 'Reservations',    icon: CalendarDays, href: '/(app)/reservations' },
+  { label: 'Reservations',    icon: CalendarDays, href: '/(app)/reservations', permission: PERMISSION.VIEW_RESERVATIONS },
   { label: 'Kitchen Display', icon: ChefHat,      href: '/(app)/kitchen' },
-  { label: 'Inventory',       icon: Package,      href: '/(app)/inventory' },
-  { label: 'Customers',       icon: Users,      href: '/(app)/customers' },
-  {
-    label: 'Reports',
-    icon: BarChart2,
-    href: '/(app)/reports',
-    roles: ['admin', 'manager'],
-  },
+  { label: 'Inventory',       icon: Package,      href: '/(app)/inventory',    permission: PERMISSION.VIEW_INVENTORY },
+  { label: 'Customers',       icon: Users,        href: '/(app)/customers' },
+  { label: 'Reports',         icon: BarChart2,    href: '/(app)/daily-orders', permission: PERMISSION.VIEW_REPORTS },
 ];
 
 const SYSTEM_NAV: NavItem[] = [
-  { label: 'Shift',     icon: DollarSign, href: '/(app)/shifts' },
-  { label: 'Settings',  icon: Settings,   href: '/(app)/settings' },
+  { label: 'Shift',     icon: DollarSign, href: '/(app)/shifts',   permission: PERMISSION.MANAGE_SHIFT },
+  { label: 'Settings',  icon: Settings,   href: '/(app)/settings', permission: PERMISSION.BASIC_SETTINGS },
   { label: 'Dashboard', icon: Monitor,    href: '/(tabs)/explore' },
 ];
 
@@ -127,15 +126,22 @@ export function SideDrawer({
   const pathname = usePathname();
   const { registration } = useDevice();
   const { isShiftOpen } = useShift();
+  const { can } = usePermissions();
+
+  const visibleMainNav = useMemo(
+    () => MAIN_NAV.filter((item) => !item.permission || can(item.permission)),
+    [can],
+  );
 
   const visibleSystemNav = useMemo(() => {
-    const items = [...SYSTEM_NAV];
-    if (isShiftOpen) {
-      const shiftIndex = items.findIndex((i) => i.href === '/(app)/shifts');
-      items.splice(shiftIndex + 1, 0, { label: 'Cash', icon: Banknote, href: '/(app)/cash' });
+    const base = SYSTEM_NAV.filter((item) => !item.permission || can(item.permission));
+    if (isShiftOpen && can(PERMISSION.CASH_MANAGEMENT)) {
+      const shiftIndex = base.findIndex((i) => i.href === '/(app)/shifts');
+      const insertAt = shiftIndex >= 0 ? shiftIndex + 1 : base.length;
+      base.splice(insertAt, 0, { label: 'Cash', icon: Banknote, href: '/(app)/cash', permission: PERMISSION.CASH_MANAGEMENT });
     }
-    return items;
-  }, [isShiftOpen]);
+    return base;
+  }, [isShiftOpen, can]);
 
   // Animate open / close
   useEffect(() => {
@@ -176,13 +182,6 @@ export function SideDrawer({
     // Small delay lets the close animation start before pushing
     setTimeout(() => router.push(href as Parameters<typeof router.push>[0]), 80);
   };
-
-  /** Filter nav items by user role */
-  const visibleMainNav = MAIN_NAV.filter((item) => {
-    if (!item.roles) return true;
-    const role = user?.role_name?.toLowerCase() ?? '';
-    return item.roles.includes(role);
-  });
 
   // User initials for avatar bubble
   const initials = user?.name

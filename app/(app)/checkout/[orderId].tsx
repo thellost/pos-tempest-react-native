@@ -140,11 +140,11 @@ function CheckoutContent({
         const p = payment.pendingPayments[i];
         const isLast = i === payment.pendingPayments.length - 1;
         const change = isLast ? Math.max(0, p.amount - balanceLeft) : 0;
-        await processPayment(orderId, shiftId, p.method, p.amount, change, p.referenceNumber);
+        await processPayment(orderId, shiftId, p.method, p.amount, user?.role_name ?? '', change, p.referenceNumber);
         balanceLeft = Math.max(0, balanceLeft - p.amount);
       }
 
-      await completeOrder(orderId);
+      await completeOrder(orderId, user?.role_name ?? '');
       const receipt = await getBillData(orderId, true);
       setLastReceipt(receipt);
       printBill('cashier', receipt).catch(() => {});
