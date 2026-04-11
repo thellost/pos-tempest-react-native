@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import type { UserRow } from '@/hooks/use-auth';
 import { getAppTimezone } from '@/utils/timezone';
 
@@ -35,6 +37,7 @@ export function AppStatusBar({
   compact = false,
 }: StatusBarProps) {
   const [time, setTime] = useState(formatTime);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const id = setInterval(() => setTime(formatTime()), 60_000);
@@ -52,7 +55,9 @@ export function AppStatusBar({
 
   if (compact) {
     return (
-      <View className="h-9 flex-row items-center border-b border-border bg-surface-card px-3">
+      <View
+        className="flex-row items-center border-b border-border bg-surface-card px-3"
+        style={{ paddingTop: insets.top, minHeight: 36 + insets.top }}>
         {/* LEFT — avatar + name */}
         <View className="flex-row items-center gap-1.5" style={{ flexShrink: 0 }}>
           <View className="h-6 w-6 items-center justify-center rounded-full bg-accent" style={{ flexShrink: 0 }}>
@@ -81,7 +86,9 @@ export function AppStatusBar({
   }
 
   return (
-    <View className="h-11 flex-row items-center border-b border-border bg-surface-card px-4">
+    <View
+      className="flex-row items-center border-b border-border bg-surface-card px-4"
+      style={{ paddingTop: insets.top, minHeight: 44 + insets.top }}>
       {/* LEFT — user info */}
       <View className="flex-row items-center gap-2" style={{ flexShrink: 0 }}>
         <View className="h-7 w-7 items-center justify-center rounded-full bg-accent" style={{ flexShrink: 0 }}>

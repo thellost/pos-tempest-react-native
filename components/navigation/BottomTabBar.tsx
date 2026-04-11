@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePathname, useRouter } from 'expo-router';
 
-import { ThemeColors } from '@/constants/theme';
+import { LightThemeColors, ThemeColors } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 import { MoreSheet } from './MoreSheet';
 
@@ -38,7 +39,9 @@ export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { isDark } = useAppTheme();
   const [moreVisible, setMoreVisible] = useState(false);
+  const colors = isDark ? ThemeColors : LightThemeColors;
 
   return (
     <>
@@ -63,8 +66,8 @@ export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
                   size={22}
                   color={
                     isActive
-                      ? ThemeColors.accent.primary
-                      : ThemeColors.text.muted
+                      ? colors.accent.primary
+                      : colors.text.muted
                   }
                   strokeWidth={isActive ? 2.2 : 1.8}
                 />
@@ -72,8 +75,8 @@ export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
                   className="mt-0.5 text-pos-xs"
                   style={{
                     color: isActive
-                      ? ThemeColors.accent.primary
-                      : ThemeColors.text.muted,
+                      ? colors.accent.primary
+                      : colors.text.muted,
                     fontWeight: isActive ? '600' : '400',
                   }}
                   numberOfLines={1}
@@ -92,11 +95,12 @@ export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
           >
             <MoreHorizontal
               size={22}
-              color={ThemeColors.text.muted}
+              color={colors.text.muted}
               strokeWidth={1.8}
             />
             <Text
-              className="mt-0.5 text-pos-xs text-pos-text-muted"
+              className="mt-0.5 text-pos-xs"
+              style={{ color: colors.text.muted }}
               numberOfLines={1}
             >
               More

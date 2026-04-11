@@ -5,7 +5,6 @@ import { IconButton } from '@/components/ui';
 import { PRICING_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
-import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 
 const DEFAULT_BUTTON_COLOR = ThemeColors.category.default;
@@ -32,8 +31,6 @@ function MenuItemCardComponent({
   const isLowStock = item.isLowStock;
   const accentColor = categoryColor || DEFAULT_BUTTON_COLOR;
   const displayCategory = categoryName || 'Food & Drink';
-  const { isPhone } = useLayout();
-  const iconSize = isPhone ? 'md' : 'sm' as const;
 
   const handleAdd = useCallback(() => {
     if (isAvailable) {
@@ -47,17 +44,15 @@ function MenuItemCardComponent({
   }, [isAvailable, onDecrementItem, quantity, item]);
 
   return (
-    <View
-      className={`overflow-hidden rounded-sm border border-border bg-surface-card ${!isAvailable ? 'opacity-50' : ''}`}
-      style={{ minHeight: 96 }}
+    <Pressable
+      onPress={handleAdd}
+      disabled={!isAvailable}
+      className={`overflow-hidden rounded-sm border border-border bg-surface-card active:opacity-70 ${!isAvailable ? 'opacity-50' : ''}`}
+      style={{ minHeight: 80 }}
     >
       <View className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accentColor }} />
 
-      <Pressable 
-        onPress={handleAdd} 
-        disabled={!isAvailable} 
-        className="flex-1 px-3 pb-1.5 pt-2 active:opacity-70"
-      >
+      <View className="flex-1 px-3 pb-1.5 pt-2">
         <Text className="text-[10px] text-pos-text-faint" numberOfLines={1}>
           {displayCategory}
         </Text>
@@ -72,30 +67,26 @@ function MenuItemCardComponent({
             {isWeightBased && `/${item.unit_of_measure}`}
           </Text>
         </View>
-      </Pressable>
+      </View>
 
-      <View className="flex-row items-center justify-end gap-1.5 border-t border-border px-2 py-1.5">
-        <IconButton
-          size={iconSize}
-          onPress={handleDecrement}
-          disabled={!isAvailable || quantity <= 0}
-          className="border border-border bg-surface-raised"
-        >
-          <Text className="text-[12px] text-pos-text">−</Text>
-        </IconButton>
-
-        <Text className="w-4 text-center text-[12px] font-semibold text-pos-text">
-          {quantity}
-        </Text>
-
-        <IconButton
-          size={iconSize}
-          onPress={handleAdd}
-          disabled={!isAvailable}
-          className="border border-border bg-surface-raised"
-        >
-          <Text className="text-[12px] text-pos-text">+</Text>
-        </IconButton>
+      <View className="flex-row items-center justify-end border-t border-border px-2 py-1">
+        {quantity > 0 ? (
+          <View className="flex-row items-center gap-1.5">
+            <IconButton
+              size="sm"
+              onPress={handleDecrement}
+              disabled={!isAvailable || quantity <= 0}
+              className="border border-border bg-surface-raised"
+            >
+              <Text className="text-[12px] text-pos-text">−</Text>
+            </IconButton>
+            <Text className="w-5 text-center text-[12px] font-semibold text-pos-text">
+              {quantity}
+            </Text>
+          </View>
+        ) : (
+          <Text className="text-[10px] text-pos-text-faint">tap to add</Text>
+        )}
       </View>
 
       {isLowStock && isAvailable && (
@@ -109,7 +100,7 @@ function MenuItemCardComponent({
           <Text className="text-[8px] font-bold text-pos-text-strong">SOLD</Text>
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 

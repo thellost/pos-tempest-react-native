@@ -1,5 +1,5 @@
-import { Modal, ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui';
+import { Modal, ScrollView, Text, View } from 'react-native';
 
 import type { BillData } from '@/services/receipt.service';
 import { formatIDR } from '@/utils/currency';
@@ -174,7 +174,7 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
               <Row label={`Pajak (${bill.taxRate}%)`} value={formatIDR(bill.taxAmount)} />
             )}
             {bill.serviceCharge > 0 && (
-              <Row label="Servis" value={formatIDR(bill.serviceCharge)} />
+              <Row label={`Servis${bill.serviceChargeRate ? ` (${bill.serviceChargeRate}%)` : ''}`} value={formatIDR(bill.serviceCharge)} />
             )}
             {bill.roundingAmount !== 0 && (
               <Row label="Pembulatan" value={formatIDR(bill.roundingAmount)} />

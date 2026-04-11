@@ -58,18 +58,35 @@ export function CustomerDetail({ customer, onClose, getOrderHistory }: CustomerD
 
         <View className="mt-4 flex-row gap-3">
           <View className="flex-1 rounded-xl bg-brand/10 p-3">
-            <Text className="text-pos-xs text-pos-text-muted">Loyalty Points</Text>
-            <Text className="text-pos-2xl font-bold text-brand">
+            <Text className="text-pos-xs text-pos-text-muted" numberOfLines={1}>Loyalty Points</Text>
+            <Text
+              className="text-pos-2xl font-bold text-brand"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
               {customer.loyalty_points.toLocaleString('id-ID')}
             </Text>
           </View>
           <View className="flex-1 rounded-xl bg-surface-raised p-3">
-            <Text className="text-pos-xs text-pos-text-muted">Total Visits</Text>
-            <Text className="text-pos-2xl font-bold text-pos-text">{customer.total_visits}</Text>
+            <Text className="text-pos-xs text-pos-text-muted" numberOfLines={1}>Total Visits</Text>
+            <Text
+              className="text-pos-2xl font-bold text-pos-text"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {customer.total_visits}
+            </Text>
           </View>
           <View className="flex-1 rounded-xl bg-surface-raised p-3">
-            <Text className="text-pos-xs text-pos-text-muted">Total Spent</Text>
-            <Text className="text-pos-lg font-bold text-pos-text">
+            <Text className="text-pos-xs text-pos-text-muted" numberOfLines={1}>Total Spent</Text>
+            <Text
+              className="text-pos-lg font-bold text-pos-text"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+            >
               {formatIDR(customer.total_spent)}
             </Text>
           </View>

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
+    Modal,
     Pressable,
     ScrollView,
     Text,
@@ -16,6 +17,7 @@ import { CustomerDetail } from '@/components/customers/CustomerDetail';
 import { NewCustomerModal } from '@/components/customers/NewCustomerModal';
 import type { Customer } from '@/db/models';
 import { useCustomers, type CreateCustomerInput } from '@/hooks/use-customers';
+import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
 import { toInt } from '@/utils/coerce';
 
@@ -32,6 +34,8 @@ export default function CustomersScreen() {
     getCustomerOrderHistory,
   } = useCustomers();
 
+  const { isPortrait } = useLayout();
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
 
@@ -47,8 +51,12 @@ export default function CustomersScreen() {
   );
 
   return (
-    <View className="flex-1 flex-row bg-surface">
-      <View className="w-[38%] border-r border-border bg-surface-card">
+    <View className="flex-1 bg-surface" style={{ flexDirection: isPortrait ? 'column' : 'row' }}>
+      {/* Customer list — full width in portrait, 38% sidebar in landscape */}
+      <View
+        style={isPortrait ? { flex: 1 } : { width: '38%' }}
+        className="border-r border-border bg-surface-card"
+      >
         <View className="border-b border-border px-5 py-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-pos-2xl font-bold text-pos-text">Customers</Text>
@@ -93,7 +101,7 @@ export default function CustomersScreen() {
         ) : (
           <ScrollView className="flex-1">
             {customers.map((customer) => {
-              const isSelected = selectedId === toInt(customer.id);
+              const isSelected = !isPortrait && selectedId === toInt(customer.id);
               return (
                 <Pressable
                   key={customer.id}
@@ -117,7 +125,7 @@ export default function CustomersScreen() {
                       >
                         {customer.name}
                       </Text>
-                      <Text className="text-pos-xs text-pos-text-muted">
+                      <Text className="text-pos-xs text-pos-text-muted" numberOfLines={1}>
                         {customer.phone ?? 'No phone'}
                       </Text>
                     </View>
@@ -145,32 +153,60 @@ export default function CustomersScreen() {
         )}
       </View>
 
-      <View className="flex-1">
-        {selectedCustomer ? (
-          <CustomerDetail
-            customer={selectedCustomer}
-            onClose={() => setSelectedCustomer(null)}
-            getOrderHistory={getCustomerOrderHistory}
-          />
-        ) : (
-          <View className="flex-1 items-center justify-center p-8">
-            <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-surface-card">
-              <Users size={40} color={ThemeColors.text.muted} />
+      {/* Landscape: inline side panel */}
+      {!isPortrait && (
+        <View className="flex-1">
+          {selectedCustomer ? (
+            <CustomerDetail
+              customer={selectedCustomer}
+              onClose={() => setSelectedCustomer(null)}
+              getOrderHistory={getCustomerOrderHistory}
+            />
+          ) : (
+            <View className="flex-1 items-center justify-center p-8">
+              <View className="mb-5 h-20 w-20 items-center justify-center rounded-full bg-surface-card">
+                <Users size={40} color={ThemeColors.text.muted} />
+              </View>
+              <Text className="text-pos-xl font-semibold text-pos-text">Customer Details</Text>
+              <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
+                Select a customer from the list to view their profile,{'\n'}
+                order history and loyalty points.
+              </Text>
+              <Button
+                onPress={() => setShowNewModal(true)}
+                className="mt-6 flex-row items-center rounded-2xl bg-brand px-6 py-3.5"
+              >
+                <Text className="text-pos-base font-bold text-white">+ Register New Customer</Text>
+              </Button>
             </View>
-            <Text className="text-pos-xl font-semibold text-pos-text">Customer Details</Text>
-            <Text className="mt-2 text-center text-pos-base text-pos-text-muted">
-              Select a customer from the list to view their profile,{'\n'}
-              order history and loyalty points.
-            </Text>
-            <Button
-              onPress={() => setShowNewModal(true)}
-              className="mt-6 flex-row items-center rounded-2xl bg-brand px-6 py-3.5"
-            >
-              <Text className="text-pos-base font-bold text-white">+ Register New Customer</Text>
-            </Button>
+          )}
+        </View>
+      )}
+
+      {/* Portrait: customer detail as a bottom sheet modal */}
+      {isPortrait && (
+        <Modal
+          visible={!!selectedCustomer}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedCustomer(null)}
+        >
+          <View className="flex-1 justify-end bg-black/60">
+            <View className="rounded-t-3xl bg-surface-card" style={{ maxHeight: '85%' }}>
+              <View className="items-center pt-3 pb-1">
+                <View className="h-1 w-10 rounded-full bg-surface-raised" />
+              </View>
+              {selectedCustomer && (
+                <CustomerDetail
+                  customer={selectedCustomer}
+                  onClose={() => setSelectedCustomer(null)}
+                  getOrderHistory={getCustomerOrderHistory}
+                />
+              )}
+            </View>
           </View>
-        )}
-      </View>
+        </Modal>
+      )}
 
       <NewCustomerModal
         visible={showNewModal}

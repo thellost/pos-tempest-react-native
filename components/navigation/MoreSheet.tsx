@@ -27,7 +27,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import type { NavItem } from '@/constants/navigation';
-import { ThemeColors } from '@/constants/theme';
+import { LightThemeColors, ThemeColors } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/hooks/use-auth';
 
 const MORE_ITEMS: NavItem[] = [
@@ -52,6 +53,8 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut, lock } = useAuth();
+  const { isDark } = useAppTheme();
+  const colors = isDark ? ThemeColors : LightThemeColors;
   const slideAnim = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
 
         {/* Sheet */}
         <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }], backgroundColor: isDark ? ThemeColors.surfaces.card : LightThemeColors.surfaces.card }]}
         >
           {/* Drag handle */}
           <View className="items-center pb-2 pt-3">
@@ -112,7 +115,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
               className="h-8 w-8 items-center justify-center rounded-full bg-surface-soft"
               style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
-              <X size={16} color={ThemeColors.text.muted} />
+              <X size={16} color={colors.text.muted} />
             </Pressable>
           </View>
 
@@ -127,7 +130,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
                   style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                 >
                   <View className="h-14 w-14 items-center justify-center rounded-xl bg-surface-soft">
-                    <item.icon size={24} color={ThemeColors.text.muted} strokeWidth={1.8} />
+                    <item.icon size={24} color={colors.text.muted} strokeWidth={1.8} />
                   </View>
                   <Text
                     className="text-center text-pos-xs text-pos-text-muted"
@@ -152,7 +155,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
                 className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-surface-soft py-3"
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <Lock size={18} color={ThemeColors.text.muted} />
+                <Lock size={18} color={colors.text.muted} />
                 <Text className="text-pos-sm text-pos-text-muted">Lock</Text>
               </Pressable>
 
@@ -164,7 +167,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
                 className="flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-surface-soft py-3"
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
-                <LogOut size={18} color={ThemeColors.danger.DEFAULT} />
+                <LogOut size={18} color={colors.danger.DEFAULT} />
                 <Text className="text-pos-sm text-pos-danger">Sign Out</Text>
               </Pressable>
             </View>
@@ -185,7 +188,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheet: {
-    backgroundColor: ThemeColors.surfaces.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',

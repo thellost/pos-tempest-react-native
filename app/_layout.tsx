@@ -8,9 +8,9 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Dimensions, Modal, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ImmersiveMode from 'react-native-immersive-mode';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PowerSyncProvider } from '@/components/powersync-provider';
 import { ThemeColors } from '@/constants/theme';
@@ -82,7 +82,13 @@ function ThemedApp() {
   useEffect(() => {
     const { width, height } = Dimensions.get('window');
     const minSide = Math.min(width, height);
+    const isTabletLayout = minSide >= 600;
     console.log('[Orientation] Dimensions:', { width, height, minSide });
+    if (!isTabletLayout) {
+      console.log('[Orientation] Phone-sized device detected, unlocking orientation');
+      ScreenOrientation.unlockAsync().catch(() => {});
+      return;
+    }
     console.log('[Orientation] Locking to LANDSCAPE...');
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
       .then(() => {

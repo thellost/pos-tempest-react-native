@@ -21,7 +21,8 @@ interface Props {
 }
 
 export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onBack, collapsible = false }: Props) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  // In view-only mode (order history), start expanded so items are immediately visible
+  const [isCollapsed, setIsCollapsed] = useState(!viewOnly);
 
   const isTakeaway = order.order_type === ORDER_TYPE.TAKEAWAY;
   const tableLabel = isTakeaway
