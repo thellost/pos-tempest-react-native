@@ -13,8 +13,8 @@ import {
 
 import { Phone } from 'lucide-react-native';
 
-import { ThemeColors } from '@/constants/theme';
 import { Button } from '@/components/ui';
+import { ThemeColors } from '@/constants/theme';
 import type { CreateCustomerInput } from '@/hooks/use-customers';
 
 const PLACEHOLDER_COLOR = ThemeColors.text.faint;

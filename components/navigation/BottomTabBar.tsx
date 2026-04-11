@@ -1,11 +1,11 @@
-import {
-  ChefHat,
-  ClipboardList,
-  DollarSign,
-  LayoutGrid,
-  MoreHorizontal,
-} from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import {
+    ChefHat,
+    ClipboardList,
+    DollarSign,
+    LayoutGrid,
+    MoreHorizontal,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

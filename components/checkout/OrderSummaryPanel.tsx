@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronUp, ShoppingBag } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui';
-import { ThemeColors } from '@/constants/theme';
 import { ORDER_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { Order, OrderDiscount, OrderItem, OrderItemModifier } from '@/db/models';
-import { formatIDR } from '@/utils/currency';
 import { toFloat } from '@/utils/coerce';
+import { formatIDR } from '@/utils/currency';
+import { ChevronDown, ChevronLeft, ChevronUp, ShoppingBag } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 export type OrderRow = Order & { table_number: string | null; branch_name: string | null; tax_rate: number; service_charge_rate: number };
 export interface OrderItemRow extends OrderItem { modifiers: OrderItemModifier[] }

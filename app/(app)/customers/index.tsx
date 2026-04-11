@@ -11,15 +11,15 @@ import {
 
 import { Search, Star, User, Users, X } from 'lucide-react-native';
 
-import { ThemeColors } from '@/constants/theme';
-import { Button } from '@/components/ui';
 import { CustomerDetail } from '@/components/customers/CustomerDetail';
 import { NewCustomerModal } from '@/components/customers/NewCustomerModal';
+import { Button } from '@/components/ui';
+import { ThemeColors } from '@/constants/theme';
 import type { Customer } from '@/db/models';
 import { useCustomers, type CreateCustomerInput } from '@/hooks/use-customers';
 import { useLayout } from '@/hooks/use-layout';
-import { formatIDR } from '@/utils/currency';
 import { toInt } from '@/utils/coerce';
+import { formatIDR } from '@/utils/currency';
 
 const PLACEHOLDER_COLOR = ThemeColors.text.faint;
 
@@ -192,7 +192,7 @@ export default function CustomersScreen() {
           onRequestClose={() => setSelectedCustomer(null)}
         >
           <View className="flex-1 justify-end bg-black/60">
-            <View className="rounded-t-3xl bg-surface-card" style={{ maxHeight: '85%' }}>
+            <View className="rounded-t-3xl bg-surface-card" style={{ flex: 1, maxHeight: '85%' }}>
               <View className="items-center pt-3 pb-1">
                 <View className="h-1 w-10 rounded-full bg-surface-raised" />
               </View>

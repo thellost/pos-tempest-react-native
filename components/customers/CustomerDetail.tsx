@@ -3,12 +3,12 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 import { Mail, Phone, X } from 'lucide-react-native';
 
-import { ThemeColors } from '@/constants/theme';
 import { IconButton } from '@/components/ui';
+import { ThemeColors } from '@/constants/theme';
 import type { Customer } from '@/db/models';
 import type { CustomerOrderHistory } from '@/hooks/use-customers';
-import { formatIDR } from '@/utils/currency';
 import { toInt } from '@/utils/coerce';
+import { formatIDR } from '@/utils/currency';
 
 export interface CustomerDetailProps {
   customer: Customer;
