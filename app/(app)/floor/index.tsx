@@ -127,8 +127,7 @@ export default function FloorScreen() {
       const timer = setTimeout(() => controller.abort(), 5000);
 
       //default to api.zidan.id if EXPO_PUBLIC_API_URL is not defined, to prevent app from crashing when user tries to long press a table while offline
-      const url = `${process.env.
-         || 'https://api.zidan.id'}/health`;
+      const url = `${process.env.EXPO_PUBLIC_API_URL || 'https://api.zidan.id'}/health`;
       const res = await fetch(url, {
         method: 'GET',
         signal: controller.signal,
