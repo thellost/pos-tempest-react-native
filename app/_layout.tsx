@@ -82,9 +82,15 @@ function ThemedApp() {
   useEffect(() => {
     const { width, height } = Dimensions.get('window');
     const minSide = Math.min(width, height);
-    if (minSide >= 600) {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-    }
+    console.log('[Orientation] Dimensions:', { width, height, minSide });
+    console.log('[Orientation] Locking to LANDSCAPE...');
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
+      .then(() => {
+        console.log('[Orientation] Lock successful');
+      })
+      .catch((err: unknown) => {
+        console.warn('[Orientation] Lock failed:', err);
+      });
   }, []);
 
   useEffect(() => {
