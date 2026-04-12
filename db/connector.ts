@@ -60,7 +60,23 @@ async function applyCrudOperation(op: CrudOp) {
 		}
 
 		if (op.op === 'PUT') {
-			const payload = { device_uid: rowId, ...(op.opData ?? {}) };
+			const payload = { device_uid: rowId, ...(op.opData ?? {}) } as Record<string, unknown>;
+			const { data: existingDevice, error: readError } = await schemaClient
+				.from(target.table)
+				.select('registered_at')
+				.eq('device_uid', rowId)
+				.maybeSingle<{ registered_at: string | null }>();
+
+			if (readError) {
+				throw new Error(`[PowerSync upload] Failed to read existing device metadata for ${tableRef}#${rowId}: ${readError.message}`);
+			}
+
+			if (existingDevice?.registered_at) {
+				payload.registered_at = existingDevice.registered_at;
+			} else if (payload.registered_at == null) {
+				delete payload.registered_at;
+			}
+
 			const { error } = await schemaClient.from(target.table).upsert(payload as never, { onConflict: 'device_uid' });
 			if (error) throw new Error(`[PowerSync upload] PUT failed for ${tableRef}#${rowId}: ${error.message}`);
 			return;

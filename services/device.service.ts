@@ -8,10 +8,62 @@
 
 import { AUDIT_ACTION, DEVICE_STATUS } from '@/constants/enums';
 import type { Branch, Device } from '@/db/models';
-import { powersync } from '@/db/provider';
+import { getPowerSyncStatusSnapshot, powersync } from '@/db/provider';
 import { captureError } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import { insertAuditLog } from '@/services/audit.service';
+
+interface RemoteDeviceRecord {
+  device_uid: string;
+  branch_id: number;
+  device_name: string;
+  status: Device['status'];
+  registered_at: Device['registered_at'];
+  last_seen_at: Device['last_seen_at'];
+}
+
+function mapRemoteDeviceRecord(record: RemoteDeviceRecord): Device {
+  return {
+    id: record.device_uid,
+    branch_id: record.branch_id,
+    device_name: record.device_name,
+    status: record.status,
+    registered_at: record.registered_at,
+    last_seen_at: record.last_seen_at,
+  };
+}
+
+async function syncRecoveredDeviceLocally(
+  deviceUid: string,
+  branchId: number,
+  deviceName: string,
+  registeredAt: string,
+  lastSeenAt: string
+): Promise<Device> {
+  const localDevice = await powersync.getOptional<Device>(
+    `SELECT * FROM devices WHERE id = ?`,
+    [deviceUid]
+  );
+
+  if (localDevice) {
+    await powersync.execute(
+      `UPDATE devices SET branch_id = ?, device_name = ?, status = ?, registered_at = ?, last_seen_at = ? WHERE id = ?`,
+      [branchId, deviceName, DEVICE_STATUS.ACTIVE, registeredAt, lastSeenAt, deviceUid]
+    );
+  } else {
+    await powersync.execute(
+      `INSERT INTO devices (id, branch_id, device_name, status, registered_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      [deviceUid, branchId, deviceName, DEVICE_STATUS.ACTIVE, registeredAt, lastSeenAt]
+    );
+  }
+
+  const device = await powersync.getOptional<Device>(`SELECT * FROM devices WHERE id = ?`, [deviceUid]);
+  if (!device) {
+    throw new Error('Failed to persist recovered device record locally');
+  }
+
+  return device;
+}
 
 /**
  * Result of device registration check
@@ -82,57 +134,54 @@ export async function registerDevice(
       throw new DeviceInactiveError(existing.device);
     }
 
-    await powersync.execute(
-      `UPDATE devices SET branch_id = ?, device_name = ?, status = ?, last_seen_at = ? WHERE id = ?`,
-      [branchId, deviceName, DEVICE_STATUS.ACTIVE, now, deviceUid]
+    const device = await syncRecoveredDeviceLocally(
+      deviceUid,
+      branchId,
+      deviceName,
+      existing.device.registered_at,
+      now
     );
 
     void insertAuditLog({
       action: AUDIT_ACTION.UPDATE,
       tableName: 'devices',
-      recordId: existing.device.id,
+      recordId: device.id,
       newValues: { branch_id: branchId, device_name: deviceName, status: DEVICE_STATUS.ACTIVE },
       description: `Device re-registered: ${deviceName} (${deviceUid})`,
     });
 
-    return { ...existing.device, branch_id: branchId, device_name: deviceName, status: DEVICE_STATUS.ACTIVE, last_seen_at: now };
+    return device;
   }
 
   // Local DB has no record — check Supabase directly in case the device was
   // previously registered but the local DB hasn't synced yet (e.g. fresh install).
-  const { data: serverDevice } = await supabase
+  const { data: serverDevice, error: serverDeviceError } = await supabase
     .from('devices')
-    .select('device_uid, status')
+    .select('device_uid, branch_id, device_name, status, registered_at, last_seen_at')
     .eq('device_uid', deviceUid)
-    .maybeSingle();
+    .maybeSingle<RemoteDeviceRecord>();
+
+  if (serverDeviceError) {
+    throw serverDeviceError;
+  }
 
   if (serverDevice) {
     if (serverDevice.status === DEVICE_STATUS.INACTIVE) {
-      const { data: full } = await supabase.from('devices').select('*').eq('device_uid', deviceUid).single();
-      if (full) throw new DeviceInactiveError(full as unknown as Device);
+      throw new DeviceInactiveError(mapRemoteDeviceRecord(serverDevice));
     }
 
-    // device_uid is the PK — use it directly as the local id
-    const local = await powersync.getOptional<Device>(`SELECT * FROM devices WHERE id = ?`, [deviceUid]);
-    if (local) {
-      await powersync.execute(
-        `UPDATE devices SET branch_id = ?, device_name = ?, status = ?, last_seen_at = ? WHERE id = ?`,
-        [branchId, deviceName, DEVICE_STATUS.ACTIVE, now, deviceUid]
-      );
-    } else {
-      await powersync.execute(
-        `INSERT INTO devices (id, branch_id, device_name, status, registered_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)`,
-        [deviceUid, branchId, deviceName, DEVICE_STATUS.ACTIVE, now, now]
-      );
-    }
-
-    const device = await powersync.getOptional<Device>(`SELECT * FROM devices WHERE id = ?`, [deviceUid]);
-    if (!device) throw new Error('Failed to sync existing device record');
+    const device = await syncRecoveredDeviceLocally(
+      deviceUid,
+      branchId,
+      deviceName,
+      serverDevice.registered_at,
+      now
+    );
 
     void insertAuditLog({
       action: AUDIT_ACTION.UPDATE,
       tableName: 'devices',
-      recordId: deviceUid,
+      recordId: device.id,
       newValues: { branch_id: branchId, device_name: deviceName, status: DEVICE_STATUS.ACTIVE },
       description: `Device re-registered (recovered from server): ${deviceName} (${deviceUid})`,
     });
@@ -171,27 +220,47 @@ export async function getDeviceRegistration(
   deviceUid: string
 ): Promise<DeviceRegistrationResult> {
   try {
-    let device = await powersync.getOptional<Device>(
+    const localDevice = await powersync.getOptional<Device>(
       `SELECT * FROM devices WHERE id = ?`,
       [deviceUid]
     );
+    let device = localDevice;
+    let usedSupabaseFallback = false;
+
+    console.log('[DeviceService] Registration lookup', {
+      deviceUid,
+      localDeviceFound: Boolean(localDevice),
+      powerSync: getPowerSyncStatusSnapshot(),
+    });
 
     // Local DB has no record — check Supabase directly in case the device was
     // previously registered but the local DB hasn't synced yet (e.g. after logout
     // when PowerSync reconnects and the devices table is briefly stale).
     if (!device) {
-      const { data: serverDevice } = await supabase
+      console.log('[DeviceService] Registration fallback start', { deviceUid });
+      const { data: serverDevice, error: serverDeviceError } = await supabase
         .from('devices')
-        .select('*')
+        .select('device_uid, branch_id, device_name, status, registered_at, last_seen_at')
         .eq('device_uid', deviceUid)
-        .maybeSingle();
+        .maybeSingle<RemoteDeviceRecord>();
+
+      if (serverDeviceError) {
+        throw serverDeviceError;
+      }
 
       if (serverDevice) {
-        device = serverDevice as unknown as Device;
+        device = mapRemoteDeviceRecord(serverDevice);
+        usedSupabaseFallback = true;
       }
     }
 
     if (!device) {
+      console.log('[DeviceService] Registration lookup result', {
+        deviceUid,
+        registered: false,
+        localDeviceFound: Boolean(localDevice),
+        usedSupabaseFallback,
+      });
       return { registered: false, device: null, branch: null };
     }
 
@@ -201,6 +270,14 @@ export async function getDeviceRegistration(
       [device.branch_id]
     );
 
+    console.log('[DeviceService] Registration lookup result', {
+      deviceUid,
+      registered: device.status === DEVICE_STATUS.ACTIVE,
+      branchId: device.branch_id,
+      localDeviceFound: Boolean(localDevice),
+      usedSupabaseFallback,
+    });
+
     return {
       registered: device.status === DEVICE_STATUS.ACTIVE,
       device,
@@ -208,7 +285,11 @@ export async function getDeviceRegistration(
     };
   } catch (error) {
     captureError(error, { module: 'device', operation: 'getDeviceRegistration', level: 'error' });
-    return { registered: false, device: null, branch: null };
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error('Failed to determine device registration');
   }
 }
 

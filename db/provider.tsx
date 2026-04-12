@@ -17,6 +17,19 @@ export const powersync = new PowerSyncDatabase({
 
 let initPromise: Promise<void> | null = null;
 
+export function getPowerSyncStatusSnapshot() {
+	const status = powersync.currentStatus;
+
+	return {
+		connected: status.connected,
+		connecting: status.connecting,
+		hasSynced: status.hasSynced,
+		downloading: Boolean(status.dataFlowStatus?.downloading),
+		uploading: Boolean(status.dataFlowStatus?.uploading),
+		lastSyncedAt: status.lastSyncedAt ? status.lastSyncedAt.toISOString() : null,
+	};
+}
+
 export async function initializePowerSync() {
 	if (initPromise) {
 		return initPromise;
@@ -24,16 +37,19 @@ export async function initializePowerSync() {
 
 	initPromise = (async () => {
 		try {
+			console.log('[PowerSync] initialize start');
 			await powersync.init();
+			console.log('[PowerSync] init complete', getPowerSyncStatusSnapshot());
 
 			if (process.env.EXPO_PUBLIC_POWERSYNC_URL) {
 				const env = __DEV__ ? 'development' : 'production';
+				console.log('[PowerSync] connect start', { environment: env });
 				await powersync.connect(powerSyncConnector,
 					{
 						params: { environment: env }
 					}
 				);
-				console.log('[PowerSync] connected — status:', powersync.currentStatus);
+				console.log('[PowerSync] connect complete', getPowerSyncStatusSnapshot());
 			}
 		} catch (error) {
 			// Reset so callers can retry
@@ -56,6 +72,14 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 				setReady(true);
 				dispose = powersync.registerListener({
 					statusChanged: (status) => {
+						console.log('[PowerSync] status', {
+							connected: status.connected,
+							connecting: status.connecting,
+							hasSynced: status.hasSynced,
+							downloading: Boolean(status.dataFlowStatus?.downloading),
+							uploading: Boolean(status.dataFlowStatus?.uploading),
+							lastSyncedAt: status.lastSyncedAt ? status.lastSyncedAt.toISOString() : null,
+						});
 						addBreadcrumb('sync', `PowerSync ${status.connected ? 'connected' : 'disconnected'}`, {
 							connected: status.connected,
 							lastSyncedAt: status.lastSyncedAt,

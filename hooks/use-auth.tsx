@@ -3,7 +3,7 @@ import { createContext, PropsWithChildren, useCallback, useContext, useEffect, u
 import { AppState, AppStateStatus } from 'react-native';
 
 import { Config } from '@/constants/config';
-import { powersync } from '@/db/provider';
+import { getPowerSyncStatusSnapshot, powersync } from '@/db/provider';
 import {
   AuditEventType,
   getSafeErrorMessage,
@@ -118,6 +118,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     setProfileLoading(true);
+    console.log('[AuthProvider] Refresh profile start', {
+      authUserId,
+      powerSync: getPowerSyncStatusSnapshot(),
+    });
 
     try {
       // On fresh install, PowerSync may not have synced the users table yet.
@@ -164,6 +168,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         clearUserContext();
       }
       setUser(profile);
+      console.log('[AuthProvider] Refresh profile result', {
+        authUserId,
+        found: Boolean(profile),
+        branchId: profile?.branch_id ?? null,
+        powerSync: getPowerSyncStatusSnapshot(),
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -536,6 +546,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let mounted = true;
 
+    console.log('[AuthProvider] Restoring session');
     supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) {
         return;
@@ -557,9 +568,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSession(data.session ?? null);
       setIsLocked(false);
       setLoading(false);
+      console.log('[AuthProvider] Session restored', {
+        hasSession: Boolean(data.session),
+        userId: data.session?.user?.id ?? null,
+        expiresAt: data.session?.expires_at ?? null,
+      });
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      console.log('[AuthProvider] Auth state change', {
+        event,
+        hasSession: Boolean(nextSession),
+        userId: nextSession?.user?.id ?? null,
+        expiresAt: nextSession?.expires_at ?? null,
+      });
+
       if (event === 'TOKEN_REFRESHED' && !nextSession) {
         console.warn('[AuthProvider] Token refresh failed — signing out');
         supabase.auth.signOut();

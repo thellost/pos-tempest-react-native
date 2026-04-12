@@ -97,10 +97,10 @@ export { startSpan } from '@sentry/react-native';
 // ── Device Context ────────────────────────────────────────────────────────────
 
 export function setDeviceContext(device: {
-  id: number;
+  id: number | string;
   name: string;
   uid: string;
-  branch_id: number;
+  branch_id: number | string;
 }): void {
   Sentry.setTag('device.id', String(device.id));
   Sentry.setTag('device.name', device.name);
