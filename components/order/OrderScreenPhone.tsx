@@ -6,11 +6,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
-import { toInt } from '@/utils/coerce';
 import { CategoryTabs } from '@/components/menu/CategoryTabs';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuSearchBar } from '@/components/menu/MenuSearchBar';
 import { OrderPanel } from '@/components/order/OrderPanel';
+import { toInt } from '@/utils/coerce';
 import { PerfProfiler } from '@/utils/perf-debug';
 
 import type { OrderScreenSharedProps } from './order-screen-props';

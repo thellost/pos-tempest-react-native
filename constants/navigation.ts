@@ -1,18 +1,18 @@
-import {
-  Banknote,
-  CalendarDays,
-  ChefHat,
-  ClipboardList,
-  DollarSign,
-  LayoutGrid,
-  Package,
-  Settings,
-  Users,
-} from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import {
+    Banknote,
+    CalendarDays,
+    ChefHat,
+    ClipboardList,
+    DollarSign,
+    LayoutGrid,
+    Package,
+    Settings,
+    Users,
+} from 'lucide-react-native';
 
-import { PERMISSION } from '@/constants/permissions';
 import type { Permission } from '@/constants/permissions';
+import { PERMISSION } from '@/constants/permissions';
 
 export interface NavItem {
   label: string;
