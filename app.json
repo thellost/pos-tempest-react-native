@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "pos-tempest",
+    "name": "POS Tempest",
     "slug": "pos-tempest",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "postempest",
