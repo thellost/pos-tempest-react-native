@@ -168,19 +168,21 @@ export function OrderActions({
             </Text>
           </SecondaryButton>
 
-          {canPayment ? (
-            <SuccessButton onPress={handlePayment} className="flex-1">
-              <Text className="text-pos-sm font-bold text-white">
-                Payment
-              </Text>
-            </SuccessButton>
-          ) : (
-            <SecondaryButton onPress={handlePayment} disabled className="flex-1">
-              <Text className="text-pos-sm font-bold text-pos-text-faint">
-                Payment
-              </Text>
-            </SecondaryButton>
-          )}
+          <PermissionGate permission={PERMISSION.PROCESS_PAYMENT}>
+            {canPayment ? (
+              <SuccessButton onPress={handlePayment} className="flex-1">
+                <Text className="text-pos-sm font-bold text-white">
+                  Payment
+                </Text>
+              </SuccessButton>
+            ) : (
+              <SecondaryButton onPress={handlePayment} disabled className="flex-1">
+                <Text className="text-pos-sm font-bold text-pos-text-faint">
+                  Payment
+                </Text>
+              </SecondaryButton>
+            )}
+          </PermissionGate>
         </View>
       </View>
     );
@@ -210,19 +212,21 @@ export function OrderActions({
   // Fallback
   return (
     <View className="border-t border-border bg-surface-card p-2">
-      {canPayment ? (
-        <SuccessButton onPress={handlePayment}>
-          <Text className="text-pos-sm font-bold text-white">
-            Payment
-          </Text>
-        </SuccessButton>
-      ) : (
-        <SecondaryButton onPress={handlePayment} disabled>
-          <Text className="text-pos-sm font-bold text-pos-text-faint">
-            Payment
-          </Text>
-        </SecondaryButton>
-      )}
+      <PermissionGate permission={PERMISSION.PROCESS_PAYMENT}>
+        {canPayment ? (
+          <SuccessButton onPress={handlePayment}>
+            <Text className="text-pos-sm font-bold text-white">
+              Payment
+            </Text>
+          </SuccessButton>
+        ) : (
+          <SecondaryButton onPress={handlePayment} disabled>
+            <Text className="text-pos-sm font-bold text-pos-text-faint">
+              Payment
+            </Text>
+          </SecondaryButton>
+        )}
+      </PermissionGate>
     </View>
   );
 }

@@ -4,9 +4,9 @@ import { Config } from '@/constants/config';
 import { ThemeColors } from '@/constants/theme';
 import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Button, SelectButton } from '@/components/ui';
+import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 
 interface CashTransactionModalProps {
   visible: boolean;
@@ -35,6 +35,8 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const amountRef = useRef<ShakeFieldRef>(null);
 
   const amount = useMemo(() => Number(amountInput || '0'), [amountInput]);
 
@@ -66,7 +68,11 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
   }
 
   async function handleSubmit() {
-    if (!canSubmit || submitting) return;
+    if (submitting) return;
+    if (!canSubmit) {
+      amountRef.current?.shake();
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -160,9 +166,9 @@ export function CashTransactionModal({ visible, availableCash, onClose, onSubmit
 
           {/* Amount Input */}
           <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Amount</Text>
-          <View className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
+          <ShakeField ref={amountRef} className="mt-2 rounded-xl border border-border bg-surface px-4 py-3">
             <Text className="text-pos-2xl font-bold text-accent">{formatIDR(amount)}</Text>
-          </View>
+          </ShakeField>
 
           {/* Validation Warning */}
           {type === CASH_TRANSACTION_TYPE.CASH_OUT && amount > availableCash && (

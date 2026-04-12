@@ -59,6 +59,12 @@ export default function AuthLayout() {
             title: 'Unlock',
           }}
         />
+        <Stack.Screen
+          name="forgot-password"
+          options={{
+            title: 'Forgot Password',
+          }}
+        />
       </Stack>
     </AppErrorBoundary>
   );

@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { ArrowLeft, CheckCircle, Star, X } from 'lucide-react-native';
 
 import { ThemeColors } from '@/constants/theme';
-import { Button, IconButton } from '@/components/ui';
+import { Button, IconButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 
 interface ReservationFormProps {
   guestName: string;
@@ -55,6 +55,34 @@ export function ReservationForm({
   onBack,
 }: ReservationFormProps) {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; date?: string; time?: string; guests?: string }>({});
+
+  const nameRef = useRef<ShakeFieldRef>(null);
+  const dateRef = useRef<ShakeFieldRef>(null);
+  const timeRef = useRef<ShakeFieldRef>(null);
+  const guestCountRef = useRef<ShakeFieldRef>(null);
+
+  const handleValidatedSubmit = useCallback(() => {
+    const newErrors: { name?: string; date?: string; time?: string; guests?: string } = {};
+    if (!guestName.trim()) newErrors.name = 'Customer name is required.';
+    if (!reservationDate.trim()) newErrors.date = 'Date is required.';
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(reservationDate)) newErrors.date = 'Use YYYY-MM-DD format.';
+    if (!reservationTime.trim()) newErrors.time = 'Time is required.';
+    else if (!/^\d{2}:\d{2}$/.test(reservationTime)) newErrors.time = 'Use HH:MM format.';
+    if (!guestCount.trim() || isNaN(Number(guestCount)) || Number(guestCount) <= 0)
+      newErrors.guests = 'Enter a valid guest count.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.name) nameRef.current?.shake();
+      if (newErrors.date) dateRef.current?.shake();
+      if (newErrors.time) timeRef.current?.shake();
+      if (newErrors.guests) guestCountRef.current?.shake();
+      return;
+    }
+    setErrors({});
+    onSubmit();
+  }, [guestName, reservationDate, reservationTime, guestCount, onSubmit]);
 
   const handleSelectCustomer = useCallback(
     (customer: { id: number; name: string; phone: string | null }) => {
@@ -81,7 +109,7 @@ export function ReservationForm({
       </View>
 
       {/* Customer name with search */}
-      <View className="mb-4">
+      <ShakeField ref={nameRef} className="mb-4">
         <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">
           Customer Name *
         </Text>
@@ -89,6 +117,7 @@ export function ReservationForm({
           value={guestName}
           onChangeText={(v) => {
             setGuestName(v);
+            if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
             if (v.length >= 2) {
               setSearchQuery(v);
               setShowCustomerSearch(true);
@@ -100,6 +129,7 @@ export function ReservationForm({
           placeholderTextColor="#6B7280"
           className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
         />
+        {errors.name && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.name}</Text>}
         {/* Customer search results */}
         {showCustomerSearch && customers.length > 0 && (
           <View className="mt-1 rounded-xl border border-border bg-surface-card shadow-lg">
@@ -140,7 +170,7 @@ export function ReservationForm({
             </Pressable>
           </View>
         )}
-      </View>
+      </ShakeField>
 
       {/* Phone number */}
       <View className="mb-4">
@@ -157,41 +187,53 @@ export function ReservationForm({
 
       {/* Date and time side by side */}
       <View className="mb-4 flex-row gap-3">
-        <View className="flex-1">
+        <ShakeField ref={dateRef} className="flex-1">
           <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Date *</Text>
           <TextInput
             value={reservationDate}
-            onChangeText={setReservationDate}
+            onChangeText={(v) => {
+              setReservationDate(v);
+              if (errors.date) setErrors((p) => ({ ...p, date: undefined }));
+            }}
             placeholder="YYYY-MM-DD"
             placeholderTextColor="#6B7280"
             className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
           />
-        </View>
-        <View className="flex-1">
+          {errors.date && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.date}</Text>}
+        </ShakeField>
+        <ShakeField ref={timeRef} className="flex-1">
           <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Time *</Text>
           <TextInput
             value={reservationTime}
-            onChangeText={setReservationTime}
+            onChangeText={(v) => {
+              setReservationTime(v);
+              if (errors.time) setErrors((p) => ({ ...p, time: undefined }));
+            }}
             placeholder="HH:MM"
             placeholderTextColor="#6B7280"
             className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
           />
-        </View>
+          {errors.time && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.time}</Text>}
+        </ShakeField>
       </View>
 
       {/* Guest count and duration */}
       <View className="mb-4 flex-row gap-3">
-        <View className="flex-1">
+        <ShakeField ref={guestCountRef} className="flex-1">
           <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Guests *</Text>
           <TextInput
             value={guestCount}
-            onChangeText={setGuestCount}
+            onChangeText={(v) => {
+              setGuestCount(v);
+              if (errors.guests) setErrors((p) => ({ ...p, guests: undefined }));
+            }}
             keyboardType="numeric"
             placeholder="2"
             placeholderTextColor="#6B7280"
             className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
           />
-        </View>
+          {errors.guests && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.guests}</Text>}
+        </ShakeField>
         <View className="flex-1">
           <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Duration (min)</Text>
           <TextInput
@@ -222,7 +264,7 @@ export function ReservationForm({
 
       {/* Submit */}
       <Button
-        onPress={onSubmit}
+        onPress={handleValidatedSubmit}
         disabled={isSubmitting}
         className="items-center justify-center rounded-2xl bg-brand py-4"
       >

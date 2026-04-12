@@ -1,9 +1,11 @@
 import { Colors, ThemeColors } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { Eye, EyeOff, Zap } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
-import { Button, IconButton } from '@/components/ui';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Button, IconButton, ShakeField } from '@/components/ui';
+import type { ShakeFieldRef } from '@/components/ui';
 import 'react-native-url-polyfill/auto';
 
 export default function LoginScreen() {
@@ -13,12 +15,17 @@ export default function LoginScreen() {
     isLoginLocked,
     loginResetInMs,
   } = useAuth();
+  const router = useRouter();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  const emailRef = useRef<ShakeFieldRef>(null);
+  const passwordRef = useRef<ShakeFieldRef>(null);
 
   useEffect(() => {
     if (isLoginLocked && loginResetInMs > 0) {
@@ -42,15 +49,19 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
 
-    if (!trimmedEmail || !trimmedPassword) {
-      Alert.alert('Missing Information', 'Please enter both email and password.');
+    const newErrors: { email?: string; password?: string } = {};
+    if (!trimmedEmail) newErrors.email = 'Email is required.';
+    if (!trimmedPassword) newErrors.password = 'Password is required.';
+    else if (trimmedPassword.length < 6) newErrors.password = 'Password must be at least 6 characters.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.email) emailRef.current?.shake();
+      if (newErrors.password) passwordRef.current?.shake();
       return;
     }
 
-    if (trimmedPassword.length < 6) {
-      Alert.alert('Invalid Password', 'Password must be at least 6 characters.');
-      return;
-    }
+    setErrors({});
 
     if (isLoginLocked) {
       const minutes = Math.ceil(lockTimeRemaining / 60);
@@ -141,25 +152,36 @@ export default function LoginScreen() {
           )}
 
           <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-            keyboardType="email-address"
-            placeholder="your@email.com"
-            placeholderTextColor={ThemeColors.text.faint}
-            editable={!loading && !isLoginLocked}
-            returnKeyType="next"
-            className="mb-4 rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
-          />
+          <ShakeField ref={emailRef} className="mb-4">
+            <TextInput
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+              }}
+              autoCapitalize="none"
+              autoComplete="email"
+              autoCorrect={false}
+              keyboardType="email-address"
+              placeholder="your@email.com"
+              placeholderTextColor={ThemeColors.text.faint}
+              editable={!loading && !isLoginLocked}
+              returnKeyType="next"
+              className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
+            />
+            {errors.email && (
+              <Text className="mt-1 text-pos-xs text-pos-danger">{errors.email}</Text>
+            )}
+          </ShakeField>
 
           <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Password</Text>
-          <View className="relative mb-5">
+          <ShakeField ref={passwordRef} className="relative mb-5">
             <TextInput
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => {
+                setPassword(v);
+                if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
+              }}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoComplete="password"
@@ -182,7 +204,10 @@ export default function LoginScreen() {
                 ? <Eye size={18} color={ThemeColors.text.muted} />
                 : <EyeOff size={18} color={ThemeColors.text.muted} />}
             </IconButton>
-          </View>
+            {errors.password && (
+              <Text className="mt-1 text-pos-xs text-pos-danger">{errors.password}</Text>
+            )}
+          </ShakeField>
 
           <Button
             className="items-center justify-center rounded-xl bg-accent p-3.5"
@@ -195,6 +220,13 @@ export default function LoginScreen() {
               </Text>
             </View>
           </Button>
+
+          <Pressable
+            onPress={() => router.push('/(auth)/forgot-password')}
+            className="mt-3 items-center"
+          >
+            <Text className="text-pos-sm text-brand">Forgot password?</Text>
+          </Pressable>
 
           <Text className="mt-4 text-center text-pos-xs text-pos-text-faint">
             Your credentials are encrypted and secure

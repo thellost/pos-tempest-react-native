@@ -13,3 +13,5 @@ export type { CustomerRow } from './CustomerSearchDropdown';
 export { NoShiftWarning } from './NoShiftWarning';
 export { EmptyStateView } from './EmptyStateView';
 export { NoShiftLockOverlay } from './NoShiftLockOverlay';
+export { ShakeField } from './ShakeField';
+export type { ShakeFieldRef } from './ShakeField';

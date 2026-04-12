@@ -1,6 +1,5 @@
 import { memo, useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { IconButton } from '@/components/ui';
 
 import { PRICING_TYPE } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
@@ -43,64 +42,80 @@ function MenuItemCardComponent({
     onDecrementItem(item);
   }, [isAvailable, onDecrementItem, quantity, item]);
 
+  const activeStyle = quantity > 0
+    ? { borderColor: accentColor + '99' }  // accent at ~60% opacity when in cart
+    : undefined;
+
   return (
-    <Pressable
-      onPress={handleAdd}
-      disabled={!isAvailable}
-      className={`overflow-hidden rounded-sm border border-border bg-surface-card active:opacity-70 ${!isAvailable ? 'opacity-50' : ''}`}
-      style={{ minHeight: 80 }}
+    <View
+      className={`overflow-hidden rounded-sm border border-border bg-surface-card flex-row ${!isAvailable ? 'opacity-50' : ''}`}
+      style={[{ minHeight: 72 }, activeStyle]}
     >
+      {/* Left accent bar */}
       <View className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accentColor }} />
 
-      <View className="flex-1 px-3 pb-1.5 pt-2">
-        <Text className="text-[10px] text-pos-text-faint" numberOfLines={1}>
+      {/* Content area — the whole left side is the "add" press target */}
+      <Pressable
+        onPress={handleAdd}
+        disabled={!isAvailable}
+        className="flex-1 justify-between pl-3 pr-1.5 pb-2 pt-2 active:opacity-70"
+      >
+        <Text className="text-[9px] uppercase tracking-widest text-pos-text-faint" numberOfLines={1}>
           {displayCategory}
         </Text>
+        <Text className="mt-0.5 text-[12px] font-semibold leading-[15px] text-pos-text" numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text className="mt-1 font-mono text-[11px] font-bold text-pos-text" numberOfLines={1}>
+          {formatIDR(item.price)}
+          {isWeightBased && (
+            <Text className="text-[10px] font-normal text-pos-text-faint">/{item.unit_of_measure}</Text>
+          )}
+        </Text>
 
-        <View className="mt-0.5 flex-1 justify-between">
-          <Text className="text-[13px] font-semibold leading-4 text-pos-text" numberOfLines={2}>
-            {item.name}
-          </Text>
-
-          <Text className="mt-1 font-mono text-[12px] font-semibold text-pos-text">
-            {formatIDR(item.price)}
-            {isWeightBased && `/${item.unit_of_measure}`}
-          </Text>
-        </View>
-      </View>
-
-      <View className="flex-row items-center justify-end border-t border-border px-2 py-1">
-        {quantity > 0 ? (
-          <View className="flex-row items-center gap-1.5">
-            <IconButton
-              size="sm"
-              onPress={handleDecrement}
-              disabled={!isAvailable || quantity <= 0}
-              className="border border-border bg-surface-raised"
-            >
-              <Text className="text-[12px] text-pos-text">−</Text>
-            </IconButton>
-            <Text className="w-5 text-center text-[12px] font-semibold text-pos-text">
-              {quantity}
-            </Text>
+        {/* LOW STOCK badge */}
+        {isLowStock && isAvailable && (
+          <View className="absolute right-1 top-1 rounded bg-pos-warning px-1 py-px">
+            <Text className="text-[7px] font-bold uppercase text-pos-text-strong">low</Text>
           </View>
-        ) : (
-          <Text className="text-[10px] text-pos-text-faint">tap to add</Text>
         )}
-      </View>
+        {/* SOLD OUT badge */}
+        {!isAvailable && (
+          <View className="absolute bottom-1 right-1 rounded bg-pos-danger px-1 py-px">
+            <Text className="text-[7px] font-bold uppercase text-pos-text-strong">sold</Text>
+          </View>
+        )}
+      </Pressable>
 
-      {isLowStock && isAvailable && (
-        <View className="absolute right-1.5 top-1.5 rounded bg-pos-warning px-1.5 py-0.5">
-          <Text className="text-[8px] font-bold text-pos-text-strong">LOW</Text>
-        </View>
+      {/* Right panel — separate from the add Pressable so decrement works reliably */}
+      {quantity > 0 ? (
+        /* Entire panel = decrement press target → max touch area, no nested conflict */
+        <Pressable
+          onPress={handleDecrement}
+          disabled={!isAvailable}
+          className="w-9 items-center justify-between py-2 active:opacity-50"
+          style={{ borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.07)' }}
+        >
+          <Text
+            className="text-[14px] font-bold leading-none"
+            style={{ color: accentColor }}
+          >
+            {quantity > 9 ? '9+' : quantity}
+          </Text>
+          <Text className="text-[20px] font-light leading-none text-pos-muted">−</Text>
+        </Pressable>
+      ) : (
+        /* Faint + hint: tapping the right side also adds */
+        <Pressable
+          onPress={handleAdd}
+          disabled={!isAvailable}
+          className="w-9 items-center justify-center active:opacity-50"
+          style={{ borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.07)' }}
+        >
+          <Text className="text-[18px] font-thin leading-none text-pos-text-faint opacity-30">+</Text>
+        </Pressable>
       )}
-
-      {!isAvailable && (
-        <View className="absolute right-1.5 top-1.5 rounded bg-pos-danger px-1.5 py-0.5">
-          <Text className="text-[8px] font-bold text-pos-text-strong">SOLD</Text>
-        </View>
-      )}
-    </Pressable>
+    </View>
   );
 }
 

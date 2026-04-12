@@ -76,7 +76,7 @@ export function OrderItemRow({
   ), []);
 
   return (
-    <View className={item.is_voided ? 'opacity-50' : locked ? 'opacity-70' : ''}>
+    <View className={`overflow-hidden ${item.is_voided ? 'opacity-50' : locked ? 'opacity-70' : ''}`}>
       <Swipeable
         ref={(ref) => {
           swipeableRef.current = ref;
@@ -88,6 +88,7 @@ export function OrderItemRow({
         overshootRight={false}
         leftThreshold={40}
         rightThreshold={40}
+        containerStyle={{ overflow: 'hidden' }}
       >
         <Pressable
           onPress={isDisabled ? undefined : () => onEditModifiers(itemId)}

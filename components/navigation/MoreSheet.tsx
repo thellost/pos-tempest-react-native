@@ -9,10 +9,9 @@ import {
     Package,
     Settings,
     Users,
-    UtensilsCrossed,
     X,
 } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     Modal,
@@ -27,20 +26,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import type { NavItem } from '@/constants/navigation';
+import { PERMISSION } from '@/constants/permissions';
 import { LightThemeColors, ThemeColors } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/hooks/use-auth';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const MORE_ITEMS: NavItem[] = [
-  { label: 'Cash',         icon: Banknote,       href: '/(app)/cash' },
-  { label: 'Inventory',    icon: Package,        href: '/(app)/inventory' },
-  { label: 'Customers',    icon: Users,          href: '/(app)/customers' },
-  { label: 'Reservations', icon: CalendarDays,   href: '/(app)/reservations' },
-  { label: 'Daily Orders', icon: ClipboardList,  href: '/(app)/daily-orders' },
-  { label: 'Kitchen',      icon: ChefHat,        href: '/(app)/kitchen' },
-  { label: 'Shifts',       icon: DollarSign,     href: '/(app)/shifts' },
-  { label: 'Menu',         icon: UtensilsCrossed, href: '/(app)/menu' },
-  { label: 'Settings',     icon: Settings,       href: '/(app)/settings' },
+  { label: 'Cash',         icon: Banknote,        href: '/(app)/cash',         permission: PERMISSION.CASH_MANAGEMENT },
+  { label: 'Inventory',    icon: Package,         href: '/(app)/inventory',    permission: PERMISSION.VIEW_INVENTORY },
+  { label: 'Customers',    icon: Users,           href: '/(app)/customers' },
+  { label: 'Reservations', icon: CalendarDays,    href: '/(app)/reservations', permission: PERMISSION.VIEW_RESERVATIONS },
+  { label: 'Daily Orders', icon: ClipboardList,   href: '/(app)/daily-orders', permission: PERMISSION.VIEW_REPORTS },
+  { label: 'Kitchen',      icon: ChefHat,         href: '/(app)/kitchen' },
+  { label: 'Shifts',       icon: DollarSign,      href: '/(app)/shifts',       permission: PERMISSION.MANAGE_SHIFT },
+  { label: 'Settings',     icon: Settings,        href: '/(app)/settings',     permission: PERMISSION.BASIC_SETTINGS },
 ];
 
 interface MoreSheetProps {
@@ -54,6 +54,7 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
   const insets = useSafeAreaInsets();
   const { signOut, lock } = useAuth();
   const { isDark } = useAppTheme();
+  const { can } = usePermissions();
   const colors = isDark ? ThemeColors : LightThemeColors;
   const slideAnim = useRef(new Animated.Value(400)).current;
 
@@ -79,10 +80,15 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
     router.push(href as Parameters<typeof router.push>[0]);
   };
 
-  const visibleItems = MORE_ITEMS.filter((item) => {
-    if (item.href === '/(app)/cash' && !isShiftOpen) return false;
-    return true;
-  });
+  const visibleItems = useMemo(
+    () =>
+      MORE_ITEMS.filter((item) => {
+        if (item.href === '/(app)/cash' && !isShiftOpen) return false;
+        if (item.permission && !can(item.permission)) return false;
+        return true;
+      }),
+    [isShiftOpen, can],
+  );
 
   return (
     <Modal

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +14,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarDays, Check, Clock, Users, X } from 'lucide-react-native';
 
-import { Button, IconButton } from '@/components/ui';
+import { Button, IconButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
 import { TABLE_STATUS } from '@/constants/enums';
 import type { CreateReservationInput, ReservationWithCustomer } from '@/hooks/use-reservations';
@@ -226,6 +226,11 @@ export function ReservationFormModal({
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; table?: string; guestCount?: string }>({});
+
+  const nameRef = useRef<ShakeFieldRef>(null);
+  const tableRef = useRef<ShakeFieldRef>(null);
+  const guestCountRef = useRef<ShakeFieldRef>(null);
 
   const selectedTable = selectedTableId
     ? tables.find((t) => toInt(t.id) === selectedTableId) ?? null
@@ -247,9 +252,11 @@ export function ReservationFormModal({
     if (isEditMode && editingReservation) {
       const count = parseInt(guestCount, 10);
       if (isNaN(count) || count < 1) {
-        Alert.alert('Validation', 'Guest count must be at least 1.');
+        setErrors({ guestCount: 'Guest count must be at least 1.' });
+        guestCountRef.current?.shake();
         return;
       }
+      setErrors({});
       setIsSubmitting(true);
       try {
         await onUpdate(toInt(editingReservation.id), {
@@ -267,20 +274,20 @@ export function ReservationFormModal({
     }
 
     // Create mode
-    if (!guestName.trim()) {
-      Alert.alert('Validation', 'Customer name is required.');
-      return;
-    }
-    if (!selectedTableId) {
-      Alert.alert('Validation', 'Please select a table.');
-      return;
-    }
+    const newErrors: { name?: string; table?: string; guestCount?: string } = {};
+    if (!guestName.trim()) newErrors.name = 'Customer name is required.';
+    if (!selectedTableId) newErrors.table = 'Please select a table.';
     const count = parseInt(guestCount, 10);
-    if (isNaN(count) || count < 1) {
-      Alert.alert('Validation', 'Guest count must be at least 1.');
+    if (isNaN(count) || count < 1) newErrors.guestCount = 'Guest count must be at least 1.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.name) nameRef.current?.shake();
+      if (newErrors.table) tableRef.current?.shake();
+      if (newErrors.guestCount) guestCountRef.current?.shake();
       return;
     }
-
+    setErrors({});
     const isoDatetime = pickerDateToISO(reservationDateTime);
     setIsSubmitting(true);
     try {
@@ -346,7 +353,7 @@ export function ReservationFormModal({
                 </View>
               </View>
             ) : (
-              <View className="mb-4">
+              <ShakeField ref={nameRef} className="mb-4">
                 <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
                   Customer Name <Text className="text-pos-danger">*</Text>
                 </Text>
@@ -357,11 +364,13 @@ export function ReservationFormModal({
                     setSearchQuery(v);
                     setShowCustomerSearch(v.length > 0);
                     setSelectedCustomerId(null);
+                    if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
                   }}
                   placeholder="Enter customer name"
                   placeholderTextColor={ThemeColors.text.faint}
                   className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                 />
+                {errors.name && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.name}</Text>}
                 {showCustomerSearch && customers.length > 0 && (
                   <View className="mt-1 rounded-sm border border-border bg-surface-card">
                     {customers.slice(0, 5).map((c) => (
@@ -372,6 +381,7 @@ export function ReservationFormModal({
                           setGuestPhone(c.phone ?? '');
                           setSelectedCustomerId(toInt(c.id));
                           setShowCustomerSearch(false);
+                          setErrors((p) => ({ ...p, name: undefined }));
                         }}
                         className="border-b border-border px-4 py-2.5 last:border-0 active:bg-surface-raised"
                       >
@@ -383,7 +393,7 @@ export function ReservationFormModal({
                     ))}
                   </View>
                 )}
-              </View>
+              </ShakeField>
             )}
 
             {/* Phone — create mode only */}
@@ -403,12 +413,12 @@ export function ReservationFormModal({
 
             {/* Table + Guest count */}
             <View className="mb-4 flex-row gap-3">
-              <View className="flex-1">
+              <ShakeField ref={tableRef} className="flex-1">
                 <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">
                   Table {!isEditMode && <Text className="text-pos-danger">*</Text>}
                 </Text>
                 <Pressable
-                  onPress={() => setShowTableModal(true)}
+                  onPress={() => { setShowTableModal(true); setErrors((p) => ({ ...p, table: undefined })); }}
                   className={`flex-row items-center justify-between rounded-sm border px-4 py-3 ${
                     selectedTableLabel ? 'border-brand bg-brand/5' : 'border-border bg-surface'
                   }`}
@@ -421,17 +431,19 @@ export function ReservationFormModal({
                     : <Users size={16} color={ThemeColors.text.muted} />
                   }
                 </Pressable>
-              </View>
+                {errors.table && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.table}</Text>}
+              </ShakeField>
 
-              <View className="w-24">
+              <ShakeField ref={guestCountRef} className="w-24">
                 <Text className="mb-1.5 text-pos-sm font-medium text-pos-text-muted">Guests</Text>
                 <TextInput
                   value={guestCount}
-                  onChangeText={setGuestCount}
+                  onChangeText={(v) => { setGuestCount(v); if (errors.guestCount) setErrors((p) => ({ ...p, guestCount: undefined })); }}
                   keyboardType="number-pad"
                   className="rounded-sm border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                 />
-              </View>
+                {errors.guestCount && <Text className="mt-1 text-pos-xs text-pos-danger">{errors.guestCount}</Text>}
+              </ShakeField>
             </View>
 
             {/* Date + Time — create mode only */}

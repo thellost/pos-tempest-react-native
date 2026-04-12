@@ -89,7 +89,7 @@ export function ReservationRow({
 
         {reservation.notes ? (
           <Text className="mt-1.5 text-pos-xs italic text-pos-text-muted" numberOfLines={2}>
-            "{reservation.notes}"
+            &ldquo;{reservation.notes}&rdquo;
           </Text>
         ) : null}
 

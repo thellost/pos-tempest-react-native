@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import type { CreatePurchaseInput, Purchase } from '@/hooks/use-purchases';
 import type { Supplier } from '@/hooks/use-suppliers';
 import { useLayout } from '@/hooks/use-layout';
 import { formatIDR } from '@/utils/currency';
+import { ShakeField, type ShakeFieldRef } from '@/components/ui';
 import { UomDropdown } from './UomDropdown';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
   const [tax, setTax] = useState('');
   const [items, setItems] = useState<DraftPOItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [poErrors, setPoErrors] = useState<{ supplier?: string; items?: string }>({});
+
+  const supplierRef = useRef<ShakeFieldRef>(null);
+  const itemsRef = useRef<ShakeFieldRef>(null);
 
   const [itemSearch, setItemSearch] = useState('');
   const [searchResults, setSearchResults] = useState<InventoryRow[]>([]);
@@ -116,8 +121,17 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
   }
 
   async function handleCreate() {
-    if (!selectedSupplier) { Alert.alert('Select Supplier', 'Please select a supplier.'); return; }
-    if (items.length === 0) { Alert.alert('Add Items', 'Add at least one item to the PO.'); return; }
+    const newErrors: { supplier?: string; items?: string } = {};
+    if (!selectedSupplier) newErrors.supplier = 'Please select a supplier.';
+    if (items.length === 0) newErrors.items = 'Add at least one item to the PO.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setPoErrors(newErrors);
+      if (newErrors.supplier) supplierRef.current?.shake();
+      if (newErrors.items) itemsRef.current?.shake();
+      return;
+    }
+    setPoErrors({});
 
     const parsed = items.map((it) => ({
       inventory_id: parseInt(String(it.inventory_id), 10),
@@ -165,7 +179,7 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
             <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
 
               {/* Supplier search */}
-              <View>
+              <ShakeField ref={supplierRef}>
                 <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Supplier *</Text>
                 {selectedSupplier ? (
                   <View
@@ -176,7 +190,7 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                     <Text className="flex-1 text-pos-base font-bold" style={{ color: ThemeColors.accent.primary }}>
                       {selectedSupplier.name}
                     </Text>
-                    <Pressable onPress={() => { setSelectedSupplier(null); setSupplierSearch(''); }} hitSlop={8}>
+                    <Pressable onPress={() => { setSelectedSupplier(null); setSupplierSearch(''); setPoErrors((p) => ({ ...p, supplier: undefined })); }} hitSlop={8}>
                       <X size={18} color={ThemeColors.accent.primary} />
                     </Pressable>
                   </View>
@@ -184,7 +198,7 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                   <View>
                     <TextInput
                       value={supplierSearch}
-                      onChangeText={setSupplierSearch}
+                      onChangeText={(v) => { setSupplierSearch(v); if (poErrors.supplier) setPoErrors((p) => ({ ...p, supplier: undefined })); }}
                       placeholder="Search supplier by name..."
                       placeholderTextColor={ThemeColors.text.faint}
                       className="rounded-sm border border-border bg-surface-raised px-4 text-pos-base text-pos-text"
@@ -196,7 +210,7 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                         {supplierResults.map((s) => (
                           <Pressable
                             key={s.id}
-                            onPress={() => { setSelectedSupplier(s); setSupplierSearch(''); }}
+                            onPress={() => { setSelectedSupplier(s); setSupplierSearch(''); setPoErrors((p) => ({ ...p, supplier: undefined })); }}
                             className="flex-row items-center gap-3 border-b border-border px-4 py-3"
                           >
                             <Truck size={16} color={ThemeColors.text.muted} />
@@ -209,11 +223,12 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                       </View>
                     )}
                     {supplierSearch.trim().length > 0 && supplierResults.length === 0 && (
-                      <Text className="mt-2 text-pos-sm text-pos-text-faint">No suppliers match "{supplierSearch}"</Text>
+                      <Text className="mt-2 text-pos-sm text-pos-text-faint">No suppliers match &quot;{supplierSearch}&quot;</Text>
                     )}
                   </View>
                 )}
-              </View>
+                {poErrors.supplier && <Text className="mt-1 text-pos-xs text-pos-danger">{poErrors.supplier}</Text>}
+              </ShakeField>
 
               {/* Notes + Tax */}
               <View className={isPhone ? 'gap-3' : 'flex-row gap-4'}>
@@ -243,11 +258,11 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
               </View>
 
               {/* Add item search */}
-              <View>
+              <ShakeField ref={itemsRef}>
                 <Text className="mb-2 text-pos-sm font-semibold text-pos-text-muted">Add Items *</Text>
                 <TextInput
                   value={itemSearch}
-                  onChangeText={setItemSearch}
+                  onChangeText={(v) => { setItemSearch(v); if (poErrors.items) setPoErrors((p) => ({ ...p, items: undefined })); }}
                   placeholder="Search ingredient by name..."
                   placeholderTextColor={ThemeColors.text.faint}
                   className="rounded-sm border border-border bg-surface-raised px-4 text-pos-base text-pos-text"
@@ -259,7 +274,7 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                     {searchResults.map((r) => (
                       <Pressable
                         key={r.id}
-                        onPress={() => addItem(r)}
+                        onPress={() => { addItem(r); setPoErrors((p) => ({ ...p, items: undefined })); }}
                         className="flex-row items-center gap-3 border-b border-border px-4 py-3"
                       >
                         <Plus size={16} color={ThemeColors.accent.primary} />
@@ -269,7 +284,8 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
                     ))}
                   </View>
                 )}
-              </View>
+                {poErrors.items && <Text className="mt-1 text-pos-xs text-pos-danger">{poErrors.items}</Text>}
+              </ShakeField>
 
               {/* Item list */}
               {items.length > 0 && (

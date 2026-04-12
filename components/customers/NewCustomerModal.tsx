@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -13,7 +13,7 @@ import {
 
 import { Phone } from 'lucide-react-native';
 
-import { Button } from '@/components/ui';
+import { Button, ShakeField, type ShakeFieldRef } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
 import type { CreateCustomerInput } from '@/hooks/use-customers';
 
@@ -29,8 +29,15 @@ export interface NewCustomerModalProps {
 
 export function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewCustomerModalProps) {
   const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
 
-  const reset = useCallback(() => setForm(EMPTY_FORM), []);
+  const nameRef = useRef<ShakeFieldRef>(null);
+  const phoneRef = useRef<ShakeFieldRef>(null);
+
+  const reset = useCallback(() => {
+    setForm(EMPTY_FORM);
+    setErrors({});
+  }, []);
 
   const handleClose = () => {
     reset();
@@ -38,14 +45,18 @@ export function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewC
   };
 
   const handleSubmit = async () => {
-    if (!form.phone.trim()) {
-      Alert.alert('Validation', 'Phone number is required.');
+    const newErrors: { name?: string; phone?: string } = {};
+    if (!form.name.trim()) newErrors.name = 'Customer name is required.';
+    if (!form.phone.trim()) newErrors.phone = 'Phone number is required.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.name) nameRef.current?.shake();
+      if (newErrors.phone) phoneRef.current?.shake();
       return;
     }
-    if (!form.name.trim()) {
-      Alert.alert('Validation', 'Customer name is required.');
-      return;
-    }
+
+    setErrors({});
     try {
       await onCreate({
         name: form.name.trim(),
@@ -84,24 +95,33 @@ export function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewC
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}
               showsVerticalScrollIndicator={false}
             >
-              <View className="mb-4">
+              <ShakeField ref={nameRef} className="mb-4">
                 <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Full Name *</Text>
                 <TextInput
                   value={form.name}
-                  onChangeText={name => setForm(p => ({ ...p, name }))}
+                  onChangeText={name => {
+                    setForm(p => ({ ...p, name }));
+                    if (errors.name) setErrors(p => ({ ...p, name: undefined }));
+                  }}
                   placeholder="Customer name"
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   className="rounded-xl border border-border bg-surface px-4 py-3 text-pos-base text-pos-text"
                 />
-              </View>
+                {errors.name && (
+                  <Text className="mt-1 text-pos-xs text-pos-danger">{errors.name}</Text>
+                )}
+              </ShakeField>
 
-              <View className="mb-4">
+              <ShakeField ref={phoneRef} className="mb-4">
                 <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">Phone Number *</Text>
                 <View className="flex-row items-center rounded-xl border border-brand bg-surface px-4 py-3">
                   <Phone size={16} color={ThemeColors.text.muted} style={{ marginRight: 8 }} />
                   <TextInput
                     value={form.phone}
-                    onChangeText={phone => setForm(p => ({ ...p, phone }))}
+                    onChangeText={phone => {
+                      setForm(p => ({ ...p, phone }));
+                      if (errors.phone) setErrors(p => ({ ...p, phone: undefined }));
+                    }}
                     placeholder="e.g. 081234567890"
                     placeholderTextColor={PLACEHOLDER_COLOR}
                     keyboardType="phone-pad"
@@ -111,7 +131,10 @@ export function NewCustomerModal({ visible, onClose, onCreate, isLoading }: NewC
                 <Text className="mt-1 text-pos-xs text-pos-text-muted">
                   Phone is used as the unique registration identifier.
                 </Text>
-              </View>
+                {errors.phone && (
+                  <Text className="mt-1 text-pos-xs text-pos-danger">{errors.phone}</Text>
+                )}
+              </ShakeField>
 
               <View className="mb-4">
                 <Text className="mb-1.5 text-pos-sm font-semibold text-pos-text">

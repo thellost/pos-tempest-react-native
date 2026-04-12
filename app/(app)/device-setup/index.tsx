@@ -2,7 +2,7 @@ import { Brand } from '@/constants/theme';
 import { useDevice } from '@/hooks/use-device';
 import { DeviceInactiveError, DeviceNameTakenError } from '@/services/device.service';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -12,7 +12,7 @@ import {
     TextInput,
     View
 } from 'react-native';
-import { Button, SelectButton } from '@/components/ui';
+import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 
 export default function DeviceSetupScreen() {
   const router = useRouter();
@@ -24,6 +24,8 @@ export default function DeviceSetupScreen() {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [inactiveDeviceName, setInactiveDeviceName] = useState<string | null>(null);
 
+  const deviceNameRef = useRef<ShakeFieldRef>(null);
+
   const handleRegister = async () => {
     if (!selectedBranchId) {
       setRegisterError('Please select a branch');
@@ -32,6 +34,7 @@ export default function DeviceSetupScreen() {
     
     if (!deviceName.trim()) {
       setRegisterError('Please enter a device name');
+      deviceNameRef.current?.shake();
       return;
     }
     
@@ -189,7 +192,7 @@ export default function DeviceSetupScreen() {
           )}
         </View>
 
-        <View className="mb-6">
+        <ShakeField ref={deviceNameRef} className="mb-6">
           <Text className="mb-3 text-pos-base font-semibold text-pos-text">
             Device Name
           </Text>
@@ -198,14 +201,17 @@ export default function DeviceSetupScreen() {
             placeholder="e.g., Kasir 1, Bar, Drive-Thru"
             placeholderTextColor="#64748B"
             value={deviceName}
-            onChangeText={setDeviceName}
+            onChangeText={(v) => {
+              setDeviceName(v);
+              if (registerError === 'Please enter a device name') setRegisterError(null);
+            }}
             autoCapitalize="words"
             autoCorrect={false}
           />
           <Text className="mt-2 text-pos-xs text-pos-text-muted">
             Give this terminal a recognizable name for staff identification
           </Text>
-        </View>
+        </ShakeField>
 
         {(error || registerError) && (
           <View className="mb-6 rounded-xl bg-pos-danger-muted p-4">

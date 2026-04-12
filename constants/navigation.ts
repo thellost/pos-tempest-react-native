@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   Package,
   Settings,
-  UserCog,
   Users,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
@@ -35,6 +34,5 @@ export const MAIN_NAV: NavItem[] = [
 export const SYSTEM_NAV: NavItem[] = [
   { label: 'Shift',    icon: DollarSign, href: '/(app)/shifts',   permission: PERMISSION.MANAGE_SHIFT },
   { label: 'Cash',     icon: Banknote,   href: '/(app)/cash',     permission: PERMISSION.CASH_MANAGEMENT },
-  { label: 'Staff',    icon: UserCog,    href: '/(app)/users',    permission: PERMISSION.MANAGE_USERS },
   { label: 'Settings', icon: Settings,   href: '/(app)/settings', permission: PERMISSION.BASIC_SETTINGS },
 ];

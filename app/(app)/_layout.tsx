@@ -28,7 +28,6 @@ const ROUTE_PERMISSIONS: Record<string, Permission> = {
   shifts: PERMISSION.MANAGE_SHIFT,
   cash: PERMISSION.MANAGE_SHIFT,
   reservations: PERMISSION.VIEW_RESERVATIONS,
-  users: PERMISSION.MANAGE_USERS,
 };
 
 export default function AppLayout() {
@@ -200,7 +199,6 @@ export default function AppLayout() {
               }}>
               <Stack.Screen name="floor/index"        options={{ title: 'Floor View' }} />
               <Stack.Screen name="order/[tableId]"    options={{ title: 'Order' }} />
-              <Stack.Screen name="menu/index"         options={{ title: 'Menu' }} />
               <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
               <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
               <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
@@ -210,7 +208,6 @@ export default function AppLayout() {
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
               <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
               <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
-              <Stack.Screen name="users/index"        options={{ title: 'Staff Management' }} />
               <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
             </Stack>
           </View>
@@ -245,7 +242,6 @@ export default function AppLayout() {
               }}>
               <Stack.Screen name="floor/index"        options={{ title: 'Floor View' }} />
               <Stack.Screen name="order/[tableId]"    options={{ title: 'Order' }} />
-              <Stack.Screen name="menu/index"         options={{ title: 'Menu' }} />
               <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
               <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
               <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
@@ -255,7 +251,6 @@ export default function AppLayout() {
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
               <Stack.Screen name="reservations/index" options={{ title: 'Reservations' }} />
               <Stack.Screen name="customers/index"    options={{ title: 'Customers' }} />
-              <Stack.Screen name="users/index"        options={{ title: 'Staff Management' }} />
               <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
             </Stack>
           </View>
