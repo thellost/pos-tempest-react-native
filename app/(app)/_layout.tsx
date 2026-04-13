@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { Redirect, router, Stack, usePathname, useSegments } from 'expo-router';
@@ -13,7 +13,6 @@ import { MAIN_NAV, SYSTEM_NAV } from '@/constants/navigation';
 import type { Permission } from '@/constants/permissions';
 import { PERMISSION } from '@/constants/permissions';
 import { Brand, ThemeColors } from '@/constants/theme';
-import { getPowerSyncStatusSnapshot } from '@/db/provider';
 import { useAppTimezone } from '@/hooks/use-app-timezone';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
@@ -61,83 +60,8 @@ export default function AppLayout() {
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
   const { isPhone } = useLayout();
   const pathname = usePathname();
-  const guardLogRef = useRef<string | null>(null);
   const onDeviceSetupScreen = pathname === '/device-setup';
   const onShiftScreen = pathname.startsWith('/shifts');
-
-  let guardStage = 'ready';
-  if (loading) {
-    guardStage = 'auth-loading';
-  } else if (!isAuthenticated) {
-    guardStage = 'redirect-login';
-  } else if (isLocked) {
-    guardStage = 'redirect-pin';
-  } else if (profileLoading) {
-    guardStage = 'profile-loading';
-  } else if (!user) {
-    guardStage = 'profile-missing';
-  } else if (deviceLoading && !onDeviceSetupScreen) {
-    guardStage = 'device-loading';
-  } else if (!registrationResolved && !onDeviceSetupScreen) {
-    guardStage = 'device-check-failed';
-  } else if (!isRegistered && !onDeviceSetupScreen) {
-    guardStage = 'redirect-device-setup';
-  } else if (isRegistered && requiresShift && shiftLoading && !onShiftScreen) {
-    guardStage = 'shift-loading';
-  } else if (isRegistered && requiresShift && !isShiftOpen && !onShiftScreen) {
-    guardStage = 'redirect-shifts';
-  }
-
-  useEffect(() => {
-    const snapshot = {
-      stage: guardStage,
-      pathname,
-      auth: {
-        loading,
-        profileLoading,
-        isAuthenticated,
-        isLocked,
-        hasUser: Boolean(user),
-      },
-      device: {
-        loading: deviceLoading,
-        error: deviceError,
-        isRegistered,
-        registrationResolved,
-        hasDevice: Boolean(registration?.device),
-        branchId: registration?.device?.branch_id ?? null,
-      },
-      shift: {
-        loading: shiftLoading,
-        requiresShift,
-        isShiftOpen,
-      },
-      powerSync: getPowerSyncStatusSnapshot(),
-    };
-    const signature = JSON.stringify(snapshot);
-
-    if (guardLogRef.current !== signature) {
-      console.log('[AppLayout] Guard state', snapshot);
-      guardLogRef.current = signature;
-    }
-  }, [
-    deviceLoading,
-    deviceError,
-    guardStage,
-    isAuthenticated,
-    isLocked,
-    isRegistered,
-    isShiftOpen,
-    loading,
-    pathname,
-    profileLoading,
-    registration?.device?.branch_id,
-    registration?.device,
-    registrationResolved,
-    requiresShift,
-    shiftLoading,
-    user,
-  ]);
 
   if (loading) {
     return (

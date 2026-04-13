@@ -4,20 +4,20 @@ import { DeviceInactiveError, DeviceNameTakenError } from '@/services/device.ser
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 
 export default function DeviceSetupScreen() {
   const router = useRouter();
   const { branches, loading, error, registerDevice, deviceInfo, refresh } = useDevice();
-  
+
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [deviceName, setDeviceName] = useState('');
   const [registering, setRegistering] = useState(false);
@@ -31,24 +31,18 @@ export default function DeviceSetupScreen() {
       setRegisterError('Please select a branch');
       return;
     }
-    
+
     if (!deviceName.trim()) {
       setRegisterError('Please enter a device name');
       deviceNameRef.current?.shake();
       return;
     }
-    
+
     try {
       setRegistering(true);
       setRegisterError(null);
-      
-      console.log('[DeviceSetup] Attempting to register device with:', {
-        selectedBranchId,
-        deviceName: deviceName.trim(),
-      });
-      
+
       await registerDevice(selectedBranchId, deviceName.trim());
-      
       router.replace('/(app)/floor');
     } catch (err) {
       if (err instanceof DeviceInactiveError) {
@@ -105,7 +99,7 @@ export default function DeviceSetupScreen() {
       className="flex-1 bg-surface"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         className="flex-1 p-8"
         contentContainerStyle={{ maxWidth: 600, alignSelf: 'center', width: '100%' }}
       >
@@ -156,7 +150,9 @@ export default function DeviceSetupScreen() {
               </Text>
               <Button
                 className="rounded-lg bg-surface-card px-4 py-2"
-                onPress={() => refresh().catch(() => {})}
+                onPress={() => {
+                  refresh().catch(() => {});
+                }}
               >
                 <Text className="text-center text-pos-sm font-semibold text-pos-text">
                   Refresh
@@ -172,7 +168,9 @@ export default function DeviceSetupScreen() {
                   selectedClassName="border-accent bg-accent-muted"
                   unselectedClassName="border-border bg-surface-card"
                   className="rounded-xl p-4"
-                  onPress={() => setSelectedBranchId(branch.id)}
+                  onPress={() => {
+                    setSelectedBranchId(branch.id);
+                  }}
                 >
                   <Text
                     className={`text-pos-base font-semibold ${

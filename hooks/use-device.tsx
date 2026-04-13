@@ -11,7 +11,7 @@
 import { useQuery } from '@powersync/react';
 
 import type { Branch } from '@/db/models';
-import { getPowerSyncStatusSnapshot, initializePowerSync, powersync } from '@/db/provider';
+import { initializePowerSync } from '@/db/provider';
 import { useAuth } from '@/hooks/use-auth';
 import {
   clearDeviceId,
@@ -84,9 +84,15 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
 
     for (let attempt = 0; attempt <= REGISTRATION_CHECK_MAX_RETRIES; attempt += 1) {
       try {
-        return await getDeviceRegistration(id);
+        const result = await getDeviceRegistration(id);
+        return result;
       } catch (err) {
         if (attempt === REGISTRATION_CHECK_MAX_RETRIES) {
+          console.warn('[DeviceHook] Registration resolution exhausted retries', {
+            deviceId: id,
+            attempts: attempt + 1,
+            finalError: err instanceof Error ? err.message : String(err),
+          });
           throw err;
         }
 
@@ -116,15 +122,9 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
       setRegistrationResolved(false);
-      console.log('[DeviceHook] Cold start init begin', {
-        powerSync: getPowerSyncStatusSnapshot(),
-      });
 
       // Ensure PowerSync is ready before any DB operations
       await initializePowerSync();
-      console.log('[DeviceHook] PowerSync ready for device init', {
-        powerSync: getPowerSyncStatusSnapshot(),
-      });
 
       // Get or create device ID
       const id = await getOrCreateDeviceId();
@@ -134,31 +134,18 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Check if component is still mounted before updating state
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        return;
+      }
 
       setDeviceId(id);
-      console.log('[DeviceHook] Initialized device ID:', id);
 
       // Get device info
       const info = await getDeviceInfo();
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        return;
+      }
       setDeviceInfo(info);
-
-      const localDeviceRows = await powersync.getOptional<{ totalCount: number; matchCount: number }>(
-        `
-          SELECT
-            COUNT(*) as totalCount,
-            COALESCE(SUM(CASE WHEN id = ? THEN 1 ELSE 0 END), 0) as matchCount
-          FROM devices
-        `,
-        [id],
-      );
-      console.log('[DeviceHook] Registration prerequisites', {
-        deviceId: id,
-        localDeviceRows: localDeviceRows?.totalCount ?? 0,
-        localDeviceMatch: localDeviceRows?.matchCount ?? 0,
-        powerSync: getPowerSyncStatusSnapshot(),
-      });
 
       if (!isAuthenticated) {
         setRegistration(null);
@@ -168,16 +155,11 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
 
       // Check registration status
       const regResult = await resolveRegistration(id);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        return;
+      }
       setRegistration(regResult);
       setRegistrationResolved(true);
-      console.log('[DeviceHook] Registration result', {
-        deviceId: id,
-        registered: regResult.registered,
-        hasDevice: Boolean(regResult.device),
-        branchId: regResult.device?.branch_id ?? null,
-        powerSync: getPowerSyncStatusSnapshot(),
-      });
 
       // Publish device identity to the audit service so every log entry
       // is automatically tagged with this device's ID and name.
@@ -208,9 +190,8 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
       if (regResult.registered) {
         await updateDeviceLastSeen(id);
       }
-
-      console.log('[DeviceHook] Initialized device:', id, 'Registered:', regResult.registered);
     } catch (err) {
+      console.error('[DeviceHook] Failed to initialize device', err);
       captureError(err, { module: 'device', operation: 'initializeDevice', level: 'error' });
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to initialize device');

@@ -28,7 +28,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 
   db: {
-    schema: 'pos_tempest',
+    schema: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? undefined,
   },
 })
 

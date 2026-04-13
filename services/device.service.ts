@@ -8,7 +8,7 @@
 
 import { AUDIT_ACTION, DEVICE_STATUS } from '@/constants/enums';
 import type { Branch, Device } from '@/db/models';
-import { getPowerSyncStatusSnapshot, powersync } from '@/db/provider';
+import { powersync } from '@/db/provider';
 import { captureError } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import { insertAuditLog } from '@/services/audit.service';
@@ -225,19 +225,11 @@ export async function getDeviceRegistration(
       [deviceUid]
     );
     let device = localDevice;
-    let usedSupabaseFallback = false;
-
-    console.log('[DeviceService] Registration lookup', {
-      deviceUid,
-      localDeviceFound: Boolean(localDevice),
-      powerSync: getPowerSyncStatusSnapshot(),
-    });
 
     // Local DB has no record — check Supabase directly in case the device was
     // previously registered but the local DB hasn't synced yet (e.g. after logout
     // when PowerSync reconnects and the devices table is briefly stale).
     if (!device) {
-      console.log('[DeviceService] Registration fallback start', { deviceUid });
       const { data: serverDevice, error: serverDeviceError } = await supabase
         .from('devices')
         .select('device_uid, branch_id, device_name, status, registered_at, last_seen_at')
@@ -250,17 +242,10 @@ export async function getDeviceRegistration(
 
       if (serverDevice) {
         device = mapRemoteDeviceRecord(serverDevice);
-        usedSupabaseFallback = true;
       }
     }
 
     if (!device) {
-      console.log('[DeviceService] Registration lookup result', {
-        deviceUid,
-        registered: false,
-        localDeviceFound: Boolean(localDevice),
-        usedSupabaseFallback,
-      });
       return { registered: false, device: null, branch: null };
     }
 
@@ -269,14 +254,6 @@ export async function getDeviceRegistration(
       `SELECT * FROM branches WHERE id = ?`,
       [device.branch_id]
     );
-
-    console.log('[DeviceService] Registration lookup result', {
-      deviceUid,
-      registered: device.status === DEVICE_STATUS.ACTIVE,
-      branchId: device.branch_id,
-      localDeviceFound: Boolean(localDevice),
-      usedSupabaseFallback,
-    });
 
     return {
       registered: device.status === DEVICE_STATUS.ACTIVE,

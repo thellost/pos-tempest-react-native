@@ -16,6 +16,7 @@ export const powersync = new PowerSyncDatabase({
 });
 
 let initPromise: Promise<void> | null = null;
+const POWERSYNC_ENVIRONMENT = __DEV__ ? 'development' : 'production';
 
 export function getPowerSyncStatusSnapshot() {
 	const status = powersync.currentStatus;
@@ -37,23 +38,16 @@ export async function initializePowerSync() {
 
 	initPromise = (async () => {
 		try {
-			console.log('[PowerSync] initialize start');
 			await powersync.init();
-			console.log('[PowerSync] init complete', getPowerSyncStatusSnapshot());
 
 			if (process.env.EXPO_PUBLIC_POWERSYNC_URL) {
-				const env = __DEV__ ? 'development' : 'production';
-				console.log('[PowerSync] connect start', { environment: env });
-				await powersync.connect(powerSyncConnector,
-					{
-						params: { environment: env }
-					}
-				);
-				console.log('[PowerSync] connect complete', getPowerSyncStatusSnapshot());
+				await powersync.connect(powerSyncConnector, {
+					params: { environment: POWERSYNC_ENVIRONMENT },
+				});
 			}
 		} catch (error) {
-			// Reset so callers can retry
 			initPromise = null;
+			console.error('[PowerSync] Failed to initialize or connect:', error);
 			throw error;
 		}
 	})();
@@ -72,14 +66,6 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 				setReady(true);
 				dispose = powersync.registerListener({
 					statusChanged: (status) => {
-						console.log('[PowerSync] status', {
-							connected: status.connected,
-							connecting: status.connecting,
-							hasSynced: status.hasSynced,
-							downloading: Boolean(status.dataFlowStatus?.downloading),
-							uploading: Boolean(status.dataFlowStatus?.uploading),
-							lastSyncedAt: status.lastSyncedAt ? status.lastSyncedAt.toISOString() : null,
-						});
 						addBreadcrumb('sync', `PowerSync ${status.connected ? 'connected' : 'disconnected'}`, {
 							connected: status.connected,
 							lastSyncedAt: status.lastSyncedAt,
@@ -88,10 +74,13 @@ export function PowerSyncProvider({ children }: PropsWithChildren) {
 				});
 			})
 			.catch((e: unknown) => {
+				console.error('[PowerSyncProvider] Initialization failed:', e);
 				setError(e instanceof Error ? e.message : 'PowerSync initialization failed');
 			});
 
-		return () => { dispose?.(); };
+		return () => {
+			dispose?.();
+		};
 	}, []);
 
 	if (error) {

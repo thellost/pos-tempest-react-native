@@ -57,19 +57,16 @@ export async function getOrCreateDeviceId(): Promise<string> {
   try {
     // Try to get existing device ID
     const existingId = await AsyncStorage.getItem(DEVICE_ID_KEY);
-    
+     
     if (existingId) {
-      console.log('[Device] Found existing device ID:', existingId);
       return existingId;
     }
-    
+     
     // Generate new UUID
     const newId = await generateUUID();
-    
+     
     // Persist to AsyncStorage
     await AsyncStorage.setItem(DEVICE_ID_KEY, newId);
-    
-    console.log('[Device] Generated new device ID:', newId);
     return newId;
   } catch (error) {
     console.error('[Device] Error getting/creating device ID:', error);
@@ -92,7 +89,7 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
     const platform = Device.osName?.toLowerCase() === 'android' ? 'android' 
       : Device.osName?.toLowerCase() === 'ios' ? 'ios' 
       : 'web';
-    
+
     return {
       deviceId,
       deviceName: savedName || `POS-${deviceId.slice(0, 8)}`,
@@ -151,7 +148,6 @@ export async function getDeviceName(): Promise<string | null> {
 export async function clearDeviceId(): Promise<void> {
   try {
     await AsyncStorage.multiRemove([DEVICE_ID_KEY, DEVICE_NAME_KEY]);
-    console.log('[Device] Cleared device ID and name');
   } catch (error) {
     console.error('[Device] Error clearing device ID:', error);
     throw error;

@@ -6,7 +6,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Dimensions, Modal, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Modal, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ImmersiveMode from 'react-native-immersive-mode';
 import 'react-native-reanimated';
@@ -20,15 +20,15 @@ import { ConfigProvider } from '@/hooks/use-config';
 import { DeviceProvider } from '@/hooks/use-device';
 
 import * as Sentry from '@sentry/react-native';
-import { Platform } from 'react-native';
 import '../global.css';
 
 const navigationIntegration = Sentry.reactNavigationIntegration();
+const appEnvironment = __DEV__ ? 'development' : 'production';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? 'https://1c005b8ac82e51e8b9f3d1f6c52528c9@o4511089167695872.ingest.us.sentry.io/4511089168744448',
 
-  environment: __DEV__ ? 'development' : 'production',
+  environment: appEnvironment,
   debug: false,
 
   // Release tracking
