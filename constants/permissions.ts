@@ -17,6 +17,7 @@ export const PERMISSION = {
   VIEW_REPORTS: 'view_reports',
   BASIC_SETTINGS: 'basic_settings',
   PRINTER_SETTINGS: 'printer_settings',
+  PRINT_KOT: 'print_kot',
   BRANCH_SETTINGS: 'branch_settings',
   SYSTEM_CONFIG: 'system_config',
   MANAGE_USERS: 'manage_users',
@@ -32,7 +33,10 @@ export const ROLE_PERMISSIONS: Record<string, ReadonlySet<Permission>> = {
     PERMISSION.CREATE_ORDER,
     PERMISSION.VIEW_CUSTOMERS,
     PERMISSION.VIEW_MENU,
+    PERMISSION.VIEW_REPORTS,
     PERMISSION.BASIC_SETTINGS,
+    PERMISSION.PRINTER_SETTINGS,
+    PERMISSION.PRINT_KOT,
   ]),
 
   [ROLE_TYPE.CASHIER]: new Set<Permission>([
@@ -49,6 +53,7 @@ export const ROLE_PERMISSIONS: Record<string, ReadonlySet<Permission>> = {
     PERMISSION.VIEW_INVENTORY,
     PERMISSION.BASIC_SETTINGS,
     PERMISSION.PRINTER_SETTINGS,
+    PERMISSION.PRINT_KOT,
   ]),
 
   [ROLE_TYPE.MANAGER]: new Set<Permission>([
@@ -68,6 +73,7 @@ export const ROLE_PERMISSIONS: Record<string, ReadonlySet<Permission>> = {
     PERMISSION.VIEW_REPORTS,
     PERMISSION.BASIC_SETTINGS,
     PERMISSION.PRINTER_SETTINGS,
+    PERMISSION.PRINT_KOT,
     PERMISSION.BRANCH_SETTINGS,
     PERMISSION.MANAGE_USERS,
   ]),
@@ -89,6 +95,7 @@ export const ROLE_PERMISSIONS: Record<string, ReadonlySet<Permission>> = {
     PERMISSION.VIEW_REPORTS,
     PERMISSION.BASIC_SETTINGS,
     PERMISSION.PRINTER_SETTINGS,
+    PERMISSION.PRINT_KOT,
     PERMISSION.BRANCH_SETTINGS,
     PERMISSION.SYSTEM_CONFIG,
     PERMISSION.MANAGE_USERS,

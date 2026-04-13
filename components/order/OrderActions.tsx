@@ -103,11 +103,13 @@ export function OrderActions({
             </Text>
           </DangerButton>
 
-          <SecondaryButton onPress={onPrintBill} className="flex-1">
-            <Text className="text-pos-xs font-semibold text-pos-text-muted">
-              Print Bill
-            </Text>
-          </SecondaryButton>
+          <PermissionGate permission={PERMISSION.PROCESS_PAYMENT}>
+            <SecondaryButton onPress={onPrintBill} className="flex-1">
+              <Text className="text-pos-xs font-semibold text-pos-text-muted">
+                Print Bill
+              </Text>
+            </SecondaryButton>
+          </PermissionGate>
         </View>
 
         <PrimaryButton onPress={handleConfirmRound} className="mt-1">
@@ -140,33 +142,37 @@ export function OrderActions({
             )}
           </PermissionGate>
 
-          {canSend ? (
-            <PrimaryButton onPress={handleSendToKitchen} className="flex-1">
-              <Text className="text-pos-xs font-semibold text-white">
-                Print KOT
-              </Text>
-              {sentAt ? (
-                <Text className="mt-0.5 text-[9px] text-white/70">✓ {sentAt}</Text>
-              ) : null}
-            </PrimaryButton>
-          ) : (
-            <SecondaryButton onPress={handleSendToKitchen} disabled className="flex-1">
-              <Text className="text-pos-xs font-semibold text-pos-text-faint">
-                Print KOT
-              </Text>
-              {sentAt ? (
-                <Text className="mt-0.5 text-[9px] text-pos-text-faint/70">✓ {sentAt}</Text>
-              ) : null}
-            </SecondaryButton>
-          )}
+          <PermissionGate permission={PERMISSION.PRINT_KOT}>
+            {canSend ? (
+              <PrimaryButton onPress={handleSendToKitchen} className="flex-1">
+                <Text className="text-pos-xs font-semibold text-white">
+                  Print KOT
+                </Text>
+                {sentAt ? (
+                  <Text className="mt-0.5 text-[9px] text-white/70">✓ {sentAt}</Text>
+                ) : null}
+              </PrimaryButton>
+            ) : (
+              <SecondaryButton onPress={handleSendToKitchen} disabled className="flex-1">
+                <Text className="text-pos-xs font-semibold text-pos-text-faint">
+                  Print KOT
+                </Text>
+                {sentAt ? (
+                  <Text className="mt-0.5 text-[9px] text-pos-text-faint/70">✓ {sentAt}</Text>
+                ) : null}
+              </SecondaryButton>
+            )}
+          </PermissionGate>
         </View>
 
         <View className="mt-1 flex-row gap-1">
-          <SecondaryButton onPress={onPrintBill} className="flex-1">
-            <Text className="text-pos-xs font-semibold text-pos-text-muted">
-              Print Bill
-            </Text>
-          </SecondaryButton>
+          <PermissionGate permission={PERMISSION.PROCESS_PAYMENT}>
+            <SecondaryButton onPress={onPrintBill} className="flex-1">
+              <Text className="text-pos-xs font-semibold text-pos-text-muted">
+                Print Bill
+              </Text>
+            </SecondaryButton>
+          </PermissionGate>
 
           <PermissionGate permission={PERMISSION.PROCESS_PAYMENT}>
             {canPayment ? (
