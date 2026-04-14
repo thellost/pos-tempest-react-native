@@ -49,6 +49,7 @@ export function OrderScreenTablet({
   quantitiesByMenuItemId,
   onMenuItemPress,
   onMenuItemDecrement,
+  onMoveTable,
 }: OrderScreenSharedProps) {
   return (
     <View className="flex-1 flex-row">
@@ -77,6 +78,7 @@ export function OrderScreenTablet({
             assignedCustomer={assignedCustomer}
             onAssignCustomer={onAssignCustomer}
             onClearCustomer={onClearCustomer}
+            onMoveTable={onMoveTable}
           />
         </PerfProfiler>
       </View>

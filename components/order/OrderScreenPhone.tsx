@@ -66,6 +66,7 @@ export function OrderScreenPhone({
   quantitiesByMenuItemId,
   onMenuItemPress,
   onMenuItemDecrement,
+  onMoveTable,
 }: OrderScreenSharedProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('menu');
 
@@ -335,6 +336,7 @@ export function OrderScreenPhone({
               assignedCustomer={assignedCustomer}
               onAssignCustomer={onAssignCustomer}
               onClearCustomer={onClearCustomer}
+              onMoveTable={onMoveTable}
             />
           </PerfProfiler>
         )}

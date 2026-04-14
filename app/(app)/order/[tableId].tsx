@@ -3,9 +3,12 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { KOTTicketPreview } from '@/components/kitchen/KOTTicketPreview';
 import { ModifierPicker } from '@/components/menu/ModifierPicker';
+import { MoveTableModal } from '@/components/order/MoveTableModal';
 import { OrderScreenPhone } from '@/components/order/OrderScreenPhone';
 import { OrderScreenTablet } from '@/components/order/OrderScreenTablet';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
+import { ORDER_TYPE } from '@/constants/enums';
+import { useAuth } from '@/hooks/use-auth';
 import { useLayout } from '@/hooks/use-layout';
 import { useOrderScreen } from '@/hooks/use-order-screen';
 import { PerfProfiler, useMountTimer } from '@/utils/perf-debug';
@@ -29,6 +32,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
   useMountTimer('OrderScreenContent');
 
   const { isPhone } = useLayout();
+  const { user } = useAuth();
 
   const screen = useOrderScreen({
     orderType: 'dine-in',
@@ -92,6 +96,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
     onConfirmRound: screen.handleConfirmRound,
     onCancelRound: screen.handleCancelRound,
     onPrintBill: screen.handlePrintBill,
+    onMoveTable: screen.handleMoveTable,
     isShiftOpen: screen.isShiftOpen,
     assignedCustomer: screen.assignedCustomer,
     onAssignCustomer: screen.handleAssignCustomer,
@@ -123,6 +128,17 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
 
         <KOTTicketPreview kot={screen.lastKOT} onDismiss={screen.dismissKOT} />
         <ReceiptPreview bill={screen.lastBill} onDismiss={screen.dismissBill} />
+
+        {screen.order && screen.order.order_type === ORDER_TYPE.DINE_IN && (
+          <MoveTableModal
+            visible={screen.showMoveTableModal}
+            onClose={() => screen.setShowMoveTableModal(false)}
+            orderId={screen.order.id}
+            currentTableId={toInt(tableId)}
+            branchId={user?.branch_id ? toInt(user.branch_id) : 0}
+            onMoved={screen.handleMoveTableComplete}
+          />
+        )}
 
         {screen.selectedMenuItem && (
           <ModifierPicker

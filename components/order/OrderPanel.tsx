@@ -1,7 +1,9 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+
+import { AlertTriangle, ArrowRightLeft, UtensilsCrossed } from 'lucide-react-native';
+
 import { Button, SelectButton } from '@/components/ui';
-import { AlertTriangle, UtensilsCrossed } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 
 import type { OrderItemDisplay } from '@/components/order/types';
@@ -33,6 +35,8 @@ interface OrderPanelProps {
   onConfirmRound: () => void;
   onCancelRound: () => void;
   onPrintBill: () => void;
+  /** Called when the user wants to move the order to a different table */
+  onMoveTable?: () => void;
   /** When false, shows no-shift warning banner and disables action buttons */
   isShiftOpen?: boolean;
   /** Optionally assigned customer for this order */
@@ -63,6 +67,7 @@ export const OrderPanel = memo(function OrderPanel({
   onConfirmRound,
   onCancelRound,
   onPrintBill,
+  onMoveTable,
   isShiftOpen = true,
   assignedCustomer = null,
   onAssignCustomer,
@@ -263,6 +268,18 @@ export const OrderPanel = memo(function OrderPanel({
             </Pressable>
           </View>
         </View>
+
+        {onMoveTable && order && order.order_type === ORDER_TYPE.DINE_IN && (
+          <View className="mt-2 flex-row justify-end">
+            <Pressable
+              onPress={onMoveTable}
+              className="flex-row items-center gap-1 rounded-sm border border-border bg-surface-raised px-2.5 py-1.5"
+            >
+              <ArrowRightLeft size={12} color={ThemeColors.text.muted} />
+              <Text className="text-pos-xs font-medium text-pos-text-muted">Move Table</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Customer picker */}
         {onAssignCustomer && onClearCustomer && (

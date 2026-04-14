@@ -135,6 +135,72 @@ export async function createOrder(
 }
 
 /**
+ * Moves an active order to a different table.
+ * - Validates target table has no active order
+ * - Updates order's table_id to the new table
+ * - Sets old table status to AVAILABLE
+ * - Sets new table status to OCCUPIED
+ *
+ * @param orderId - The order to move
+ * @param fromTableId - The current table ID (will be freed)
+ * @param toTableId - The destination table ID
+ * @param userId - The user performing the action (for audit log)
+ * @param branchId - Branch ID (for audit log)
+ */
+export async function moveOrderToTable(
+  orderId: string,
+  fromTableId: number,
+  toTableId: number,
+  userId: number,
+  branchId: number,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Validate target table is not already occupied by another active order
+  const conflicting = await powersync.getOptional<{ id: string }>(
+    `SELECT id FROM orders
+     WHERE table_id = ? AND status NOT IN (?, ?, ?)
+     LIMIT 1`,
+    [toTableId, ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.SERVED]
+  );
+  if (conflicting) {
+    throw new Error('[OrderService] Target table already has an active order');
+  }
+
+  // Move order to new table
+  await powersync.execute(
+    `UPDATE orders SET table_id = ?, updated_at = ? WHERE id = ?`,
+    [toTableId, now, orderId]
+  );
+
+  // Free the old table
+  await powersync.execute(
+    `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
+    [TABLE_STATUS.AVAILABLE, now, fromTableId]
+  );
+
+  // Occupy the new table
+  await powersync.execute(
+    `UPDATE tables SET status = ?, updated_at = ? WHERE id = ?`,
+    [TABLE_STATUS.OCCUPIED, now, toTableId]
+  );
+
+  void insertAuditLog({
+    action: AUDIT_ACTION.UPDATE,
+    tableName: 'orders',
+    recordId: orderId,
+    userId,
+    branchId,
+    oldValues: { table_id: fromTableId },
+    newValues: { table_id: toTableId },
+    description: `Order moved from table ${fromTableId} to table ${toTableId}`,
+  });
+
+  addBreadcrumb('order', 'Order moved to table', { orderId, fromTableId, toTableId });
+  console.log('[OrderService] Moved order', orderId, 'from table', fromTableId, 'to table', toTableId);
+}
+
+/**
  * Confirms an order (moves from pending to confirmed)
  */
 export async function confirmOrder(orderId: string, cashierId: number): Promise<void> {

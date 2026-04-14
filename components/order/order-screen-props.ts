@@ -26,6 +26,8 @@ export interface OrderScreenSharedProps {
   onConfirmRound: () => void;
   onCancelRound: () => void;
   onPrintBill: () => void;
+  /** Called when the user wants to move the order to a different table */
+  onMoveTable?: () => void;
   isShiftOpen: boolean;
   assignedCustomer: AssignedCustomer | null;
   onAssignCustomer: (customer: AssignedCustomer) => void;

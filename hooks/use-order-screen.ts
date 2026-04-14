@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { useRouter } from 'expo-router';
+
 import type { AssignedCustomer } from '@/components/order/CustomerPickerRow';
 import type { OrderItemDisplay } from '@/components/order/types';
 import { cartItemToDisplay } from '@/components/order/types';
@@ -63,6 +65,8 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   const screenLabel = orderType === 'takeaway' ? 'TakeawayOrder' : 'OrderScreen';
   const screenBootRef = useRef(nowMs());
 
+  const router = useRouter();
+
   const { user } = useAuth();
   const { isShiftOpen, activeShift } = useShift();
 
@@ -83,6 +87,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   const [assignedCustomer, setAssignedCustomer] = useState<AssignedCustomer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [table, setTable] = useState<OrderTableData | null>(null);
+  const [showMoveTableModal, setShowMoveTableModal] = useState(false);
   const hasLoadedTableIdRef = useRef<number | null>(null);
   const hasBootLoggedRef = useRef(false);
 
@@ -288,6 +293,18 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   const handlePrintBill = useCallback(async () => {
     await printBill();
   }, [printBill]);
+
+  const handleMoveTable = useCallback(() => {
+    setShowMoveTableModal(true);
+  }, []);
+
+  const handleMoveTableComplete = useCallback((newTableId: number) => {
+    setShowMoveTableModal(false);
+    router.replace({
+      pathname: '/(app)/order/[tableId]',
+      params: { tableId: newTableId.toString(), orderId: order?.id ?? '' },
+    });
+  }, [order?.id, router]);
 
   // For takeaway: confirm existing draft via DB service, or delegate new order to hook.
   // For dine-in: delegate directly to hook's confirmOrder.
@@ -534,6 +551,11 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     handlePrintBill,
     handleConfirmOrder,
     handleMenuItemDecrement,
+    handleMoveTable,
+    handleMoveTableComplete,
+    // Move table modal
+    showMoveTableModal,
+    setShowMoveTableModal,
     // Dine-in specific
     table,
   };
