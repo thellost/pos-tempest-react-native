@@ -2,7 +2,7 @@
 
 > **Base URL:** `http://localhost:8080`
 > **Content-Type:** `application/json`
-> **Total Endpoints:** 96
+> **Total Endpoints:** 97
 
 ---
 
@@ -65,7 +65,7 @@ Content-Type: application/json
 |------|-------------|
 | `admin` | Full access to all endpoints |
 | `manager` | All management endpoints (no branch create/delete, no user deactivation) |
-| `cashier` | Shifts, customers, reservations, own profile |
+| `cashier` | Near-manager access: all management endpoints except stock adjustment and tax configuration |
 | `chef` | Shifts, customers, reservations, own profile |
 | `waiter` | Shifts, customers, reservations, own profile |
 
@@ -162,7 +162,7 @@ All list endpoints support pagination via query parameters:
 
 ### `GET /api/v1/branches`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List all branches with pagination.
 
@@ -218,7 +218,7 @@ List all branches with pagination.
 
 ### `GET /api/v1/branches/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get a single branch by ID.
 
@@ -381,7 +381,7 @@ Soft-delete (deactivate) a branch. Sets `is_active = false`.
 
 ### `GET /api/v1/users`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List users with optional filters.
 
@@ -434,7 +434,7 @@ List users with optional filters.
 
 ### `GET /api/v1/users/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get a single user by ID.
 
@@ -498,7 +498,7 @@ Get the currently authenticated user's own profile.
 
 ### `POST /api/v1/users`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Create a new user. This creates the user in **Supabase Auth** and in the **database**.
 
@@ -553,7 +553,7 @@ Create a new user. This creates the user in **Supabase Auth** and in the **datab
 
 ### `PUT /api/v1/users/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update a user. Only send fields you want to change.
 
@@ -604,7 +604,7 @@ Deactivate a user. Sets `is_active = false`.
 
 ### `GET /api/v1/devices`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List devices, optionally filtered by branch.
 
@@ -653,7 +653,7 @@ List devices, optionally filtered by branch.
 
 ### `POST /api/v1/devices`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Register a new device.
 
@@ -678,7 +678,7 @@ Register a new device.
 
 ### `PUT /api/v1/devices/:device_uid`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update device name or status. `:device_uid` is the UUID primary key of the device.
 
@@ -700,7 +700,7 @@ Update device name or status. `:device_uid` is the UUID primary key of the devic
 
 ### `PATCH /api/v1/devices/:device_uid/status`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Change device status only. `:device_uid` is the UUID primary key of the device.
 
@@ -1009,7 +1009,7 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
 
 ### `GET /api/v1/floor-areas`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List floor areas for a branch.
 
@@ -1059,7 +1059,7 @@ List floor areas for a branch.
 
 ### `POST /api/v1/floor-areas`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1082,7 +1082,7 @@ List floor areas for a branch.
 
 ### `PUT /api/v1/floor-areas/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1104,7 +1104,7 @@ List floor areas for a branch.
 
 ### `DELETE /api/v1/floor-areas/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Hard delete a floor area. Fails if tables still reference it.
 
@@ -1124,7 +1124,7 @@ Hard delete a floor area. Fails if tables still reference it.
 
 ### `GET /api/v1/tables`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List tables with optional filters.
 
@@ -1184,7 +1184,7 @@ List tables with optional filters.
 
 ### `GET /api/v1/tables/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the table object (same shape as list item).
 
@@ -1192,7 +1192,7 @@ List tables with optional filters.
 
 ### `POST /api/v1/tables`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1217,7 +1217,7 @@ List tables with optional filters.
 
 ### `PUT /api/v1/tables/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1240,7 +1240,7 @@ List tables with optional filters.
 
 ### `PATCH /api/v1/tables/:id/status`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Change table status.
 
@@ -1267,7 +1267,7 @@ Change table status.
 
 ### `DELETE /api/v1/tables/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete a table. Sets `is_active = false`. Table must not be `occupied` or `reserved`.
 
@@ -1287,7 +1287,7 @@ Soft-delete a table. Sets `is_active = false`. Table must not be `occupied` or `
 
 ### `GET /api/v1/categories`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Flat list of all categories.
 
@@ -1354,7 +1354,7 @@ Flat list of all categories.
 
 ### `GET /api/v1/categories/tree`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Nested tree structure with children.
 
@@ -1420,7 +1420,7 @@ Nested tree structure with children.
 
 ### `GET /api/v1/categories/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the category object.
 
@@ -1428,7 +1428,7 @@ Nested tree structure with children.
 
 ### `POST /api/v1/categories`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1455,7 +1455,7 @@ Nested tree structure with children.
 
 ### `PUT /api/v1/categories/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1481,7 +1481,7 @@ Nested tree structure with children.
 
 ### `DELETE /api/v1/categories/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete. Fails if the category still has active menu items.
 
@@ -1503,7 +1503,7 @@ Soft-delete. Fails if the category still has active menu items.
 
 ### `GET /api/v1/menu-items`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List menu items with optional filters.
 
@@ -1580,7 +1580,7 @@ List menu items with optional filters.
 
 ### `GET /api/v1/menu-items/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get a single menu item **with modifier groups and ingredients attached**.
 
@@ -1722,7 +1722,7 @@ Get a single menu item **with modifier groups and ingredients attached**.
 
 ### `POST /api/v1/menu-items`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Create a menu item. Optionally include `ingredients` to define the recipe (which raw inventory ingredients are consumed and in what quantity).
 
@@ -1774,7 +1774,7 @@ Create a menu item. Optionally include `ingredients` to define the recipe (which
 
 ### `PUT /api/v1/menu-items/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update a menu item. Only send fields you want to change. Include `ingredients` to **replace** the entire ingredient list.
 
@@ -1816,7 +1816,7 @@ Update a menu item. Only send fields you want to change. Include `ingredients` t
 
 ### `PATCH /api/v1/menu-items/:id/availability`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Toggle item availability (e.g., mark as out of stock).
 
@@ -1833,7 +1833,7 @@ Toggle item availability (e.g., mark as out of stock).
 
 ### `DELETE /api/v1/menu-items/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete a menu item. Sets `is_active = false`.
 
@@ -1853,7 +1853,7 @@ Soft-delete a menu item. Sets `is_active = false`.
 
 ### `GET /api/v1/modifier-groups`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List all modifier groups with their nested modifiers.
 
@@ -1910,7 +1910,7 @@ List all modifier groups with their nested modifiers.
 
 ### `GET /api/v1/modifier-groups/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the modifier group with nested modifiers.
 
@@ -1918,7 +1918,7 @@ List all modifier groups with their nested modifiers.
 
 ### `POST /api/v1/modifier-groups`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -1947,7 +1947,7 @@ List all modifier groups with their nested modifiers.
 
 ### `PUT /api/v1/modifier-groups/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the updated modifier group.
 
@@ -1955,7 +1955,7 @@ List all modifier groups with their nested modifiers.
 
 ### `DELETE /api/v1/modifier-groups/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete a modifier group.
 
@@ -1973,7 +1973,7 @@ Soft-delete a modifier group.
 
 ### `POST /api/v1/modifier-groups/:id/modifiers`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Add a modifier option to a group.
 
@@ -2000,7 +2000,7 @@ Add a modifier option to a group.
 
 ### `PUT /api/v1/modifiers/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update a single modifier.
 
@@ -2025,7 +2025,7 @@ Update a single modifier.
 
 ### `DELETE /api/v1/modifiers/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete a modifier.
 
@@ -2045,7 +2045,7 @@ Soft-delete a modifier.
 
 ### `POST /api/v1/menu-items/:id/modifier-groups`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Assign a modifier group to a menu item.
 
@@ -2084,7 +2084,7 @@ Assign a modifier group to a menu item.
 
 ### `DELETE /api/v1/menu-items/:id/modifier-groups/:groupId`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Unassign a modifier group from a menu item.
 
@@ -2367,7 +2367,7 @@ Change reservation status.
 
 ### `GET /api/v1/orders`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -2435,7 +2435,7 @@ Change reservation status.
 
 ### `GET /api/v1/orders/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get full order detail with nested items, modifiers, payments, and discounts.
 
@@ -2555,7 +2555,7 @@ Get full order detail with nested items, modifiers, payments, and discounts.
 
 ### `GET /api/v1/discounts`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List all discounts.
 
@@ -2606,7 +2606,7 @@ List all discounts.
 
 ### `GET /api/v1/discounts/active`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 List only currently active and valid discounts (within date range).
 
@@ -2616,7 +2616,7 @@ List only currently active and valid discounts (within date range).
 
 ### `GET /api/v1/discounts/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the discount object.
 
@@ -2624,7 +2624,7 @@ List only currently active and valid discounts (within date range).
 
 ### `POST /api/v1/discounts`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -2657,7 +2657,7 @@ List only currently active and valid discounts (within date range).
 
 ### `PUT /api/v1/discounts/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the updated discount object.
 
@@ -2665,7 +2665,7 @@ List only currently active and valid discounts (within date range).
 
 ### `DELETE /api/v1/discounts/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Soft-delete (deactivate) a discount.
 
@@ -2692,7 +2692,7 @@ Soft-delete (deactivate) a discount.
 
 ### `POST /api/v1/inventory`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 > **⚠️ New endpoint added in inventory refactor**
 
 Create a new raw ingredient inventory record for a branch.
@@ -2738,9 +2738,9 @@ Create a new raw ingredient inventory record for a branch.
 
 ### `GET /api/v1/inventory`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
-List raw ingredient stock levels with optional filters.
+List raw ingredient stock levelswith optional filters.
 
 **Query Parameters:**
 
@@ -2749,10 +2749,13 @@ List raw ingredient stock levels with optional filters.
 | `branch_id` | int | Filter by branch |
 | `low_stock_only` | bool | Only items where stock ≤ threshold |
 | `name` | string | Partial name search (case-insensitive) |
+| `search` | string | Alias for `name` — use this for consistency with other list endpoints |
 | `page` | int | Page number |
-| `page_size` | int | Items per page |
+| `page_size` | int | Items per page (max 100) |
 
-> **Changed:** `menu_item_id` filter removed. `name` search filter added.
+> **Note:** `?search=` and `?name=` are interchangeable. Both perform a case-insensitive partial match on the ingredient name across **all** rows in the database — not just the current page. Use these server-side filters instead of filtering client-side.
+
+> **Changed:** `menu_item_id` filter removed. `name` / `search` filter added.
 
 **Response `200 OK`:**
 ```json
@@ -2801,9 +2804,49 @@ List raw ingredient stock levels with optional filters.
 
 ---
 
+### `GET /api/v1/inventory/search`
+
+> **Roles:** admin, manager, cashier
+
+Lightweight autocomplete searchendpoint for ingredient pickers (e.g. when adding ingredients to a menu item). Returns up to 50 matching inventory items with minimal fields — designed for search-as-you-type dropdowns.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | ✅ | Search term — partial match on ingredient name (case-insensitive) |
+| `branch_id` | int | ❌ | Filter by branch |
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "branch_id": 1,
+      "name": "Rice",
+      "unit_of_measure": "kg"
+    },
+    {
+      "id": 12,
+      "branch_id": 1,
+      "name": "Jasmine Rice",
+      "unit_of_measure": "kg"
+    }
+  ]
+}
+```
+
+**Error `400`:** `q` parameter is missing or empty.
+
+> **Usage tip:** Call this endpoint as the user types in an ingredient picker. Returns at most 50 results — no pagination needed. To browse the full inventory list with pagination, use `GET /api/v1/inventory`.
+
+---
+
 ### `GET /api/v1/inventory/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get one raw ingredient inventory item by ID.
 
@@ -2815,7 +2858,7 @@ Get one raw ingredient inventory item by ID.
 
 ### `PUT /api/v1/inventory/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update an inventory item.
 
@@ -2846,7 +2889,7 @@ Update an inventory item.
 
 ### `DELETE /api/v1/inventory/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Delete an inventory item.
 
@@ -2868,9 +2911,9 @@ Delete an inventory item.
 
 ### `GET /api/v1/inventory/low-stock`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
-Get only items with stock at or below threshold. `branch_id` is required.
+Get only items with stock at or below threshold.`branch_id` is required.
 
 **Query Parameters:**
 
@@ -2931,7 +2974,7 @@ Manually adjust ingredient stock (waste, count correction, transfer).
 
 ### `PATCH /api/v1/inventory/:id/threshold`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Update the low stock alert threshold for an ingredient.
 
@@ -2958,9 +3001,9 @@ Update the low stock alert threshold for an ingredient.
 
 ### `GET /api/v1/inventory/:id/movements`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
-Get the stock movement history for a raw ingredient.
+Get the stock movement historyfor a raw ingredient.
 
 **Query Parameters:**
 
@@ -3018,7 +3061,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `GET /api/v1/suppliers`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:**
 ```json
@@ -3050,7 +3093,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `GET /api/v1/suppliers/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the supplier object.
 
@@ -3058,7 +3101,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `POST /api/v1/suppliers`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Request Body:**
 ```json
@@ -3085,7 +3128,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `PUT /api/v1/suppliers/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Response `200 OK`:** Returns the updated supplier object.
 
@@ -3095,7 +3138,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `GET /api/v1/purchases`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3124,6 +3167,7 @@ Get the stock movement history for a raw ingredient.
       "subtotal": 2500000.00,
       "tax_amount": 275000.00,
       "total": 2775000.00,
+      "paid_amount": 2775000.00,
       "status": "received",
       "notes": "Monthly rice order",
       "ordered_at": "2026-03-01T08:00:00Z",
@@ -3149,7 +3193,7 @@ Get the stock movement history for a raw ingredient.
 
 ### `GET /api/v1/purchases/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get purchase with nested items.
 
@@ -3167,6 +3211,7 @@ Get purchase with nested items.
     "subtotal": 2500000.00,
     "tax_amount": 275000.00,
     "total": 2775000.00,
+    "paid_amount": 0.00,
     "status": "received",
     "notes": "Monthly rice order",
     "ordered_at": "2026-03-01T08:00:00Z",
@@ -3197,7 +3242,7 @@ Get purchase with nested items.
 
 ### `POST /api/v1/purchases`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Create a purchase order for raw ingredients. `ordered_by` is set from authenticated user.
 
@@ -3245,34 +3290,45 @@ Create a purchase order for raw ingredients. `ordered_by` is set from authentica
 
 ### `POST /api/v1/purchases/:id/receive`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
-Mark a purchase as received. **Automatically adds all items to inventory.**
+Record a payment against a purchase order.Supports full or partial payment in installments.
+
+**On the first payment**, all goods are added to inventory (stock is adjusted for every item at full ordered quantity). Subsequent payments only update the paid amount — no further inventory changes occur.
 
 **Request Body:**
 ```json
 {
-  "notes": "All items received in good condition"
+  "paid_amount": 1387500.00,
+  "notes": "First installment — 50% paid"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|----------|------------|
+| `paid_amount` | float | ✅ | > 0; cannot exceed remaining unpaid amount (`total - paid_amount`) |
 | `notes` | string | ❌ | — |
 
-**Side effects:** For each purchase item, the raw ingredient's `stock_quantity` is increased by the purchased quantity and an `inventory_movements` record of type `purchase_in` is created. Both operations are atomic — if either fails, neither is applied for that item.
+**Auto-status logic:**
+- `paid_amount + new payment >= total` → status = `received`, `received_at` is stamped
+- `paid_amount + new payment < total` → status = `partial_received`, `received_at` is **not** set yet
 
-**Response `200 OK`:** Returns the updated purchase object.
+**Side effects (first payment only):** For each purchase item, the raw ingredient's `stock_quantity` is increased by the full ordered quantity and an `inventory_movements` record of type `purchase_in` is created.
 
-**Error `400`:** `"purchase already received"` or `"purchase is cancelled"`
+**Response `200 OK`:** Returns the updated purchase object with the new `paid_amount` and `status`.
 
-**Error `500`:** `"failed to receive item (inventory_id=X)"` — inventory adjustment or movement recording failed for a specific item. No stock changes are applied for that item.
+**Error `400`:**
+- `"purchase status must be ordered or partial_received"` — already fully received or cancelled
+- `"paid amount exceeds remaining balance of X"` — overpayment attempt
+- `"paid_amount must be greater than 0"`
+
+**Error `500`:** `"failed to receive item (inventory_id=X)"` — inventory adjustment failed (only possible on first payment).
 
 ---
 
 ### `PATCH /api/v1/purchases/:id/cancel`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Cancel a purchase order. Cannot cancel if already received.
 
@@ -3286,7 +3342,7 @@ Cancel a purchase order. Cannot cancel if already received.
 
 ### `GET /api/v1/audit-logs`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3361,7 +3417,7 @@ Cancel a purchase order. Cannot cancel if already received.
 
 ### `GET /api/v1/audit-logs/record/:table/:recordId`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get the full change history for a specific record.
 
@@ -3382,7 +3438,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/dashboard`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3419,7 +3475,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/sales`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3475,7 +3531,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/revenue-by-category`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3519,7 +3575,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/top-items`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3564,7 +3620,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/payment-methods`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3617,7 +3673,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/expense-breakdown`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3686,7 +3742,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/cash-flow`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 **Query Parameters:**
 
@@ -3747,7 +3803,7 @@ Get the full change history for a specific record.
 
 ### `GET /api/v1/statistics/shifts/:id`
 
-> **Roles:** admin, manager
+> **Roles:** admin, manager, cashier
 
 Get a detailed financial report for a specific shift.
 
@@ -3974,9 +4030,9 @@ Get a detailed financial report for a specific shift.
 ### Purchase Status
 | Value | Description |
 |-------|-------------|
-| `ordered` | Purchase order placed |
-| `partial_received` | Some items received |
-| `received` | All items received |
+| `ordered` | Purchase order placed, no goods received yet |
+| `partial_received` | Partially paid; goods received into inventory on first payment; further payments allowed |
+| `received` | All ordered quantities have been fully received |
 | `cancelled` | Purchase cancelled |
 
 ### Reservation Status
