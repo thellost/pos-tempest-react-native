@@ -1,3 +1,5 @@
+SET search_path TO pos_tempest;
+
 CREATE TYPE "role_type" AS ENUM (
   'admin',
   'manager',
@@ -503,6 +505,7 @@ CREATE TABLE "purchases" (
   "subtotal" decimal(14,2) NOT NULL DEFAULT 0,
   "tax_amount" decimal(14,2) NOT NULL DEFAULT 0,
   "total" decimal(14,2) NOT NULL DEFAULT 0,
+  "paid_amount" decimal(14,2) NOT NULL DEFAULT 0,
   "status" purchase_status NOT NULL DEFAULT 'ordered',
   "notes" text,
   "ordered_at" timestamp NOT NULL DEFAULT (now()),
@@ -1022,3 +1025,9 @@ ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "round_number" integer;
 ALTER TABLE "order_items" ADD COLUMN IF NOT EXISTS "weight" decimal(8,3);
 ALTER TABLE "kitchen_order_tickets" ADD COLUMN IF NOT EXISTS "round_number" integer;
 ALTER TABLE "inventory_movements" ALTER COLUMN "reference_id" TYPE text USING reference_id::text;
+
+
+--- USAGE ---
+GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO service_role;
+GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO powersync_role;
