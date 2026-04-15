@@ -50,7 +50,8 @@ export async function createOrder(
   cashierId: number,
   shiftId: number | null,
   orderType: string,
-  guestCount: number | null
+  guestCount: number | null,
+  customerName: string | null = null
 ): Promise<Order> {
   return startSpan({ name: 'order.create', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
@@ -75,10 +76,10 @@ export async function createOrder(
 
   await powersync.execute(
     `INSERT INTO orders (
-      id, order_number, branch_id, table_id, cashier_id, customer_id, shift_id,
+      id, order_number, branch_id, table_id, cashier_id, customer_id, customer_name, shift_id,
       order_type, status, guest_count, subtotal, discount_amount, tax_amount,
       service_charge, rounding_amount, total, payment_status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId,
       orderNumber,
@@ -86,6 +87,7 @@ export async function createOrder(
       tableId,
       cashierId,
       null,
+      customerName,
       shiftId,
       orderType,
       ORDER_STATUS.PENDING,
@@ -883,6 +885,22 @@ export async function assignCustomerToOrder(
   await powersync.execute(
     `UPDATE orders SET customer_id = ?, updated_at = ? WHERE id = ?`,
     [customerId, now, orderId]
+  );
+}
+
+/**
+ * Sets or clears a free-text guest name on an order (no customer registration required).
+ * @param orderId - The order ID
+ * @param name - Guest name string, or null to clear
+ */
+export async function setGuestNameOnOrder(
+  orderId: string,
+  name: string | null
+): Promise<void> {
+  const now = new Date().toISOString();
+  await powersync.execute(
+    `UPDATE orders SET customer_name = ?, updated_at = ? WHERE id = ?`,
+    [name, now, orderId]
   );
 }
 

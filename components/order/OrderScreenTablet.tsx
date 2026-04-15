@@ -35,6 +35,9 @@ export function OrderScreenTablet({
   assignedCustomer,
   onAssignCustomer,
   onClearCustomer,
+  guestName,
+  onSetGuestName,
+  onClearGuestName,
   topLevelCategories,
   subCategories,
   selectedCategoryId,
@@ -78,6 +81,9 @@ export function OrderScreenTablet({
             assignedCustomer={assignedCustomer}
             onAssignCustomer={onAssignCustomer}
             onClearCustomer={onClearCustomer}
+            guestName={guestName}
+            onSetGuestName={onSetGuestName}
+            onClearGuestName={onClearGuestName}
             onMoveTable={onMoveTable}
           />
         </PerfProfiler>

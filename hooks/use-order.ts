@@ -659,6 +659,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         tableLabel:   kot.order_type === ORDER_TYPE.TAKEAWAY
           ? 'Takeaway'
           : kot.table_number ? `Table ${kot.table_number}` : 'N/A',
+        customerName: kot.customer_name ?? null,
         time:        new Date(kot.created_at).toLocaleString('id-ID'),
         isTakeaway:  kot.order_type === ORDER_TYPE.TAKEAWAY,
         items:       kot.items.map(item => ({

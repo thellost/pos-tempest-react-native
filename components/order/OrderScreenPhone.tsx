@@ -52,6 +52,9 @@ export function OrderScreenPhone({
   assignedCustomer,
   onAssignCustomer,
   onClearCustomer,
+  guestName,
+  onSetGuestName,
+  onClearGuestName,
   topLevelCategories,
   subCategories,
   selectedCategoryId,
@@ -336,6 +339,9 @@ export function OrderScreenPhone({
               assignedCustomer={assignedCustomer}
               onAssignCustomer={onAssignCustomer}
               onClearCustomer={onClearCustomer}
+              guestName={guestName}
+              onSetGuestName={onSetGuestName}
+              onClearGuestName={onClearGuestName}
               onMoveTable={onMoveTable}
             />
           </PerfProfiler>

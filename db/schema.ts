@@ -196,6 +196,7 @@ export const appSchema = new Schema({
 		table_id: column.integer,
 		cashier_id: column.integer,
 		customer_id: column.integer,
+		customer_name: column.text,
 		shift_id: column.integer,
 		order_type: column.text,
 		status: column.text,

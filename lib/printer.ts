@@ -140,6 +140,7 @@ export function formatKOT(params: {
   orderNumber: string;
   roundNumber: number;
   tableLabel: string;
+  customerName?: string | null;
   time: string;
   isTakeaway: boolean;
   items: Array<{
@@ -165,8 +166,9 @@ export function formatKOT(params: {
     `Table : ${params.tableLabel}`,
     `Time  : ${params.time}`,
     `Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}`,
-    L,
   ];
+  if (params.customerName) lines.push(`Guest : ${params.customerName}`);
+  lines.push(L);
 
   for (const item of params.items) {
     const isWeightBased = item.unitOfMeasure !== 'piece';
@@ -192,6 +194,7 @@ export function formatBill(params: {
   orderNumber: string;
   tableLabel: string;
   cashierName: string;
+  customerName?: string | null;
   printedAt: string;
   items: Array<{
     name: string;
@@ -232,8 +235,9 @@ export function formatBill(params: {
     `Table : ${params.tableLabel}`,
     `Staff : ${params.cashierName}`,
     `Time  : ${formatReceiptDate(params.printedAt)}`,
-    L,
   );
+  if (params.customerName) lines.push(`Guest : ${params.customerName}`);
+  lines.push(L);
 
   for (const item of params.items) {
     const prefix = `${item.quantity}x `;
@@ -287,8 +291,9 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
     text(`Table : ${params.tableLabel}`),
     text(`Time  : ${params.time}`),
     text(`Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}`),
-    divider(),
   ];
+  if (params.customerName) els.push(text(`Guest : ${params.customerName}`));
+  els.push(divider());
 
   for (const item of params.items) {
     const isWeightBased = item.unitOfMeasure !== 'piece';
@@ -328,8 +333,9 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     text(`Table : ${params.tableLabel}`),
     text(`Staff : ${params.cashierName}`),
     text(`Time  : ${formatReceiptDate(params.printedAt)}`),
-    divider(),
   );
+  if (params.customerName) els.push(text(`Guest : ${params.customerName}`));
+  els.push(divider());
 
   for (const item of params.items) {
     els.push(

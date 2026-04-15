@@ -99,13 +99,14 @@ export function KOTTicketPreview({ kot, onDismiss }: KOTTicketPreviewProps) {
             </Text>
 
             {/* Ticket info rows */}
-            {[
+            {((): [string, string][] => [
               ['KOT',   kot.ticket_number],
               ['Order', kot.order_number],
               ['Round', `Round ${kot.round_number}`],
               ['Table', tableLabel],
+              ...(kot.customer_name ? [['Guest', kot.customer_name] as [string, string]] : []),
               ['Time',  formatDateTime(kot.created_at)],
-            ].map(([label, value]) => (
+            ])().map(([label, value]) => (
               <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
                 <Text style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: '600', color: '#78716C' }}>
                   {label}:

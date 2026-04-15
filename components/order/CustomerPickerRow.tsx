@@ -27,6 +27,7 @@ interface CustomerPickerRowProps {
   onAssign: (customer: AssignedCustomer) => void;
   onClear: () => void;
   disabled?: boolean;
+  onSetGuestName?: (name: string) => void;
 }
 
 /**
@@ -41,6 +42,7 @@ export function CustomerPickerRow({
   onAssign,
   onClear,
   disabled = false,
+  onSetGuestName,
 }: CustomerPickerRowProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const { customers, isLoading, searchQuery, setSearchQuery } = useCustomers();
@@ -163,6 +165,24 @@ export function CustomerPickerRow({
               keyboardShouldPersistTaps="handled"
               style={{ maxHeight: 260 }}
             >
+              {/* Guest name row — shown whenever there is text in the search field */}
+              {searchQuery.length > 0 && onSetGuestName && (
+                <Pressable
+                  onPress={() => { onSetGuestName(searchQuery); close(); }}
+                  className="flex-row items-center gap-3 border-b border-border px-4 py-3 active:bg-surface-raised"
+                >
+                  <View className="h-9 w-9 items-center justify-center rounded-full bg-brand/10">
+                    <UserPlus size={16} color={ThemeColors.accent.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-pos-sm font-semibold text-pos-text" numberOfLines={1}>
+                      Use &quot;{searchQuery}&quot; as guest name
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
+
+              {/* Customer results */}
               {isLoading ? (
                 <View className="items-center py-8">
                   <ActivityIndicator color="#6366F1" />

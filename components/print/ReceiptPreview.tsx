@@ -112,12 +112,13 @@ export function ReceiptPreview({ bill, onDismiss }: ReceiptPreviewProps) {
             </Text>
 
             {/* Order info */}
-            {[
+            {((): [string, string][] => [
               ['Order', bill.orderNumber],
               ['Table', bill.tableLabel],
               ['Staff', bill.cashierName],
+              ...(bill.customerName ? [['Guest', bill.customerName] as [string, string]] : []),
               ['Time',  formatDateTime(bill.printedAt)],
-            ].map(([label, value]) => (
+            ])().map(([label, value]) => (
               <Row key={label} label={`${label}:`} value={value} />
             ))}
             <Text style={{ fontFamily: 'monospace', fontSize: 10, color: '#A8A29E', marginVertical: 8 }}>

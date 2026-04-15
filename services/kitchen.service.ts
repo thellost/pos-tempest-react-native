@@ -32,6 +32,7 @@ export interface KOTWithItems {
   table_number: string | null;
   order_number: string;
   order_type: string;
+  customer_name: string | null;
   created_at: string;
   items: KOTItemDetail[];
 }
@@ -58,9 +59,10 @@ export async function createKOT(
   const orderRow = await powersync.getOptional<{
     order_number: string;
     order_type: string;
+    customer_name: string | null;
     table_number: string | null;
   }>(
-    `SELECT o.order_number, o.order_type, t.table_number
+    `SELECT o.order_number, o.order_type, o.customer_name, t.table_number
      FROM orders o
      LEFT JOIN tables t ON t.id = o.table_id
      WHERE o.id = ?`,
@@ -203,6 +205,7 @@ export async function createKOT(
     table_number: orderRow.table_number,
     order_number: orderRow.order_number,
     order_type: orderRow.order_type,
+    customer_name: orderRow.customer_name ?? null,
     created_at: now,
     items: itemDetails,
   };
@@ -295,10 +298,11 @@ export async function getKOTsForOrder(
     table_number: string | null;
     order_number: string;
     order_type: string;
+    customer_name: string | null;
   }>(
     `SELECT kot.id, kot.ticket_number, kot.status, kot.priority,
             kot.round_number, kot.created_at, t.table_number,
-            o.order_number, o.order_type
+            o.order_number, o.order_type, o.customer_name
      FROM kitchen_order_tickets kot
      JOIN orders o ON o.id = kot.order_id
      LEFT JOIN tables t ON t.id = o.table_id
@@ -320,6 +324,7 @@ export async function getKOTsForOrder(
         table_number: row.table_number,
         order_number: row.order_number,
         order_type: row.order_type,
+        customer_name: row.customer_name ?? null,
         created_at: row.created_at,
         items: await _getKOTItems(kotId),
       };

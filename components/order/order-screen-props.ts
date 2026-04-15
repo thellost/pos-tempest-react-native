@@ -32,6 +32,9 @@ export interface OrderScreenSharedProps {
   assignedCustomer: AssignedCustomer | null;
   onAssignCustomer: (customer: AssignedCustomer) => void;
   onClearCustomer: () => void;
+  guestName?: string | null;
+  onSetGuestName?: (name: string) => void;
+  onClearGuestName?: () => void;
 
   // ── Menu section ─────────────────────────────────────────────────────────────
   topLevelCategories: Category[];

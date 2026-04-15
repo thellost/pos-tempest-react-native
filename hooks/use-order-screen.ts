@@ -13,7 +13,7 @@ import { useMenu, type MenuItemWithInventory } from '@/hooks/use-menu';
 import { useModifierPicker } from '@/hooks/use-modifier-picker';
 import { useOrder } from '@/hooks/use-order';
 import { useShift } from '@/hooks/use-shift';
-import { assignCustomerToOrder, confirmOrder as confirmOrderService } from '@/services/order.service';
+import { assignCustomerToOrder, confirmOrder as confirmOrderService, setGuestNameOnOrder } from '@/services/order.service';
 import { logPerf, nowMs, timedAsync } from '@/utils/perf-debug';
 import { toInt, toIntOrNull } from '@/utils/coerce';
 
@@ -85,6 +85,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [assignedCustomer, setAssignedCustomer] = useState<AssignedCustomer | null>(null);
+  const [guestName, setGuestNameState] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [table, setTable] = useState<OrderTableData | null>(null);
   const [showMoveTableModal, setShowMoveTableModal] = useState(false);
@@ -188,6 +189,8 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
 
   // Load assigned customer when order changes
   useEffect(() => {
+    setGuestNameState(order?.customer_name ?? null);
+
     let cancelled = false;
     const customerId = order?.customer_id;
     if (!customerId) {
@@ -211,7 +214,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [order?.customer_id]);
+  }, [order?.customer_id, order?.customer_name]);
 
   const handleAssignCustomer = useCallback(async (customer: AssignedCustomer) => {
     const currentOrderId = order ? order.id : null;
@@ -235,6 +238,28 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       }
     }
     setAssignedCustomer(null);
+  }, [order, screenLabel]);
+
+  const handleSetGuestName = useCallback(async (name: string) => {
+    if (order?.id) {
+      try {
+        await setGuestNameOnOrder(order.id, name);
+      } catch (err) {
+        console.error(`[${screenLabel}] setGuestNameOnOrder error:`, err);
+      }
+    }
+    setGuestNameState(name);
+  }, [order, screenLabel]);
+
+  const handleClearGuestName = useCallback(async () => {
+    if (order?.id) {
+      try {
+        await setGuestNameOnOrder(order.id, null);
+      } catch (err) {
+        console.error(`[${screenLabel}] clearGuestName error:`, err);
+      }
+    }
+    setGuestNameState(null);
   }, [order, screenLabel]);
 
   const handleSelectCategory = useCallback((categoryId: number) => {
@@ -528,6 +553,9 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     assignedCustomer,
     handleAssignCustomer,
     handleClearCustomer,
+    guestName,
+    handleSetGuestName,
+    handleClearGuestName,
     // Category nav
     topLevelCategories,
     subCategories,

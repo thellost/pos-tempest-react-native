@@ -1,9 +1,9 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { AlertTriangle, ArrowRightLeft, UtensilsCrossed } from 'lucide-react-native';
+import { AlertTriangle, ArrowRightLeft, UtensilsCrossed, X } from 'lucide-react-native';
 
-import { Button, SelectButton } from '@/components/ui';
+import { Button, IconButton, SelectButton } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
 
 import type { OrderItemDisplay } from '@/components/order/types';
@@ -43,6 +43,10 @@ interface OrderPanelProps {
   assignedCustomer?: AssignedCustomer | null;
   onAssignCustomer?: (customer: AssignedCustomer) => void;
   onClearCustomer?: () => void;
+  /** Free-text guest name (shown only when no registered customer is assigned) */
+  guestName?: string | null;
+  onSetGuestName?: (name: string) => void;
+  onClearGuestName?: () => void;
 }
 
 /**
@@ -72,6 +76,9 @@ export const OrderPanel = memo(function OrderPanel({
   assignedCustomer = null,
   onAssignCustomer,
   onClearCustomer,
+  guestName = null,
+  onSetGuestName,
+  onClearGuestName,
 }: OrderPanelProps) {
   const activeItems = useMemo(() => items.filter(i => !i.is_voided), [items]);
   const hasItems = activeItems.length > 0;
@@ -288,7 +295,32 @@ export const OrderPanel = memo(function OrderPanel({
             onAssign={onAssignCustomer}
             onClear={onClearCustomer}
             disabled={!isShiftOpen}
+            onSetGuestName={onSetGuestName}
           />
+        )}
+
+        {/* Guest name chip — shown when a free-text guest name is set and no registered customer */}
+        {guestName && !assignedCustomer && (
+          <View className="mt-2 flex-row items-center gap-2 rounded-lg bg-brand/10 px-3 py-2">
+            <View className="h-6 w-6 items-center justify-center rounded-full bg-brand/30">
+              <Text className="text-[10px] font-bold text-brand">
+                {guestName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-pos-xs font-semibold text-brand" numberOfLines={1}>
+                {guestName}
+              </Text>
+            </View>
+            <IconButton
+              size="sm"
+              onPress={onClearGuestName}
+              disabled={!isShiftOpen}
+              className="ml-1 rounded-full bg-brand/20"
+            >
+              <X size={10} color={ThemeColors.accent.primary} />
+            </IconButton>
+          </View>
         )}
 
         {guestCount !== null && (

@@ -33,6 +33,7 @@ export interface BillData {
   tableLabel: string;
   cashierName: string;
   printedAt: string;
+  customerName: string | null;
 
   // Items
   items: BillLineItem[];
@@ -57,6 +58,7 @@ export interface BillData {
 type OrderBillRow = {
   order_number: string;
   order_type: string;
+  customer_name: string | null;
   table_number: string | null;
   cashier_name: string | null;
   branch_name: string | null;
@@ -106,7 +108,7 @@ export async function getBillData(
 ): Promise<BillData> {
   const orderRow = await powersync.getOptional<OrderBillRow>(
     `SELECT
-       o.order_number, o.order_type,
+       o.order_number, o.order_type, o.customer_name,
        o.subtotal, o.discount_amount, o.tax_amount,
        o.service_charge, o.rounding_amount, o.total,
        o.created_at,
@@ -190,6 +192,7 @@ export async function getBillData(
     tableLabel,
     cashierName: orderRow.cashier_name || 'Staff',
     printedAt: new Date().toISOString(),
+    customerName: orderRow.customer_name || null,
     items,
     subtotal: Number(orderRow.subtotal) || 0,
     discountAmount: Number(orderRow.discount_amount) || 0,

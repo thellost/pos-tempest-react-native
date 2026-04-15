@@ -234,6 +234,7 @@ export interface Order {
 	table_id: EntityId | null;
 	cashier_id: EntityId;
 	customer_id: EntityId | null;
+	customer_name: string | null;
 	shift_id: EntityId | null;
 	order_type: OrderType;
 	status: OrderStatus;
