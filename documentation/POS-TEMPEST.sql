@@ -190,6 +190,9 @@ CREATE TABLE "branches" (
   "currency" varchar(3) NOT NULL DEFAULT 'IDR',
   "timezone" varchar(50) NOT NULL DEFAULT 'Asia/Jakarta',
   "is_active" boolean NOT NULL DEFAULT true,
+  "opening_time" varchar(5) NOT NULL DEFAULT '08:00',
+  "closing_time" varchar(5) NOT NULL DEFAULT '22:00',
+  "auto_shift" boolean NOT NULL DEFAULT true,
   "created_at" timestamp NOT NULL DEFAULT (now()),
   "updated_at" timestamp NOT NULL DEFAULT (now())
 );
@@ -745,6 +748,12 @@ COMMENT ON TABLE "branches" IS 'Restaurant branches / outlets';
 COMMENT ON COLUMN "branches"."tax_rate" IS 'Default tax rate e.g. 11% PPN';
 
 COMMENT ON COLUMN "branches"."service_charge_rate" IS 'e.g. 5% service charge';
+
+COMMENT ON COLUMN "branches"."opening_time" IS '24h clock HH:MM e.g. 08:00 — used by Go scheduler to auto-open shifts';
+
+COMMENT ON COLUMN "branches"."closing_time" IS '24h clock HH:MM e.g. 23:00 — used by Go scheduler to auto-close shifts';
+
+COMMENT ON COLUMN "branches"."auto_shift" IS 'When true the Go scheduler manages shift open/close automatically using branch timezone';
 
 COMMENT ON TABLE "floor_areas" IS 'Sections / areas within a branch';
 

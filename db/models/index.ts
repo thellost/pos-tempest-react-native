@@ -70,6 +70,12 @@ export interface Branch {
 	currency: string;
 	timezone: string;
 	is_active: boolean;
+	/** 24h HH:MM — Go scheduler auto-open time */
+	opening_time: string;
+	/** 24h HH:MM — Go scheduler auto-close time */
+	closing_time: string;
+	/** When true the Go scheduler manages shift open/close automatically */
+	auto_shift: boolean;
 	created_at: Timestamp;
 	updated_at: Timestamp;
 }

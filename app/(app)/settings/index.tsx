@@ -1,4 +1,5 @@
 import { AccordionSection } from '@/components/settings/AccordionSection';
+import { BranchScheduleSection } from '@/components/settings/BranchScheduleSection';
 import { ConfigSection, type ConfigRow } from '@/components/settings/ConfigSection';
 import { DeviceList } from '@/components/settings/DeviceList';
 import { InfoRow, RowDivider } from '@/components/settings/primitives';
@@ -14,6 +15,7 @@ import { usePrinter } from '@/hooks/use-printer';
 import Constants from 'expo-constants';
 import {
   AlertTriangle,
+  Clock,
   Monitor,
   Moon,
   Palette,
@@ -212,6 +214,13 @@ export default function SettingsScreen() {
           value={deviceInfo?.deviceId ? `${deviceInfo.deviceId.slice(0, 8)}…` : '—'}
         />
       </AccordionSection>
+
+      {/* Branch Schedule */}
+      <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
+        <AccordionSection icon={Clock} title="Branch Schedule">
+          <BranchScheduleSection branch={registration?.branch ?? null} />
+        </AccordionSection>
+      </PermissionGate>
 
       {/* Branch Devices */}
       <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
