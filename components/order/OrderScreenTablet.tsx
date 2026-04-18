@@ -129,7 +129,6 @@ export function OrderScreenTablet({
             quantitiesByMenuItemId={quantitiesByMenuItemId}
             onItemPress={onMenuItemPress}
             onDecrementItem={onMenuItemDecrement}
-            disabled={!isShiftOpen}
           />
         </PerfProfiler>
       </View>

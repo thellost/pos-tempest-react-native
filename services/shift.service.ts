@@ -1,9 +1,21 @@
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
+import type { Branch } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
+import {
+  isWithinOperatingWindow,
+  operatingDayKey,
+  TZ_FALLBACK,
+} from '@/utils/branch-schedule';
+
+/** Minimal branch shape required by the auto-shift safeguard helpers. */
+export type AutoShiftBranch = Pick<
+  Branch,
+  'id' | 'timezone' | 'opening_time' | 'closing_time'
+> & { auto_shift?: boolean };
 
 export type ShiftRecord = {
   id: number;
@@ -205,8 +217,8 @@ export async function getShiftCashSummary(shiftId: number, openingCash: number):
   };
 }
 
-export async function openShift(callerRole: string, userId: number, branchId: number, openingCash: number, deviceId: number | null = null): Promise<ShiftRecord> {
-  if (!hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
+export async function openShift(callerRole: string, userId: number, branchId: number, openingCash: number = 0, deviceId: number | null = null, system: boolean = false): Promise<ShiftRecord> {
+  if (!system && !hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
     throw new Error('[ShiftService] Permission denied: manage_shift required');
   }
 
@@ -272,26 +284,44 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
   }); // end shift.open span
 }
 
-export async function closeShift(callerRole: string, shiftId: number, closingCash: number): Promise<ShiftRecord> {
-  if (!hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
+export async function closeShift(
+  callerRole: string,
+  shiftId: number,
+  closingCash: number,
+  options?: { auto?: boolean; system?: boolean; notes?: string | null },
+): Promise<ShiftRecord> {
+  const auto = options?.auto === true;
+  const system = options?.system === true;
+
+  if (!system && !hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
     throw new Error('[ShiftService] Permission denied: manage_shift required');
   }
 
   return startSpan({ name: 'shift.close', op: 'db.powersync' }, async () => {
-  if (!Number.isFinite(closingCash) || closingCash < 0) {
-    throw new Error('Closing cash must be a valid positive amount');
-  }
-
   const shift = await getShiftById(shiftId);
 
   if (!shift || shift.status !== SHIFT_STATUS.OPEN) {
+    if (auto || system) {
+      console.warn('[ShiftService] closeShift: shift already closed or missing', shiftId);
+      if (shift) return shift;
+      throw new Error('No active shift found to close');
+    }
     throw new Error('No active shift found to close');
   }
 
   const summary = await getShiftCashSummary(shiftId, shift.opening_cash);
   const expectedCash = summary.expectedCash;
-  const cashDifference = closingCash - expectedCash;
+
+  // For auto-close, derive closing cash from expected so cash_difference = 0.
+  const effectiveClosingCash = auto ? expectedCash : closingCash;
+
+  if (!auto && (!Number.isFinite(effectiveClosingCash) || effectiveClosingCash < 0)) {
+    throw new Error('Closing cash must be a valid positive amount');
+  }
+
+  const cashDifference = effectiveClosingCash - expectedCash;
   const closedAt = new Date().toISOString();
+  const finalNotes = options?.notes ?? (auto ? 'auto-closed by client safeguard' : shift.notes);
 
   await powersync.execute(
     `
@@ -301,11 +331,12 @@ export async function closeShift(callerRole: string, shiftId: number, closingCas
         closing_cash = ?,
         expected_cash = ?,
         cash_difference = ?,
-        closed_at = ?
+        closed_at = ?,
+        notes = COALESCE(?, notes)
       WHERE id = ?
         AND status = ?
     `,
-    [SHIFT_STATUS.CLOSED, closingCash, expectedCash, cashDifference, closedAt, shiftId, SHIFT_STATUS.OPEN],
+    [SHIFT_STATUS.CLOSED, effectiveClosingCash, expectedCash, cashDifference, closedAt, finalNotes, shiftId, SHIFT_STATUS.OPEN],
   );
 
   void insertAuditLog({
@@ -315,18 +346,19 @@ export async function closeShift(callerRole: string, shiftId: number, closingCas
     userId: shift.user_id,
     newValues: {
       status: SHIFT_STATUS.CLOSED,
-      closing_cash: closingCash,
+      closing_cash: effectiveClosingCash,
       expected_cash: expectedCash,
       cash_difference: cashDifference,
+      auto: auto || undefined,
     },
-    description: `Shift closed: ${shiftId}`,
+    description: auto ? `Shift auto-closed: ${shiftId}` : `Shift closed: ${shiftId}`,
   });
-  addBreadcrumb('shift', 'Shift closed', { shiftId, closingCash, expectedCash, cashDifference });
+  addBreadcrumb('shift', auto ? 'Shift auto-closed' : 'Shift closed', { shiftId, closingCash: effectiveClosingCash, expectedCash, cashDifference });
 
-  if (cashDifference !== 0) {
+  if (!auto && cashDifference !== 0) {
     captureMessage('Shift closing balance mismatch', 'warning', {
       shiftId,
-      closingCash,
+      closingCash: effectiveClosingCash,
       expectedCash,
       cashDifference,
     });
@@ -340,6 +372,109 @@ export async function closeShift(callerRole: string, shiftId: number, closingCas
 
   return closedShift;
   }); // end shift.close span
+}
+
+// ---------------------------------------------------------------------------
+// Auto-shift safeguard (client-side fallback for the backend Go scheduler)
+// ---------------------------------------------------------------------------
+
+/**
+ * Close any open shifts on the given branch whose operating-day key has
+ * rolled over, or where the current time is outside the operating window.
+ * Returns the number of shifts closed. Failures are logged and skipped.
+ */
+export async function autoCloseStaleShifts(branch: AutoShiftBranch): Promise<number> {
+  if (branch.auto_shift === false) return 0;
+
+  const opening = branch.opening_time ?? '';
+  const closing = branch.closing_time ?? '';
+  if (!opening || !closing) return 0;
+
+  const tz = branch.timezone ?? TZ_FALLBACK;
+  const branchId = toNumber(branch.id);
+
+  const rows = await powersync.getAll<ShiftRow>(
+    `
+      SELECT
+        id, user_id, branch_id, device_id, status,
+        opening_cash, closing_cash, expected_cash, cash_difference,
+        opened_at, closed_at, notes
+      FROM shifts
+      WHERE branch_id = ?
+        AND status = ?
+    `,
+    [branchId, SHIFT_STATUS.OPEN],
+  );
+
+  const now = new Date();
+  const currentDayKey = operatingDayKey(opening, closing, tz, now);
+  const inWindow = isWithinOperatingWindow(opening, closing, tz, now);
+
+  let closedCount = 0;
+  for (const row of rows) {
+    const shift = normalizeShift(row);
+    let openedAt: Date;
+    try {
+      openedAt = new Date(shift.opened_at);
+    } catch {
+      openedAt = now;
+    }
+    const shiftDayKey = operatingDayKey(opening, closing, tz, openedAt);
+    const stale = shiftDayKey !== currentDayKey || !inWindow;
+
+    if (!stale) continue;
+
+    try {
+      await closeShift('', shift.id, 0, { auto: true, system: true });
+      closedCount += 1;
+    } catch (err) {
+      console.warn('[ShiftService] autoCloseStaleShifts: failed to close shift', shift.id, err);
+    }
+  }
+
+  return closedCount;
+}
+
+/**
+ * Ensure a shift exists for the current operating window. Acts as a
+ * client-side safeguard to the backend scheduler:
+ *   1. Auto-close stale open shifts.
+ *   2. Return the current active shift if one exists.
+ *   3. If `branch.auto_shift === true` AND the current time is within the
+ *      operating window, auto-open a new shift with opening_cash = 0.
+ *   4. Otherwise return null.
+ */
+export async function ensureShiftForNow(
+  branch: AutoShiftBranch,
+  userId: number,
+  deviceId: number | null,
+): Promise<ShiftRecord | null> {
+  const branchId = toNumber(branch.id);
+
+  try {
+    await autoCloseStaleShifts(branch);
+  } catch (err) {
+    console.warn('[ShiftService] ensureShiftForNow: autoCloseStaleShifts failed', err);
+  }
+
+  const existing = await getActiveShift(branchId);
+  if (existing) return existing;
+
+  if (branch.auto_shift !== true) return null;
+
+  const opening = branch.opening_time ?? '';
+  const closing = branch.closing_time ?? '';
+  if (!opening || !closing) return null;
+
+  const tz = branch.timezone ?? TZ_FALLBACK;
+  if (!isWithinOperatingWindow(opening, closing, tz)) return null;
+
+  try {
+    return await openShift('', userId, branchId, 0, deviceId, true);
+  } catch (err) {
+    console.warn('[ShiftService] ensureShiftForNow: openShift failed', err);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------

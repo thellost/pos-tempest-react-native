@@ -64,6 +64,9 @@ export function BranchScheduleSection({ branch }: BranchScheduleSectionProps) {
           <Text className="text-pos-xs font-semibold uppercase tracking-widest text-pos-text-faint">
             Schedule
           </Text>
+          <Text className="mt-0.5 text-pos-xs text-pos-text-faint" numberOfLines={1}>
+            Times are in {branch.timezone || 'Asia/Jakarta'}
+          </Text>
         </View>
 
         {/* Auto-shift toggle */}

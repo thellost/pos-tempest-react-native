@@ -13,7 +13,6 @@ interface IconRailProps {
   onNavigate: (href: string) => void;
   user: UserRow | null;
   userRole: string;
-  isShiftOpen: boolean;
   onLock: () => void;
   onSignOut: () => void;
 }
@@ -23,7 +22,6 @@ export function IconRail({
   currentPath,
   onNavigate,
   user,
-  isShiftOpen,
   onLock,
   onSignOut,
 }: IconRailProps) {
@@ -31,13 +29,11 @@ export function IconRail({
 
   const visibleItems = useMemo(() => {
     return navItems.filter((item) => {
-      // Cash is only relevant while a shift is open
-      if (item.href === '/(app)/cash' && !isShiftOpen) return false;
       // Permission gate
       if (item.permission && !can(item.permission)) return false;
       return true;
     });
-  }, [navItems, isShiftOpen, can]);
+  }, [navItems, can]);
 
   const initials = user?.name
     ? user.name

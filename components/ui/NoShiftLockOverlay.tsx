@@ -1,3 +1,4 @@
+// Deprecated: shifts are auto-managed; UI no longer blocks on shift state.
 import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 

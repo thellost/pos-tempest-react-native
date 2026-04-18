@@ -37,7 +37,11 @@ interface UseOrderOptions {
   orderId?: string | null;
   orderType?: 'dine-in' | 'takeaway';
   menuItems?: MenuItemWithInventory[];
-  /** When false, adding items and confirming orders is blocked */
+  /**
+   * @deprecated Shifts are auto-managed and never block order actions.
+   * Kept for backward compatibility; treated as informational only.
+   * Defaults to `true`.
+   */
   isShiftOpen?: boolean;
   shiftId?: number | null;
 }
@@ -227,7 +231,6 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     notes: string
   ) => {
     if (!user) return;
-    if (!isShiftOpen) return; // Blocked by UI overlay; this is a defence layer
 
     const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
     const basePrice = weight ? item.price * weight : item.price;
@@ -331,7 +334,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         }];
       });
     }
-  }, [order, user, currentRound, reload, isShiftOpen]);
+  }, [order, user, currentRound, reload]);
 
   // Update item quantity
   const updateQuantity = useCallback(async (itemId: number | string, qty: number) => {
@@ -503,11 +506,6 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const confirmOrderCallback = useCallback(async () => {
     if (!user || cartItems.length === 0) return;
 
-    if (!isShiftOpen) {
-      Alert.alert('No Active Shift', 'Please open a shift before confirming orders.');
-      return;
-    }
-
     try {
       const newOrder = await createOrder(
         user.branch_id,
@@ -546,16 +544,11 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       captureError(error, { module: 'order', operation: 'confirmOrder', level: 'error' });
       throw error;
     }
-  }, [user, cartItems, tableId, orderType, guestCount, menuItems, isShiftOpen, shiftId]);
+  }, [user, cartItems, tableId, orderType, guestCount, menuItems, shiftId]);
 
   // Confirm round (pending → confirmed)
   const confirmRound = useCallback(async () => {
     if (!order || pendingRoundItems.length === 0) return;
-
-    if (!isShiftOpen) {
-      Alert.alert('No Active Shift', 'Please open a shift before adding new rounds.');
-      return;
-    }
 
     try {
       const orderIdNum = order.id;
@@ -592,17 +585,12 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       captureError(error, { module: 'order', operation: 'confirmRound', level: 'error' });
       throw error;
     }
-  }, [order, pendingRoundItems, currentRound, menuItems, reload, isShiftOpen, user]);
+  }, [order, pendingRoundItems, currentRound, menuItems, reload, user]);
 
   // Cancel order (soft cancel only, never deletes)
   const cancelOrder = useCallback(async (reason = 'Cancelled from POS') => {
     if (!order || !user) {
       Alert.alert('Cancel Order', 'No active order to cancel.');
-      return;
-    }
-
-    if (!isShiftOpen) {
-      Alert.alert('No Active Shift', 'Please open a shift before cancelling orders.');
       return;
     }
 
@@ -623,7 +611,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       captureError(error, { module: 'order', operation: 'cancelOrder', level: 'error' });
       throw error;
     }
-  }, [order, user, isShiftOpen]);
+  }, [order, user]);
 
   // Cancel round (clear pending items)
   const cancelRound = useCallback(() => {

@@ -1,7 +1,7 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { AlertTriangle, ArrowRightLeft, UtensilsCrossed, X } from 'lucide-react-native';
+import { ArrowRightLeft, UtensilsCrossed, X } from 'lucide-react-native';
 
 import { Button, IconButton, SelectButton } from '@/components/ui';
 import { ThemeColors } from '@/constants/theme';
@@ -37,7 +37,10 @@ interface OrderPanelProps {
   onPrintBill: () => void;
   /** Called when the user wants to move the order to a different table */
   onMoveTable?: () => void;
-  /** When false, shows no-shift warning banner and disables action buttons */
+  /**
+   * @deprecated Shifts are auto-managed and never block order actions.
+   * Kept for interface stability; treated as informational only. Defaults to `true`.
+   */
   isShiftOpen?: boolean;
   /** Optionally assigned customer for this order */
   assignedCustomer?: AssignedCustomer | null;
@@ -87,7 +90,7 @@ export const OrderPanel = memo(function OrderPanel({
   const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
   const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
   const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
-  const showConfirmButton = !isConfirmed && hasItems && isShiftOpen;
+  const showConfirmButton = !isConfirmed && hasItems;
 
   // Which round to print — defaults to latest round, user can select older rounds.
   const [printRound, setPrintRound] = useState(currentRound);
@@ -294,7 +297,6 @@ export const OrderPanel = memo(function OrderPanel({
             assignedCustomer={assignedCustomer}
             onAssign={onAssignCustomer}
             onClear={onClearCustomer}
-            disabled={!isShiftOpen}
             onSetGuestName={onSetGuestName}
           />
         )}
@@ -315,7 +317,6 @@ export const OrderPanel = memo(function OrderPanel({
             <IconButton
               size="sm"
               onPress={onClearGuestName}
-              disabled={!isShiftOpen}
               className="ml-1 rounded-full bg-brand/20"
             >
               <X size={10} color={ThemeColors.accent.primary} />
@@ -346,19 +347,6 @@ export const OrderPanel = memo(function OrderPanel({
           </View>
         )}
       </View>
-
-      {/* No-shift warning banner */}
-      {!isShiftOpen && (
-        <View
-          className="flex-row items-center gap-2 border-b border-border px-4 py-2"
-          style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)' }}
-        >
-          <AlertTriangle size={14} color={ThemeColors.warning.DEFAULT} />
-          <Text className="text-pos-xs font-semibold text-pos-warning">
-            No active shift — open a shift to create or modify orders
-          </Text>
-        </View>
-      )}
 
       <ScrollView
         className="flex-1 px-3"
@@ -431,7 +419,6 @@ export const OrderPanel = memo(function OrderPanel({
         onConfirmRound={onConfirmRound}
         onCancelRound={onCancelRound}
         onPrintBill={onPrintBill}
-        isShiftOpen={isShiftOpen}
       />
     </View>
   );

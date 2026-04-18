@@ -4,9 +4,10 @@ import { Button } from '@/components/ui';
 import { PermissionGate } from '@/components/ui/PermissionGate';
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { PERMISSION } from '@/constants/permissions';
+import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
 import { formatIDR } from '@/utils/currency';
-import { Redirect } from 'expo-router';
+import { Banknote } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
@@ -23,6 +24,7 @@ function formatTimestamp(value: string | null): string {
 
 export default function CashScreen() {
   const { activeShift, summary, cashTransactions, addCashTransaction, loading } = useShift();
+  const { registration } = useDevice();
   const [showCashTxModal, setShowCashTxModal] = useState(false);
 
   if (loading) {
@@ -34,7 +36,40 @@ export default function CashScreen() {
   }
 
   if (!activeShift) {
-    return <Redirect href="/(app)/shifts" />;
+    const branch = registration?.branch ?? null;
+    const hasHours = !!(branch?.opening_time && branch?.closing_time);
+    return (
+      <View className="flex-1 bg-surface">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          <View className="rounded-sm border border-border bg-surface-card p-5">
+            <Text className="text-pos-2xl font-bold text-pos-text">Cash Management</Text>
+          </View>
+
+          <View className="mt-6 items-center justify-center px-4 py-12">
+            <View className="w-full max-w-md items-center rounded-sm border border-border bg-surface-card p-8">
+              <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-surface">
+                <Banknote size={32} color="#94a3b8" />
+              </View>
+              <Text className="text-pos-xl font-bold text-pos-text">No active shift</Text>
+              <Text className="mt-3 text-center text-pos-sm text-pos-text-muted">
+                Cash transactions are tied to an active shift. The branch is outside operating hours,
+                or the scheduler hasn&apos;t opened today&apos;s shift yet.
+              </Text>
+              {hasHours && (
+                <Text className="mt-4 text-center text-pos-xs text-pos-text-muted">
+                  <Text className="font-mono">
+                    {branch!.opening_time} – {branch!.closing_time}
+                  </Text>
+                  {branch!.timezone ? ` (${branch!.timezone})` : ''}
+                </Text>
+              )}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
   }
 
   async function handleCashTransaction(

@@ -199,10 +199,6 @@ export default function AppLayout() {
         </View>
       );
     }
-
-    if (requiresShift && !isShiftOpen && !onShiftScreen) {
-      return <Redirect href="/(app)/shifts" />;
-    }
   }
 
   return (
@@ -246,7 +242,7 @@ export default function AppLayout() {
               <Stack.Screen name="device-setup"       options={{ title: 'Device Setup' }} />
             </Stack>
           </View>
-          <BottomTabBar isShiftOpen={isShiftOpen} />
+          <BottomTabBar />
         </View>
       ) : (
         /* Tablet layout: icon rail on left + content on right */
@@ -258,7 +254,6 @@ export default function AppLayout() {
             onNavigate={(href) => router.push(href as Parameters<typeof router.push>[0])}
             user={user}
             userRole={user?.role_name?.toLowerCase() ?? ''}
-            isShiftOpen={isShiftOpen}
             onLock={lock}
             onSignOut={signOut}
           />

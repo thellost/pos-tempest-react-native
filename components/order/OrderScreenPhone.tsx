@@ -264,7 +264,6 @@ export function OrderScreenPhone({
                       quantitiesByMenuItemId={quantitiesByMenuItemId}
                       onItemPress={onMenuItemPress}
                       onDecrementItem={onMenuItemDecrement}
-                      disabled={!isShiftOpen}
                     />
                   </PerfProfiler>
                 </Animated.View>

@@ -41,7 +41,7 @@ export default function FloorScreen() {
     getOrderElapsedMinutes: getTakeawayElapsedMinutes,
   } = useTakeaway();
 
-  const { isShiftOpen, loading: shiftLoading } = useShift();
+  const { loading: shiftLoading } = useShift();
 
   const { getReservationsForTable, formatReservationTime } = useReservations();
 
@@ -63,19 +63,6 @@ export default function FloorScreen() {
       return;
     }
 
-    // Block creating a new order when no shift is open
-    if (!activeOrderId && !isShiftOpen) {
-      Alert.alert(
-        'No Active Shift',
-        'You need to open a shift before creating new orders.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Shift', onPress: () => router.push('/(app)/shifts') },
-        ]
-      );
-      return;
-    }
-
     if (activeOrderId) {
       router.push({
         pathname: '/(app)/order/[tableId]',
@@ -90,17 +77,6 @@ export default function FloorScreen() {
   };
 
   const handleTakeawayPress = () => {
-    if (!isShiftOpen) {
-      Alert.alert(
-        'No Active Shift',
-        'You need to open a shift before creating new orders.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Shift', onPress: () => router.push('/(app)/shifts') },
-        ]
-      );
-      return;
-    }
     router.push('/(app)/order/takeaway');
   };
 

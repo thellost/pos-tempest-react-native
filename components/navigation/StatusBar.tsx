@@ -75,10 +75,10 @@ export function AppStatusBar({
           </Text>
         </View>
 
-        {/* RIGHT — shift status dot */}
+        {/* RIGHT — auto-shift status dot */}
         <View className="items-center justify-center" style={{ flexShrink: 0 }}>
           <View
-            className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-danger'}`}
+            className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-text-muted'}`}
           />
         </View>
       </View>
@@ -113,14 +113,14 @@ export function AppStatusBar({
         </Text>
       </View>
 
-      {/* RIGHT — shift, orders, device */}
+      {/* RIGHT — auto-shift, orders, device */}
       <View className="flex-row items-center gap-2" style={{ flexShrink: 1 }}>
         <View className="flex-row items-center gap-1.5" style={{ flexShrink: 0 }}>
           <View
-            className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-danger'}`}
+            className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-text-muted'}`}
           />
           <Text className="text-pos-sm text-pos-text-muted">
-            {isShiftOpen ? 'Shift: Open' : 'No Shift'}
+            {isShiftOpen ? 'Auto-shift: Open' : 'Auto-shift: Pending'}
           </Text>
         </View>
 

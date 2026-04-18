@@ -25,7 +25,6 @@ import type { LucideIcon } from 'lucide-react-native';
 import type { UserRow } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useShift } from '@/hooks/use-shift';
 import { PERMISSION } from '@/constants/permissions';
 import type { Permission } from '@/constants/permissions';
 import { ThemeColors } from '@/constants/theme';
@@ -125,7 +124,6 @@ export function SideDrawer({
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const pathname = usePathname();
   const { registration } = useDevice();
-  const { isShiftOpen } = useShift();
   const { can } = usePermissions();
 
   const visibleMainNav = useMemo(
@@ -135,13 +133,13 @@ export function SideDrawer({
 
   const visibleSystemNav = useMemo(() => {
     const base = SYSTEM_NAV.filter((item) => !item.permission || can(item.permission));
-    if (isShiftOpen && can(PERMISSION.CASH_MANAGEMENT)) {
+    if (can(PERMISSION.CASH_MANAGEMENT)) {
       const shiftIndex = base.findIndex((i) => i.href === '/(app)/shifts');
       const insertAt = shiftIndex >= 0 ? shiftIndex + 1 : base.length;
       base.splice(insertAt, 0, { label: 'Cash', icon: Banknote, href: '/(app)/cash', permission: PERMISSION.CASH_MANAGEMENT });
     }
     return base;
-  }, [isShiftOpen, can]);
+  }, [can]);
 
   // Animate open / close
   useEffect(() => {

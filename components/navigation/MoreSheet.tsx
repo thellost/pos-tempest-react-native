@@ -46,10 +46,9 @@ const MORE_ITEMS: NavItem[] = [
 interface MoreSheetProps {
   visible: boolean;
   onClose: () => void;
-  isShiftOpen: boolean;
 }
 
-export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
+export function MoreSheet({ visible, onClose }: MoreSheetProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut, lock } = useAuth();
@@ -83,11 +82,10 @@ export function MoreSheet({ visible, onClose, isShiftOpen }: MoreSheetProps) {
   const visibleItems = useMemo(
     () =>
       MORE_ITEMS.filter((item) => {
-        if (item.href === '/(app)/cash' && !isShiftOpen) return false;
         if (item.permission && !can(item.permission)) return false;
         return true;
       }),
-    [isShiftOpen, can],
+    [can],
   );
 
   return (

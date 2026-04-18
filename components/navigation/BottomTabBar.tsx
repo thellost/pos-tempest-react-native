@@ -119,11 +119,7 @@ function MoreTabButton({ onPress, colors }: MoreTabButtonProps) {
   );
 }
 
-interface BottomTabBarProps {
-  isShiftOpen: boolean;
-}
-
-export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
+export function BottomTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -168,7 +164,6 @@ export function BottomTabBar({ isShiftOpen }: BottomTabBarProps) {
       <MoreSheet
         visible={moreVisible}
         onClose={() => setMoreVisible(false)}
-        isShiftOpen={isShiftOpen}
       />
     </>
   );
