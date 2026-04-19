@@ -7,10 +7,12 @@ import { PrinterSection } from '@/components/settings/PrinterSection';
 import { Button, SelectButton } from '@/components/ui';
 import { PermissionGate } from '@/components/ui/PermissionGate';
 import { PERMISSION } from '@/constants/permissions';
+import { Config } from '@/constants/config';
 import { Brand } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useConfig } from '@/hooks/use-config';
 import { useDevice } from '@/hooks/use-device';
+import { updateBranchRoundingPrecision } from '@/services/branch.service';
 import { usePrinter } from '@/hooks/use-printer';
 import Constants from 'expo-constants';
 import {
@@ -25,7 +27,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, Text, UIManager, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, UIManager, View } from 'react-native';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -44,6 +46,27 @@ export default function SettingsScreen() {
   } = usePrinter();
 
   const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
+  const [roundingPrecision, setRoundingPrecision] = useState<number>(
+    (registration?.branch?.rounding_precision as number) ?? Config.DEFAULT_ROUNDING_PRECISION,
+  );
+  const [savingRounding, setSavingRounding] = useState(false);
+
+  async function handleRoundingChange(value: number) {
+    const branchId = registration?.branch?.id;
+    if (!branchId) return;
+    setRoundingPrecision(value);
+    setSavingRounding(true);
+    try {
+      await updateBranchRoundingPrecision(branchId as number, value);
+    } catch {
+      Alert.alert('Error', 'Failed to update rounding precision');
+      setRoundingPrecision(
+        (registration?.branch?.rounding_precision as number) ?? Config.DEFAULT_ROUNDING_PRECISION,
+      );
+    } finally {
+      setSavingRounding(false);
+    }
+  }
 
   const handleResetDevice= () => {
     Alert.alert(
@@ -263,6 +286,39 @@ export default function SettingsScreen() {
               updateConfig={updateConfig}
               resetConfig={resetConfig}
             />
+          </View>
+          <View className="mt-3 overflow-hidden rounded-xl border border-border bg-surface">
+            <View className="px-3.5 pb-1.5 pt-3">
+              <Text className="text-pos-xs font-semibold uppercase tracking-widest text-pos-text-faint">
+                Rounding
+              </Text>
+              <Text className="mt-0.5 text-pos-xs text-pos-text-faint" numberOfLines={2}>
+                Order totals are rounded to the nearest value
+              </Text>
+            </View>
+            <RowDivider />
+            <View className="flex-row items-center gap-2 px-3.5 py-2.5">
+              {Config.ROUNDING_PRECISION_OPTIONS.map((opt) => {
+                const active = roundingPrecision === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => handleRoundingChange(opt.value)}
+                    disabled={savingRounding}
+                    className={`flex-1 items-center rounded-lg border py-2 ${
+                      active ? 'border-brand bg-brand' : 'border-border bg-surface-raised'
+                    }`}
+                    style={savingRounding ? { opacity: 0.5 } : undefined}
+                  >
+                    <Text
+                      className={`text-pos-xs font-bold ${active ? 'text-white' : 'text-pos-text-muted'}`}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
           {overrideCount > 0 && (
             <Button

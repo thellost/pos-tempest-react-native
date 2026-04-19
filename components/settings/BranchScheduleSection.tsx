@@ -1,5 +1,6 @@
-import type { Branch } from '@/db/models';
 import { Text, View } from 'react-native';
+
+import type { Branch } from '@/db/models';
 import { InfoRow, RowDivider } from './primitives';
 
 interface BranchScheduleSectionProps {
