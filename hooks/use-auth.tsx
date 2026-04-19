@@ -67,7 +67,31 @@ type AuthContextValue = {
   refreshProfile: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AUTH_LOADING_SENTINEL: AuthContextValue = {
+  loading: true,
+  profileLoading: false,
+  session: null,
+  authUser: null,
+  user: null,
+  isAuthenticated: false,
+  isLocked: false,
+  idleTimeoutMs: 0,
+  loginAttempts: 0,
+  pinAttempts: 0,
+  isLoginLocked: false,
+  isPinLocked: false,
+  loginResetInMs: 0,
+  pinResetInMs: 0,
+  setIdleTimeoutMs: () => {},
+  signIn: () => Promise.resolve(),
+  signOut: () => Promise.resolve(),
+  unlockWithPin: () => Promise.resolve({ success: false, isLocked: false, remainingAttempts: 0, resetInMs: 0 }),
+  lock: () => {},
+  markActivity: () => {},
+  refreshProfile: () => Promise.resolve(),
+};
+
+const AuthContext = createContext<AuthContextValue>(AUTH_LOADING_SENTINEL);
 
 async function fetchUserProfile(supabaseAuthId?: string): Promise<UserRow | null> {
   if (!supabaseAuthId) {
@@ -728,11 +752,5 @@ export function AuthProvider({ children }: PropsWithChildren) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-
-  return context;
+  return useContext(AuthContext);
 }

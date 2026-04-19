@@ -27,6 +27,7 @@ export interface Purchase {
   subtotal: number;
   tax_amount: number;
   total: number;
+  paid_amount: number;
   ordered_by: number;
   ordered_by_name: string;
   ordered_at: string;
@@ -94,8 +95,11 @@ export function usePurchases() {
     return created;
   }, []);
 
-  const receivePurchase = useCallback(async (id: number, notes?: string): Promise<Purchase> => {
-    const updated = await api.post<Purchase>(`/api/v1/purchases/${id}/receive`, { notes: notes ?? '' });
+  const receivePurchase = useCallback(async (id: number, paidAmount: number, notes?: string): Promise<Purchase> => {
+    const updated = await api.post<Purchase>(`/api/v1/purchases/${id}/receive`, {
+      paid_amount: paidAmount,
+      notes: notes ?? '',
+    });
     setPurchases((prev) => prev.map((p) => (p.id === id ? updated : p)));
     return updated;
   }, []);

@@ -330,6 +330,7 @@ export const appSchema = new Schema({
 		subtotal: column.real,
 		tax_amount: column.real,
 		total: column.real,
+		paid_amount: column.real,
 		status: column.text,
 		notes: column.text,
 		ordered_at: column.text,
