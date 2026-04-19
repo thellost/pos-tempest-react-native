@@ -8,7 +8,7 @@ import { ChevronDown, ChevronLeft, ChevronUp, ShoppingBag } from 'lucide-react-n
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-export type OrderRow = Order & { table_number: string | null; branch_name: string | null; tax_rate: number; service_charge_rate: number };
+export type OrderRow = Order & { table_number: string | null; branch_name: string | null; tax_rate: number; service_charge_rate: number; rounding_precision: number | null; waiter_name: string | null };
 export interface OrderItemRow extends OrderItem { modifiers: OrderItemModifier[] }
 
 interface Props {

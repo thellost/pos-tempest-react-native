@@ -74,6 +74,17 @@ export const Config = {
   /** Timezone */
   TIMEZONE: 'Asia/Jakarta',
 
+  /** Default rounding precision for order totals (1=exact, 10=tens, 100=hundreds, 1000=thousands) */
+  DEFAULT_ROUNDING_PRECISION: 1000,
+
+  /** Available rounding precision options for the settings UI */
+  ROUNDING_PRECISION_OPTIONS: [
+    { value: 1, label: 'Exact' },
+    { value: 10, label: '10' },
+    { value: 100, label: '100' },
+    { value: 1000, label: '1.000' },
+  ] as readonly { value: number; label: string }[],
+
   // ============================================================================
   // NETWORK
   // ============================================================================

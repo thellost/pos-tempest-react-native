@@ -55,10 +55,11 @@ function CheckoutContent({
   const { isPhone } = useLayout();
 
   const { data: orderRows } = useQuery<OrderRow>(
-    `SELECT o.*, t.table_number, b.name AS branch_name, b.tax_rate, b.service_charge_rate
+    `SELECT o.*, t.table_number, b.name AS branch_name, b.tax_rate, b.service_charge_rate, b.rounding_precision, w.name AS waiter_name
      FROM orders o
      LEFT JOIN tables t ON o.table_id = t.id
      LEFT JOIN branches b ON o.branch_id = b.id
+     LEFT JOIN users w ON o.waiter_id = w.id
      WHERE o.id = ?`,
     [orderId],
   );

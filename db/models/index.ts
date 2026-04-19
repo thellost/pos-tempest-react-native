@@ -76,6 +76,8 @@ export interface Branch {
 	closing_time: string;
 	/** When true the Go scheduler manages shift open/close automatically */
 	auto_shift: boolean;
+	/** Rounding unit for order totals (1=exact, 10=tens, 100=hundreds, 1000=thousands) */
+	rounding_precision: number | null;
 	created_at: Timestamp;
 	updated_at: Timestamp;
 }
@@ -239,6 +241,7 @@ export interface Order {
 	branch_id: EntityId;
 	table_id: EntityId | null;
 	cashier_id: EntityId;
+	waiter_id: EntityId | null;
 	customer_id: EntityId | null;
 	customer_name: string | null;
 	shift_id: EntityId | null;

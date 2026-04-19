@@ -23,3 +23,23 @@ export async function updateBranchSchedule(
     throw new Error('Failed to save branch schedule.');
   }
 }
+
+/**
+ * Updates the rounding precision for a branch.
+ * @param branchId - The branch ID to update
+ * @param precision - Rounding unit (1=exact, 10=tens, 100=hundreds, 1000=thousands)
+ */
+export async function updateBranchRoundingPrecision(
+  branchId: number,
+  precision: number,
+): Promise<void> {
+  try {
+    await powersync.execute(
+      `UPDATE branches SET rounding_precision = ?, updated_at = ? WHERE id = ?`,
+      [precision, new Date().toISOString(), branchId],
+    );
+  } catch (error) {
+    console.error('[BranchService] Failed to update rounding precision:', error);
+    throw new Error('Failed to save rounding precision.');
+  }
+}

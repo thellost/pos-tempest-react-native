@@ -364,7 +364,7 @@ CREATE TABLE "orders" (
   "order_number" varchar(30) UNIQUE NOT NULL,
   "branch_id" integer NOT NULL,
   "table_id" integer,
-  "cashier_id" integer NOT NULL,
+  "cashier_id" integer NOT NULL,`r`n  "waiter_id" integer,
   "customer_id" integer,
   "customer_name" varchar(150),
   "shift_id" integer,
@@ -983,6 +983,8 @@ ALTER TABLE "orders" ADD FOREIGN KEY ("customer_id") REFERENCES "customers" ("id
 ALTER TABLE "orders" ADD FOREIGN KEY ("shift_id") REFERENCES "shifts" ("id") ON DELETE SET NULL;
 
 ALTER TABLE "orders" ADD FOREIGN KEY ("voided_by") REFERENCES "users" ("id") ON DELETE SET NULL;
+
+ALTER TABLE "orders" ADD FOREIGN KEY ("waiter_id") REFERENCES "users" ("id");
 
 ALTER TABLE "order_items" ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
 

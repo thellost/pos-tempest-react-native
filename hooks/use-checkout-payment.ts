@@ -2,10 +2,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import type { PaymentMethodType } from '@/constants/enums';
 import { PAYMENT_METHOD_TYPE } from '@/constants/enums';
+import { Config } from '@/constants/config';
 import type { PendingPayment } from '@/components/payment/SplitPayment';
 import { generateLocalId } from '@/components/order/types';
 
-export function useCheckoutPayment(orderTotal: number) {
+export function useCheckoutPayment(orderTotal: number, roundingPrecision?: number) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType>(PAYMENT_METHOD_TYPE.CASH);
   const [cashInput, setCashInput] = useState('');
   const [referenceInput, setReferenceInput] = useState('');
@@ -31,9 +32,14 @@ export function useCheckoutPayment(orderTotal: number) {
     setReferenceInput('');
   }, []);
 
+  const precision = roundingPrecision ?? Config.DEFAULT_ROUNDING_PRECISION;
   const onCashExact = useCallback(() => {
-    setCashInput((Math.ceil(remainingBalance / 100) * 100).toString());
-  }, [remainingBalance]);
+    if (precision <= 1) {
+      setCashInput(Math.ceil(remainingBalance).toString());
+    } else {
+      setCashInput((Math.ceil(remainingBalance / precision) * precision).toString());
+    }
+  }, [remainingBalance, precision]);
 
   const onAddPayment = useCallback(() => {
     const amount = isCash ? parseFloat(cashInput) || 0 : remainingBalance;

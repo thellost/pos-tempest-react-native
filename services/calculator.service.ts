@@ -1,3 +1,4 @@
+import { Config } from '@/constants/config';
 import { DISCOUNT_TYPE } from '@/constants/enums';
 import type { Discount, OrderItem } from '@/db/models';
 
@@ -89,22 +90,19 @@ export function calculateServiceCharge(
 }
 
 /**
- * Calculates Indonesian rounding to the nearest 100 IDR.
- * Standard practice in Indonesian restaurants.
- *
- * Examples:
- *   - 45,250 → roundingAmount = +50, roundedTotal = 45,300
- *   - 45,350 → roundingAmount = -50, roundedTotal = 45,300 (wait, nearest 100 = 45,400)
- *   - 45,349 → roundingAmount = +51, roundedTotal = 45,400 (nearest 100)
+ * Calculates rounding to the nearest precision unit.
+ * Default is 1000 (nearest thousand IDR). Set to 1 for no rounding.
  *
  * @param total - The total before rounding
+ * @param precision - Rounding unit (1 = exact, 10 = tens, 100 = hundreds, 1000 = thousands)
  * @returns Object with `roundingAmount` (can be negative) and `roundedTotal`
  */
-export function calculateRounding(total: number): {
+export function calculateRounding(total: number, precision: number = Config.DEFAULT_ROUNDING_PRECISION): {
   roundingAmount: number;
   roundedTotal: number;
 } {
-  const roundedTotal = Math.round(total / 100) * 100;
+  if (precision <= 1) return { roundingAmount: 0, roundedTotal: total };
+  const roundedTotal = Math.round(total / precision) * precision;
   const roundingAmount = roundedTotal - total;
   return { roundingAmount, roundedTotal };
 }

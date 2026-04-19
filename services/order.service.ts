@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import { Config } from '@/constants/config';
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
@@ -51,7 +52,8 @@ export async function createOrder(
   shiftId: number | null,
   orderType: string,
   guestCount: number | null,
-  customerName: string | null = null
+  customerName: string | null = null,
+  waiterId: number | null = null
 ): Promise<Order> {
   return startSpan({ name: 'order.create', op: 'db.powersync' }, async () => {
   const now = new Date().toISOString();
@@ -76,16 +78,17 @@ export async function createOrder(
 
   await powersync.execute(
     `INSERT INTO orders (
-      id, order_number, branch_id, table_id, cashier_id, customer_id, customer_name, shift_id,
+      id, order_number, branch_id, table_id, cashier_id, waiter_id, customer_id, customer_name, shift_id,
       order_type, status, guest_count, subtotal, discount_amount, tax_amount,
       service_charge, rounding_amount, total, payment_status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       newId,
       orderNumber,
       branchId,
       tableId,
       cashierId,
+      waiterId,
       null,
       customerName,
       shiftId,
@@ -588,8 +591,8 @@ export async function calculateOrderTotals(orderId: string): Promise<void> {
   const subtotalAfterDiscount = subtotal - discountAmount;
 
   // Get the branch for tax and service charge rates
-  const branch = await powersync.getOptional<{ tax_rate: number; service_charge_rate: number }>(
-    `SELECT tax_rate, service_charge_rate FROM branches WHERE id = ?`,
+  const branch = await powersync.getOptional<{ tax_rate: number; service_charge_rate: number; rounding_precision: number | null }>(
+    `SELECT tax_rate, service_charge_rate, rounding_precision FROM branches WHERE id = ?`,
     [order.branch_id]
   );
 
@@ -620,8 +623,9 @@ export async function calculateOrderTotals(orderId: string): Promise<void> {
   // Calculate total before rounding
   const totalBeforeRounding = subtotalAfterDiscount + taxAmount + serviceCharge;
 
-  // Round to nearest 100 IDR (Indonesian practice)
-  const roundingAmount = Math.round(totalBeforeRounding / 100) * 100 - totalBeforeRounding;
+  // Round to nearest precision unit (default 1000 for IDR)
+  const roundingPrecision = branch.rounding_precision ?? Config.DEFAULT_ROUNDING_PRECISION;
+  const roundingAmount = Math.round(totalBeforeRounding / roundingPrecision) * roundingPrecision - totalBeforeRounding;
   const total = totalBeforeRounding + roundingAmount;
 
   // Update order
