@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
-import { Clock, ShoppingBag, Users } from 'lucide-react-native';
+import { Clock, Printer, ShoppingBag, UtensilsCrossed, Users } from 'lucide-react-native';
 
+import { ORDER_STATUS } from '@/constants/enums';
 import type { DailyOrderRow } from '@/hooks/use-daily-orders';
 import { ThemeColors } from '@/constants/theme';
 import { formatIDR } from '@/utils/currency';
@@ -26,12 +27,17 @@ const PAYMENT_CONFIG: Record<string, { label: string; color: string; bg: string 
 interface OrderRowProps {
   order: DailyOrderRow;
   onPress: () => void;
+  onPrintReceipt?: (orderId: string) => void;
+  onPrintKOT?: (orderId: string) => void;
 }
 
-export function OrderRow({ order, onPress }: OrderRowProps) {
+export function OrderRow({ order, onPress, onPrintReceipt, onPrintKOT }: OrderRowProps) {
   const status = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
   const payment = PAYMENT_CONFIG[order.payment_status] ?? PAYMENT_CONFIG.unpaid;
   const isTakeaway = order.order_type === 'takeaway';
+  const isCancelled = order.status === ORDER_STATUS.CANCELLED;
+  const KOT_STATUSES: string[] = [ORDER_STATUS.PREPARING, ORDER_STATUS.READY, ORDER_STATUS.SERVED, ORDER_STATUS.COMPLETED];
+  const hasKOTs = KOT_STATUSES.includes(order.status);
 
   return (
     <Pressable
@@ -113,6 +119,36 @@ export function OrderRow({ order, onPress }: OrderRowProps) {
           {formatIDR(typeof order.total === 'number' ? order.total : parseFloat(String(order.total)) || 0)}
         </Text>
       </View>
+
+      {/* Print action buttons */}
+      {(!isCancelled && (onPrintReceipt || onPrintKOT)) && (
+        <View className="mt-2 flex-row items-center gap-2 border-t border-border pt-2">
+          {onPrintReceipt && !isCancelled && (
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); onPrintReceipt(String(order.id)); }}
+              className="flex-row items-center gap-1.5 rounded-lg px-3 py-1.5 active:opacity-70"
+              style={{ backgroundColor: ThemeColors.accent.primaryMuted }}
+            >
+              <Printer size={12} color={ThemeColors.accent.primary} />
+              <Text className="text-[11px] font-semibold" style={{ color: ThemeColors.accent.primary }}>
+                Receipt
+              </Text>
+            </Pressable>
+          )}
+          {onPrintKOT && hasKOTs && (
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); onPrintKOT(String(order.id)); }}
+              className="flex-row items-center gap-1.5 rounded-lg px-3 py-1.5 active:opacity-70"
+              style={{ backgroundColor: ThemeColors.warning.muted }}
+            >
+              <UtensilsCrossed size={12} color={ThemeColors.warning.DEFAULT} />
+              <Text className="text-[11px] font-semibold" style={{ color: ThemeColors.warning.DEFAULT }}>
+                KOT
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }

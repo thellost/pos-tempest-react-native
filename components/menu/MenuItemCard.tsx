@@ -102,7 +102,7 @@ function MenuItemCardComponent({
           >
             {quantity > 9 ? '9+' : quantity}
           </Text>
-          <Text className="text-[20px] font-light leading-none text-pos-muted">−</Text>
+          <Text className="text-[20px] font-bold leading-none text-pos-danger">−</Text>
         </Pressable>
       ) : (
         /* Faint + hint: tapping the right side also adds */
@@ -112,7 +112,7 @@ function MenuItemCardComponent({
           className="w-9 items-center justify-center active:opacity-50"
           style={{ borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.07)' }}
         >
-          <Text className="text-[18px] font-thin leading-none text-pos-text-faint opacity-30">+</Text>
+          <Text className="text-[18px] font-medium leading-none text-pos-text-muted">+</Text>
         </Pressable>
       )}
     </View>

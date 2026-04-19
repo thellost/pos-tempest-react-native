@@ -13,6 +13,7 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PowerSyncProvider } from '@/components/powersync-provider';
+import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { ThemeColors } from '@/constants/theme';
 import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -131,6 +132,7 @@ function ThemedApp() {
           <AuthProvider>
             <DeviceProvider>
               <ThemeProvider value={DefaultTheme}>
+                <UpdateBanner />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="index" />
                   <Stack.Screen name="(tabs)" />

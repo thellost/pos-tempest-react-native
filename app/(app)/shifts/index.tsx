@@ -66,7 +66,7 @@ export default function ShiftsScreen() {
     <ScrollView className="flex-1 bg-surface" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       {/* Header card */}
       <View className="rounded-sm border border-border bg-surface-card p-5">
-        <Text className="text-pos-2xl font-bold text-pos-text">Shift Management</Text>
+        <Text className="text-pos-2xl font-bold text-pos-text">Cash Management</Text>
         <Text className="mt-2 text-pos-sm text-pos-text-muted">
           {user?.name ?? 'User'} · Branch {user?.branch_id ?? '-'}
         </Text>

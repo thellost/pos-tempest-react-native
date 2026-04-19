@@ -90,16 +90,16 @@ export function AppStatusBar({
       className="flex-row items-center border-b border-border bg-surface-card px-4"
       style={{ paddingTop: insets.top, minHeight: 44 + insets.top }}>
       {/* LEFT — user info */}
-      <View className="flex-row items-center gap-2" style={{ flexShrink: 0 }}>
+      <View className="shrink flex-row items-center gap-2">
         <View className="h-7 w-7 items-center justify-center rounded-full bg-accent" style={{ flexShrink: 0 }}>
           <Text className="text-[11px] font-bold text-white">{initials}</Text>
         </View>
-        <Text className="text-pos-sm font-medium text-pos-text" numberOfLines={1} style={{ maxWidth: 120 }}>
+        <Text className="shrink text-pos-sm font-medium text-pos-text" numberOfLines={1}>
           {user?.name ?? 'Unknown'}
         </Text>
         {user?.role_name ? (
-          <View className="rounded bg-accent-muted px-2 py-0.5" style={{ flexShrink: 0 }}>
-            <Text className="text-[10px] font-semibold uppercase tracking-wider text-accent">
+          <View className="shrink-0 rounded bg-accent-muted px-2 py-0.5">
+            <Text className="text-[10px] font-semibold uppercase tracking-wider text-accent" numberOfLines={1}>
               {user.role_name}
             </Text>
           </View>
@@ -107,37 +107,36 @@ export function AppStatusBar({
       </View>
 
       {/* CENTER — clock */}
-      <View className="flex-1 items-center">
+      <View className="shrink-0 items-center px-2">
         <Text className="font-mono text-pos-base font-bold text-pos-text-muted">
           {time}
         </Text>
       </View>
 
       {/* RIGHT — auto-shift, orders, device */}
-      <View className="flex-row items-center gap-2" style={{ flexShrink: 1 }}>
-        <View className="flex-row items-center gap-1.5" style={{ flexShrink: 0 }}>
+      <View className="shrink flex-row items-center justify-end gap-2">
+        <View className="shrink-0 flex-row items-center gap-1.5">
           <View
             className={`h-2.5 w-2.5 rounded-full ${isShiftOpen ? 'bg-pos-success' : 'bg-pos-text-muted'}`}
           />
-          <Text className="text-pos-sm text-pos-text-muted">
-            {isShiftOpen ? 'Auto-shift: Open' : 'Auto-shift: Pending'}
+          <Text className="text-pos-sm text-pos-text-muted" numberOfLines={1}>
+            {isShiftOpen ? 'Shift: Open' : 'Shift: Pending'}
           </Text>
         </View>
 
-        <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>|</Text>
+        <Text className="shrink-0 text-pos-sm text-pos-text-faint">|</Text>
 
-        <Text className="font-mono text-pos-sm font-bold text-pos-text" style={{ flexShrink: 0 }}>
+        <Text className="shrink-0 font-mono text-pos-sm font-bold text-pos-text">
           {activeOrdersCount}
         </Text>
-        <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>orders</Text>
+        <Text className="shrink-0 text-pos-sm text-pos-text-faint">orders</Text>
 
         {(deviceName || branchName) && (
           <>
-            <Text className="text-pos-sm text-pos-text-faint" style={{ flexShrink: 0 }}>|</Text>
+            <Text className="shrink-0 text-pos-sm text-pos-text-faint">|</Text>
             <Text
-              className="text-pos-sm text-pos-text-faint"
+              className="shrink text-pos-sm text-pos-text-faint"
               numberOfLines={1}
-              style={{ flexShrink: 1 }}
             >
               {[deviceName, branchName].filter(Boolean).join(' · ')}
             </Text>

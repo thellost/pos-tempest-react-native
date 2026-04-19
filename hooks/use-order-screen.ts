@@ -244,23 +244,25 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     if (order?.id) {
       try {
         await setGuestNameOnOrder(order.id, name);
+        await reload();
       } catch (err) {
         console.error(`[${screenLabel}] setGuestNameOnOrder error:`, err);
       }
     }
     setGuestNameState(name);
-  }, [order, screenLabel]);
+  }, [order, screenLabel, reload]);
 
   const handleClearGuestName = useCallback(async () => {
     if (order?.id) {
       try {
         await setGuestNameOnOrder(order.id, null);
+        await reload();
       } catch (err) {
         console.error(`[${screenLabel}] clearGuestName error:`, err);
       }
     }
     setGuestNameState(null);
-  }, [order, screenLabel]);
+  }, [order, screenLabel, reload]);
 
   const handleSelectCategory = useCallback((categoryId: number) => {
     setSelectedCategoryId(categoryId);

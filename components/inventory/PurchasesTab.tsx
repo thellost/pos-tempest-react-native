@@ -75,21 +75,20 @@ export function PurchasesTab() {
 
       <View className="border-b border-border bg-surface-card" style={{ height: 44 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}>
-          {PURCHASE_STATUS_TABS.map((tab) => (
-            <Pressable
-              key={tab.key}
-              onPress={() => setStatusFilter(tab.key)}
-              className="rounded-sm px-4 py-1"
-              style={{ backgroundColor: statusFilter === tab.key ? ThemeColors.accent.primary : ThemeColors.surfaces.raised }}
-            >
-              <Text
-                className="text-pos-xs font-bold"
-                style={{ color: statusFilter === tab.key ? ThemeColors.text.strong : ThemeColors.text.muted }}
+          {PURCHASE_STATUS_TABS.map((tab) => {
+            const active = statusFilter === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setStatusFilter(tab.key)}
+                className={`rounded-sm px-4 py-1 ${active ? 'bg-brand' : 'bg-surface-raised border border-border'}`}
               >
-                {tab.label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text className={`text-pos-xs font-bold ${active ? 'text-white' : 'text-pos-text-muted'}`}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
 

@@ -24,8 +24,10 @@ export interface AssignedCustomer {
 
 interface CustomerPickerRowProps {
   assignedCustomer: AssignedCustomer | null;
+  guestName?: string | null;
   onAssign: (customer: AssignedCustomer) => void;
   onClear: () => void;
+  onClearGuestName?: () => void;
   disabled?: boolean;
   onSetGuestName?: (name: string) => void;
 }
@@ -39,8 +41,10 @@ interface CustomerPickerRowProps {
  */
 export function CustomerPickerRow({
   assignedCustomer,
+  guestName,
   onAssign,
   onClear,
+  onClearGuestName,
   disabled = false,
   onSetGuestName,
 }: CustomerPickerRowProps) {
@@ -97,6 +101,29 @@ export function CustomerPickerRow({
             <IconButton
               size="sm"
               onPress={onClear}
+              disabled={disabled}
+              className="ml-1 rounded-full bg-brand/20"
+            >
+              <X size={10} color={ThemeColors.accent.primary} />
+            </IconButton>
+          </View>
+        ) : guestName ? (
+          /* Guest name is set — show guest chip + clear button */
+          <View className="flex-1 flex-row items-center gap-2 rounded-lg bg-brand/10 px-3 py-2">
+            <View className="h-6 w-6 items-center justify-center rounded-full bg-brand/30">
+              <Text className="text-[10px] font-bold text-brand">
+                {guestName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-pos-xs font-semibold text-brand" numberOfLines={1}>
+                {guestName}
+              </Text>
+              <Text className="text-[10px] text-pos-text-muted">Guest</Text>
+            </View>
+            <IconButton
+              size="sm"
+              onPress={onClearGuestName}
               disabled={disabled}
               className="ml-1 rounded-full bg-brand/20"
             >

@@ -1,12 +1,16 @@
 import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { ClipboardList, Search, X } from 'lucide-react-native';
 
 import { OrderRow } from '@/components/daily-orders/OrderRow';
-import { ORDER_STATUS } from '@/constants/enums';
+import { ORDER_STATUS, ORDER_TYPE, PAYMENT_STATUS } from '@/constants/enums';
 import type { OrderStatus } from '@/constants/enums';
 import { ThemeColors } from '@/constants/theme';
 import { useDailyOrders } from '@/hooks/use-daily-orders';
+import { printBill, printKOT } from '@/lib/printer';
+import { getKOTsForOrder } from '@/services/kitchen.service';
+import { getBillData } from '@/services/receipt.service';
 import { formatIDR } from '@/utils/currency';
 import { getAppDateString } from '@/utils/date';
 
@@ -39,6 +43,64 @@ export default function DailyOrdersScreen() {
       params: { orderId: String(order.id), viewOnly: '1' },
     });
   };
+
+  const handlePrintReceipt = useCallback(async (orderId: string) => {
+    try {
+      const order = orders.find((o) => String(o.id) === orderId);
+      if (!order) return;
+      if (order.status === ORDER_STATUS.CANCELLED) {
+        Alert.alert('Cannot Print', 'Cancelled orders cannot be reprinted.');
+        return;
+      }
+      const includePayments = order.payment_status === PAYMENT_STATUS.PAID;
+      const billData = await getBillData(orderId, includePayments);
+      await printBill('cashier', billData);
+      Alert.alert('Printed', `Receipt for ${order.order_number} sent to printer.`);
+    } catch (error) {
+      console.error('[DailyOrders] Receipt reprint error:', error);
+      Alert.alert('Print Error', error instanceof Error ? error.message : 'Failed to print receipt.');
+    }
+  }, [orders]);
+
+  const handlePrintKOT = useCallback(async (orderId: string) => {
+    try {
+      const order = orders.find((o) => String(o.id) === orderId);
+      if (!order) return;
+      if (order.status === ORDER_STATUS.CANCELLED) {
+        Alert.alert('Cannot Print', 'Cancelled orders cannot be reprinted.');
+        return;
+      }
+      const kots = await getKOTsForOrder(orderId);
+      if (kots.length === 0) {
+        Alert.alert('No KOTs', 'This order has no kitchen tickets to reprint.');
+        return;
+      }
+      const isTakeaway = order.order_type === ORDER_TYPE.TAKEAWAY;
+      for (const kot of kots) {
+        await printKOT('kitchen', {
+          ticketNumber: kot.ticket_number,
+          orderNumber: kot.order_number,
+          roundNumber: kot.round_number,
+          tableLabel: kot.table_number ?? 'N/A',
+          customerName: kot.customer_name,
+          time: new Date(kot.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          isTakeaway,
+          items: kot.items.map((item) => ({
+            name: item.menu_item_name,
+            quantity: item.quantity,
+            unitOfMeasure: item.unit_of_measure,
+            weight: item.weight,
+            modifiers: item.modifier_names,
+            notes: item.notes,
+          })),
+        });
+      }
+      Alert.alert('Printed', `${kots.length} KOT(s) for ${order.order_number} sent to printer.`);
+    } catch (error) {
+      console.error('[DailyOrders] KOT reprint error:', error);
+      Alert.alert('Print Error', error instanceof Error ? error.message : 'Failed to print KOTs.');
+    }
+  }, [orders]);
 
   if (isLoading) {
     return (
@@ -170,6 +232,8 @@ export default function DailyOrdersScreen() {
               key={String(order.id)}
               order={order}
               onPress={() => handleOrderPress(order)}
+              onPrintReceipt={handlePrintReceipt}
+              onPrintKOT={handlePrintKOT}
             />
           ))
         )}

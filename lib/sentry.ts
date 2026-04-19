@@ -40,7 +40,8 @@ export type BreadcrumbCategory =
   | 'shift'
   | 'customer'
   | 'network'
-  | 'print';
+  | 'print'
+  | 'ota';
 
 export function addBreadcrumb(
   category: BreadcrumbCategory,

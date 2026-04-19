@@ -48,6 +48,25 @@ const STORAGE_KEY = Config.STORAGE_KEY_PRINTER_SETTINGS;
 
 const DEFAULT_PAPER_WIDTH: PaperWidth = 80;
 
+// ── Per-address print queue ───────────────────────────────────────────────────
+// Bluetooth Classic can only have one active connection per MAC at a time.
+// This mutex serializes all send() calls to the same printer address so
+// concurrent printBill / printKOT calls don't race for the socket.
+
+const _printQueue = new Map<string, Promise<void>>();
+
+function enqueue(address: string, job: () => Promise<void>): Promise<void> {
+  const key = address.toUpperCase();
+  const prev = _printQueue.get(key) ?? Promise.resolve();
+  const next = prev.then(job, job);
+  _printQueue.set(key, next);
+  // Clean up map entry when the chain settles
+  next.finally(() => {
+    if (_printQueue.get(key) === next) _printQueue.delete(key);
+  });
+  return next;
+}
+
 const DEFAULTS: PrinterSettings = {
   kitchenPrinter: null,
   cashierPrinter: null,
@@ -404,8 +423,10 @@ export async function printKOT(
     return;
   }
   try {
-    await new BluetoothTransport(cfg.address).send(
-      buildKOTBytes({ ...params, paperWidth: cfg.paperWidth }),
+    await enqueue(cfg.address, () =>
+      new BluetoothTransport(cfg.address).send(
+        buildKOTBytes({ ...params, paperWidth: cfg.paperWidth }),
+      ),
     );
     addBreadcrumb('print', 'KOT printed', {
       type,
@@ -433,8 +454,10 @@ export async function printBill(
     return;
   }
   try {
-    await new BluetoothTransport(cfg.address).send(
-      buildBillBytes({ ...params, paperWidth: cfg.paperWidth }),
+    await enqueue(cfg.address, () =>
+      new BluetoothTransport(cfg.address).send(
+        buildBillBytes({ ...params, paperWidth: cfg.paperWidth }),
+      ),
     );
     addBreadcrumb('print', 'Bill printed', {
       type,
@@ -465,7 +488,9 @@ export async function sendToPrinter(
   try {
     const profile = getProfile(cfg.paperWidth);
     const bytes = new CommandBuilder(profile).init().text(data).cut().build();
-    await new BluetoothTransport(cfg.address).send(bytes);
+    await enqueue(cfg.address, () =>
+      new BluetoothTransport(cfg.address).send(bytes),
+    );
     addBreadcrumb('print', 'Raw print sent', { type, address: cfg.address });
   } catch (err) {
     captureError(err, {
@@ -514,7 +539,9 @@ export async function printTestPage(type: PrinterType): Promise<void> {
     header(),
   ], { profile });
   try {
-    await new BluetoothTransport(cfg.address).send(bytes);
+    await enqueue(cfg.address, () =>
+      new BluetoothTransport(cfg.address).send(bytes),
+    );
     addBreadcrumb('print', 'Test print sent', { type, address: cfg.address });
   } catch (err) {
     captureError(err, { module: 'printer', operation: 'printTestPage', extras: { type, address: cfg.address } });
@@ -531,7 +558,9 @@ export async function openCashDrawer(): Promise<void> {
   try {
     // ESC p — cash drawer pulse; no init needed (avoids paper advance)
     const bytes = new CommandBuilder(GENERIC_PROFILE_80).cashDrawer().build();
-    await new BluetoothTransport(cfg.address).send(bytes);
+    await enqueue(cfg.address, () =>
+      new BluetoothTransport(cfg.address).send(bytes),
+    );
     addBreadcrumb('print', 'Cash drawer opened', { address: cfg.address });
   } catch (err) {
     captureError(err, {

@@ -39,7 +39,7 @@ const MORE_ITEMS: NavItem[] = [
   { label: 'Reservations', icon: CalendarDays,    href: '/(app)/reservations', permission: PERMISSION.VIEW_RESERVATIONS },
   { label: 'Daily Orders', icon: ClipboardList,   href: '/(app)/daily-orders', permission: PERMISSION.VIEW_REPORTS },
   { label: 'Kitchen',      icon: ChefHat,         href: '/(app)/kitchen' },
-  { label: 'Shifts',       icon: DollarSign,      href: '/(app)/shifts',       permission: PERMISSION.MANAGE_SHIFT },
+  { label: 'Cash',         icon: DollarSign,      href: '/(app)/shifts',       permission: PERMISSION.MANAGE_SHIFT },
   { label: 'Settings',     icon: Settings,        href: '/(app)/settings',     permission: PERMISSION.BASIC_SETTINGS },
 ];
 

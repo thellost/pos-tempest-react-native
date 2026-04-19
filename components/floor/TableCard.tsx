@@ -73,13 +73,13 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
       {/* Row 2: Order info / reservation / action */}
       <View className="mt-1">
         {isOccupied && table.active_order_id ? (
-          <View className="flex-row items-center justify-between">
-            <Text className="font-mono text-pos-xs text-pos-text-muted" numberOfLines={1}>
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="shrink font-mono text-pos-xs text-pos-text-muted" numberOfLines={1}>
               {table.active_order_number}
             </Text>
             {elapsedMinutes > 0 && (
               <Text
-                className={`font-mono text-pos-xs font-bold ${
+                className={`shrink-0 font-mono text-pos-xs font-bold ${
                   elapsedMinutes > 90
                     ? 'text-pos-danger'
                     : elapsedMinutes > 60
@@ -94,12 +94,12 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
             )}
           </View>
         ) : isReserved ? (
-          <View className="flex-row items-center justify-between">
-            <Text className="text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="shrink text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
               {reservationName || 'Reserved'}
             </Text>
             {reservationTime ? (
-              <Text className="font-mono text-pos-xs text-pos-text-muted">{reservationTime}</Text>
+              <Text className="shrink-0 font-mono text-pos-xs text-pos-text-muted">{reservationTime}</Text>
             ) : null}
           </View>
         ) : isMaintenance ? (

@@ -8,6 +8,14 @@
     "scheme": "postempest",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ad9be6c4-6431-4d7d-9b10-576e43e830d5",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -55,7 +63,8 @@
           "organization": "zidanid"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true,

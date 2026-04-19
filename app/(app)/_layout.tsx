@@ -233,7 +233,7 @@ export default function AppLayout() {
               <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
               <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
               <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
-              <Stack.Screen name="shifts/index"       options={{ title: 'Shifts' }} />
+              <Stack.Screen name="shifts/index"       options={{ title: 'Cash Management' }} />
               <Stack.Screen name="cash/index"         options={{ title: 'Cash Management' }} />
               <Stack.Screen name="inventory/index"    options={{ title: 'Inventory' }} />
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />
@@ -275,7 +275,7 @@ export default function AppLayout() {
               <Stack.Screen name="kitchen/index"      options={{ title: 'Kitchen Display' }} />
               <Stack.Screen name="checkout/[orderId]" options={{ title: 'Checkout' }} />
               <Stack.Screen name="settings/index"     options={{ title: 'Settings' }} />
-              <Stack.Screen name="shifts/index"       options={{ title: 'Shifts' }} />
+              <Stack.Screen name="shifts/index"       options={{ title: 'Cash Management' }} />
               <Stack.Screen name="cash/index"         options={{ title: 'Cash Management' }} />
               <Stack.Screen name="inventory/index"    options={{ title: 'Inventory' }} />
               <Stack.Screen name="daily-orders/index" options={{ title: 'Daily Orders' }} />

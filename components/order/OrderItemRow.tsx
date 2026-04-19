@@ -76,7 +76,7 @@ export function OrderItemRow({
   ), []);
 
   return (
-    <View className={`overflow-hidden ${item.is_voided ? 'opacity-50' : locked ? 'opacity-70' : ''}`}>
+    <View className={`mb-1.5 overflow-hidden rounded-sm ${item.is_voided ? 'opacity-50' : locked ? 'opacity-70' : ''}`}>
       <Swipeable
         ref={(ref) => {
           swipeableRef.current = ref;
@@ -88,11 +88,10 @@ export function OrderItemRow({
         overshootRight={false}
         leftThreshold={40}
         rightThreshold={40}
-        containerStyle={{ overflow: 'hidden' }}
       >
         <Pressable
           onPress={isDisabled ? undefined : () => onEditModifiers(itemId)}
-          className={`mb-1.5 overflow-hidden rounded-sm bg-surface-card px-2.5 py-2 ${isDisabled ? '' : 'active:opacity-90'}`}
+          className={`overflow-hidden bg-surface-card px-2.5 py-2 ${isDisabled ? '' : 'active:opacity-90'}`}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-1 pr-1">
@@ -119,9 +118,9 @@ export function OrderItemRow({
                 <IconButton
                   size={iconSize}
                   onPress={() => onUpdateQuantity(itemId, displayQuantity - 1)}
-                  className="bg-surface-raised"
+                  className="bg-pos-danger/15"
                 >
-                  <Text className="text-[11px] text-pos-text">−</Text>
+                  <Text className="text-[11px] font-bold text-pos-danger">−</Text>
                 </IconButton>
                 <Text className="min-w-[14px] text-center font-mono text-[11px] font-semibold text-pos-text">
                   {displayQuantity}

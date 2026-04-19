@@ -51,7 +51,7 @@ const MAIN_NAV: NavItem[] = [
 ];
 
 const SYSTEM_NAV: NavItem[] = [
-  { label: 'Shift',     icon: DollarSign, href: '/(app)/shifts',   permission: PERMISSION.MANAGE_SHIFT },
+  { label: 'Cash',      icon: DollarSign, href: '/(app)/shifts',   permission: PERMISSION.MANAGE_SHIFT },
   { label: 'Settings',  icon: Settings,   href: '/(app)/settings', permission: PERMISSION.BASIC_SETTINGS },
   { label: 'Dashboard', icon: Monitor,    href: '/(tabs)/explore' },
 ];
