@@ -33,6 +33,7 @@ export interface KOTWithItems {
   order_number: string;
   order_type: string;
   customer_name: string | null;
+  waiter_name: string | null;
   created_at: string;
   items: KOTItemDetail[];
 }
@@ -61,10 +62,13 @@ export async function createKOT(
     order_type: string;
     customer_name: string | null;
     table_number: string | null;
+    waiter_name: string | null;
   }>(
-    `SELECT o.order_number, o.order_type, o.customer_name, t.table_number
+    `SELECT o.order_number, o.order_type, o.customer_name, t.table_number,
+            w.name AS waiter_name
      FROM orders o
      LEFT JOIN tables t ON t.id = o.table_id
+     LEFT JOIN users w ON w.id = o.waiter_id
      WHERE o.id = ?`,
     [orderId]
   );
@@ -206,6 +210,7 @@ export async function createKOT(
     order_number: orderRow.order_number,
     order_type: orderRow.order_type,
     customer_name: orderRow.customer_name ?? null,
+    waiter_name: orderRow.waiter_name ?? null,
     created_at: now,
     items: itemDetails,
   };
@@ -299,13 +304,16 @@ export async function getKOTsForOrder(
     order_number: string;
     order_type: string;
     customer_name: string | null;
+    waiter_name: string | null;
   }>(
     `SELECT kot.id, kot.ticket_number, kot.status, kot.priority,
             kot.round_number, kot.created_at, t.table_number,
-            o.order_number, o.order_type, o.customer_name
+            o.order_number, o.order_type, o.customer_name,
+            w.name AS waiter_name
      FROM kitchen_order_tickets kot
      JOIN orders o ON o.id = kot.order_id
      LEFT JOIN tables t ON t.id = o.table_id
+     LEFT JOIN users w ON w.id = o.waiter_id
      WHERE kot.order_id = ?
      ORDER BY kot.round_number ASC`,
     [orderId]
@@ -325,6 +333,7 @@ export async function getKOTsForOrder(
         order_number: row.order_number,
         order_type: row.order_type,
         customer_name: row.customer_name ?? null,
+        waiter_name: row.waiter_name ?? null,
         created_at: row.created_at,
         items: await _getKOTItems(kotId),
       };

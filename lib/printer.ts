@@ -160,6 +160,7 @@ export function formatKOT(params: {
   roundNumber: number;
   tableLabel: string;
   customerName?: string | null;
+  waiterName?: string | null;
   time: string;
   isTakeaway: boolean;
   items: Array<{
@@ -187,6 +188,7 @@ export function formatKOT(params: {
     `Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}`,
   ];
   if (params.customerName) lines.push(`Guest : ${params.customerName}`);
+  if (params.waiterName) lines.push(`Waiter: ${params.waiterName}`);
   lines.push(L);
 
   for (const item of params.items) {
@@ -252,7 +254,7 @@ export function formatBill(params: {
     H,
     `Order : ${params.orderNumber}`,
     `Table : ${params.tableLabel}`,
-    `Staff : ${params.cashierName}`,
+    `Waiter: ${params.cashierName}`,
     `Time  : ${formatReceiptDate(params.printedAt)}`,
   );
   if (params.customerName) lines.push(`Guest : ${params.customerName}`);
@@ -312,6 +314,7 @@ function buildKOTBytes(params: Parameters<typeof formatKOT>[0]): Uint8Array {
     text(`Type  : ${params.isTakeaway ? 'Takeaway' : 'Dine-in'}`),
   ];
   if (params.customerName) els.push(text(`Guest : ${params.customerName}`));
+  if (params.waiterName) els.push(text(`Waiter: ${params.waiterName}`));
   els.push(divider());
 
   for (const item of params.items) {
@@ -350,7 +353,7 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     header(),
     text(`Order : ${params.orderNumber}`),
     text(`Table : ${params.tableLabel}`),
-    text(`Staff : ${params.cashierName}`),
+    text(`Waiter: ${params.cashierName}`),
     text(`Time  : ${formatReceiptDate(params.printedAt)}`),
   );
   if (params.customerName) els.push(text(`Guest : ${params.customerName}`));

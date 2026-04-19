@@ -61,6 +61,7 @@ type OrderBillRow = {
   customer_name: string | null;
   table_number: string | null;
   cashier_name: string | null;
+  waiter_name: string | null;
   branch_name: string | null;
   branch_address: string | null;
   branch_phone: string | null;
@@ -114,6 +115,7 @@ export async function getBillData(
        o.created_at,
        t.table_number,
        u.name AS cashier_name,
+       w.name AS waiter_name,
        b.name AS branch_name,
        b.address AS branch_address,
        b.phone AS branch_phone,
@@ -122,6 +124,7 @@ export async function getBillData(
      FROM orders o
      LEFT JOIN tables t ON o.table_id = t.id
      LEFT JOIN users u ON o.cashier_id = u.id
+     LEFT JOIN users w ON o.waiter_id = w.id
      LEFT JOIN branches b ON o.branch_id = b.id
      WHERE o.id = ?`,
     [orderId],
@@ -190,7 +193,7 @@ export async function getBillData(
     orderNumber: orderRow.order_number,
     orderType: orderRow.order_type,
     tableLabel,
-    cashierName: orderRow.cashier_name || 'Staff',
+    cashierName: orderRow.waiter_name || orderRow.cashier_name || 'Staff',
     printedAt: new Date().toISOString(),
     customerName: orderRow.customer_name || null,
     items,

@@ -510,10 +510,12 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       const newOrder = await createOrder(
         user.branch_id,
         tableId,
-        user.id,
+        user.id,              // cashier_id
         shiftId,
         orderType === 'takeaway' ? ORDER_TYPE.TAKEAWAY : ORDER_TYPE.DINE_IN,
-        guestCount || 0
+        guestCount || 0,
+        null,                 // customerName
+        user.id,              // waiterId — the user creating the order is the waiter
       );
 
       const orderIdNum = newOrder.id;
@@ -648,6 +650,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
           ? 'Takeaway'
           : kot.table_number ? `Table ${kot.table_number}` : 'N/A',
         customerName: kot.customer_name ?? null,
+        waiterName:   kot.waiter_name ?? null,
         time:        new Date(kot.created_at).toLocaleString('id-ID'),
         isTakeaway:  kot.order_type === ORDER_TYPE.TAKEAWAY,
         items:       kot.items.map(item => ({
