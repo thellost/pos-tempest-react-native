@@ -188,6 +188,9 @@ List all branches with pagination.
       "currency": "IDR",
       "timezone": "Asia/Jakarta",
       "is_active": true,
+      "opening_time": "08:00",
+      "closing_time": "22:00",
+      "auto_shift": true,
       "created_at": "2026-01-15T08:00:00Z",
       "updated_at": "2026-02-20T10:30:00Z"
     },
@@ -201,6 +204,9 @@ List all branches with pagination.
       "currency": "IDR",
       "timezone": "Asia/Jakarta",
       "is_active": true,
+      "opening_time": "09:00",
+      "closing_time": "23:00",
+      "auto_shift": true,
       "created_at": "2026-01-20T09:00:00Z",
       "updated_at": "2026-01-20T09:00:00Z"
     }
@@ -242,6 +248,9 @@ Get a single branch by ID.
     "currency": "IDR",
     "timezone": "Asia/Jakarta",
     "is_active": true,
+    "opening_time": "08:00",
+    "closing_time": "22:00",
+    "auto_shift": true,
     "created_at": "2026-01-15T08:00:00Z",
     "updated_at": "2026-02-20T10:30:00Z"
   }
@@ -276,7 +285,10 @@ Create a new branch.
   "tax_rate": 11.00,
   "service_charge_rate": 5.00,
   "currency": "IDR",
-  "timezone": "Asia/Jakarta"
+  "timezone": "Asia/Jakarta",
+  "opening_time": "08:00",
+  "closing_time": "22:00",
+  "auto_shift": true
 }
 ```
 
@@ -289,6 +301,9 @@ Create a new branch.
 | `service_charge_rate` | float | ❌ | 0–100 |
 | `currency` | string | ❌ | max 3 chars (defaults to `IDR`) |
 | `timezone` | string | ❌ | defaults to `Asia/Jakarta` |
+| `opening_time` | string | ❌ | HH:MM 24h (defaults to `08:00`), used by auto-shift scheduler |
+| `closing_time` | string | ❌ | HH:MM 24h (defaults to `22:00`), used by auto-shift scheduler |
+| `auto_shift` | bool | ❌ | defaults to `true`; when true the scheduler auto-opens/closes shifts |
 
 **Response `201 Created`:**
 ```json
@@ -304,6 +319,9 @@ Create a new branch.
     "currency": "IDR",
     "timezone": "Asia/Jakarta",
     "is_active": true,
+    "opening_time": "08:00",
+    "closing_time": "22:00",
+    "auto_shift": true,
     "created_at": "2026-03-03T14:00:00Z",
     "updated_at": "2026-03-03T14:00:00Z"
   }
@@ -336,6 +354,9 @@ Update a branch. Only send fields you want to change.
 | `currency` | string | ❌ | max 3 chars |
 | `timezone` | string | ❌ | — |
 | `is_active` | bool | ❌ | — |
+| `opening_time` | string | ❌ | HH:MM 24h |
+| `closing_time` | string | ❌ | HH:MM 24h |
+| `auto_shift` | bool | ❌ | enable/disable scheduler for this branch |
 
 **Response `200 OK`:**
 ```json
@@ -351,6 +372,9 @@ Update a branch. Only send fields you want to change.
     "currency": "IDR",
     "timezone": "Asia/Jakarta",
     "is_active": true,
+    "opening_time": "08:00",
+    "closing_time": "22:00",
+    "auto_shift": true,
     "created_at": "2026-01-15T08:00:00Z",
     "updated_at": "2026-03-03T14:30:00Z"
   }
