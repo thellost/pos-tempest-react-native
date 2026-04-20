@@ -114,6 +114,29 @@ async function applyCrudOperation(op: CrudOp) {
 		return;
 	}
 
+	// shifts: legacy pre-device_id shifts have device_id = null and will violate the NOT NULL
+	// constraint on the Supabase shifts table. Skip PUTs with a null device_id and strip null
+	// device_id from PATCHes so these stale records don't block the sync queue.
+	if (target.table === 'shifts') {
+		if (op.op === 'PUT') {
+			const payload = op.opData ?? {};
+			if (payload.device_id == null) {
+				console.warn(`[PowerSync upload] Skipping legacy pre-device_id shift PUT (${tableRef}#${rowId})`);
+				return;
+			}
+		}
+		if (op.op === 'PATCH') {
+			const patch = { ...(op.opData ?? {}) };
+			if ('device_id' in patch && patch.device_id == null) {
+				delete patch.device_id;
+			}
+			if (Object.keys(patch).length === 0) return;
+			const { error } = await schemaClient.from(target.table).update(patch as never).eq('id', rowId);
+			if (error) throw new Error(`[PowerSync upload] PATCH failed for ${tableRef}#${rowId}: ${error.message}`);
+			return;
+		}
+	}
+
 	if (op.op === 'PUT') {
 		const payload = { id: rowId, ...(op.opData ?? {}) };
 		const { error } = await schemaClient.from(target.table).upsert(payload as never, { onConflict: 'id' });

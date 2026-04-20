@@ -222,6 +222,14 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
     throw new Error('[ShiftService] Permission denied: manage_shift required');
   }
 
+  if (deviceId === null) {
+    if (!system) {
+      throw new Error('[ShiftService] Cannot open shift without a device ID');
+    } else {
+      console.warn('[ShiftService] openShift called with null deviceId (system=true) — shift will have no device_id');
+    }
+  }
+
   return startSpan({ name: 'shift.open', op: 'db.powersync' }, async () => {
   if (!Number.isFinite(openingCash) || openingCash < 0) {
     throw new Error('Opening cash must be a valid positive amount');
@@ -468,6 +476,10 @@ export async function ensureShiftForNow(
 
   const tz = branch.timezone ?? TZ_FALLBACK;
   if (!isWithinOperatingWindow(opening, closing, tz)) return null;
+
+  if (deviceId === null) {
+    console.warn('[ShiftService] ensureShiftForNow: deviceId is null, shift will have no device_id');
+  }
 
   try {
     return await openShift('', userId, branchId, 0, deviceId, true);

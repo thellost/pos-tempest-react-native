@@ -89,6 +89,10 @@ export function useShift(): UseShiftReturn {
         const rawDeviceId = registration?.device?.id ?? null;
         const deviceId = rawDeviceId !== null ? Number(rawDeviceId) : null;
 
+        if (deviceId === null) {
+          console.warn('[useShift] deviceId is null — shift will have no device_id');
+        }
+
         try {
           await autoCloseStaleShifts(autoBranch);
         } catch (err) {
