@@ -12,5 +12,11 @@ config.resolver.blockList = [
   ...(Array.isArray(config.resolver.blockList) ? config.resolver.blockList : []),
   /node_modules\/@op-engineering\/op-sqlite\/node\/.*/,
 ];
+// Shim better-sqlite3 so static rendering (expo-router SSR) never hard-fails
+// when Metro walks the op-sqlite node/ build in the web/node platform bundle.
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules ?? {}),
+  'better-sqlite3': require.resolve('./shims/better-sqlite3.js'),
+};
  
 module.exports = withNativeWind(config, { input: './global.css' })
