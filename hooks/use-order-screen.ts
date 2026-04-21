@@ -363,11 +363,23 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = toInt(item.id);
     if (order) {
-      const matchingItems = orderItems.filter(
-        (oi) => toInt(oi.menu_item_id) === menuItemId && !oi.is_voided
+      // Prefer locally-staged pending-round items (not yet persisted) — always editable.
+      const pendingMatches = pendingRoundItems.filter((pi) => pi.menu_item_id === menuItemId);
+      if (pendingMatches.length > 0) {
+        const target = pendingMatches[pendingMatches.length - 1];
+        await updateQuantity(target.id, target.quantity - 1);
+        return;
+      }
+      // Otherwise fall back to persisted items, but only those in rounds that have NOT
+      // yet been sent to the kitchen. Once a round is sent/confirmed it's locked.
+      const editableMatches = orderItems.filter(
+        (oi) =>
+          toInt(oi.menu_item_id) === menuItemId &&
+          !oi.is_voided &&
+          !roundSentAt.has(oi.round_number || 1)
       );
-      if (matchingItems.length === 0) return;
-      const target = matchingItems.slice().sort((a, b) => toInt(b.id) - toInt(a.id))[0];
+      if (editableMatches.length === 0) return;
+      const target = editableMatches.slice().sort((a, b) => toInt(b.id) - toInt(a.id))[0];
       await updateQuantity(toInt(target.id), toInt(target.quantity) - 1);
     } else {
       const matchingItems = cartItems.filter((ci) => ci.menu_item_id === menuItemId);
@@ -375,7 +387,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       const target = matchingItems[matchingItems.length - 1];
       await updateQuantity(target.id, target.quantity - 1);
     }
-  }, [order, orderItems, cartItems, updateQuantity]);
+  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, updateQuantity]);
 
   const handleGuestCountChange = useCallback((count: number) => {
     if (orderType !== 'takeaway') setGuestCount(count);
@@ -394,6 +406,10 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     if (order) {
       orderItems.forEach((oi) => {
         if (oi.is_voided) return;
+        // Items in rounds that have already been sent to the kitchen are locked
+        // and cannot be decremented from the menu grid — exclude from the badge so
+        // users don't see a count they can't act on.
+        if (roundSentAt.has(oi.round_number || 1)) return;
         const id = toInt(oi.menu_item_id);
         result[id] = (result[id] || 0) + toInt(oi.quantity);
       });
@@ -411,7 +427,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       itemCount: order ? orderItems.length : cartItems.length,
     });
     return result;
-  }, [order, orderItems, cartItems, pendingRoundItems, orderType]);
+  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, orderType]);
 
   const allMenuItems = useMemo(() => {
     const start = nowMs();

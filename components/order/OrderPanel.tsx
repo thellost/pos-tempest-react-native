@@ -193,7 +193,7 @@ export const OrderPanel = memo(function OrderPanel({
                 onUpdateQuantity={onUpdateQuantity}
                 onEditModifiers={onEditModifiers}
                 onRemove={onRemoveItem}
-                locked={round < currentRound}
+                locked={round < currentRound || roundSentAt.has(round)}
               />
             ))}
           </Fragment>
