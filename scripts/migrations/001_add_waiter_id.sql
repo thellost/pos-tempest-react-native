@@ -2,7 +2,7 @@
 -- Description: Tracks which staff member (waiter) took the order, separate from cashier.
 -- The waiter_id is nullable since older orders won't have this field.
 -- For backward compatibility, existing orders are backfilled with their cashier_id.
-
+SET search_path TO pos_tempest;
 -- Step 1: Add the column
 ALTER TABLE "orders" ADD COLUMN "waiter_id" integer;
 

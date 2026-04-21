@@ -4,9 +4,11 @@ import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/cons
 import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
-import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
+import { addBreadcrumb, captureError, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
 import { deductStockForItems } from '@/services/inventory.service';
+import { getActiveShift, openShift } from '@/services/shift.service';
+import { isWithinOperatingWindow, TZ_FALLBACK } from '@/utils/branch-schedule';
 import { generateOrderNumber } from '@/utils/order-number';
 import { toInt } from '@/utils/coerce';
 
@@ -72,6 +74,60 @@ export async function createOrder(
     }
   }
 
+  // Safeguard: if no shiftId was provided, resolve or auto-open one.
+  // This prevents orders with null shift_id which would orphan revenue from
+  // any shift report. Auto-creation triggers a Sentry warning for visibility.
+  let resolvedShiftId: number | null = shiftId;
+
+  if (resolvedShiftId == null) {
+    const active = await getActiveShift(branchId);
+    if (active) {
+      resolvedShiftId = active.id;
+      captureMessage('Order created without shiftId — recovered from active shift', 'warning', {
+        branchId, cashierId, tableId, recoveredShiftId: active.id,
+      });
+    } else {
+      type BranchRow = {
+        id: number | string;
+        auto_shift: number | null;
+        timezone: string | null;
+        opening_time: string | null;
+        closing_time: string | null;
+      };
+      const branchRow = await powersync.getOptional<BranchRow>(
+        `SELECT id, auto_shift, timezone, opening_time, closing_time FROM branches WHERE id = ? LIMIT 1`,
+        [branchId],
+      );
+      const autoShift = Number(branchRow?.auto_shift ?? 0) === 1;
+      const opening = branchRow?.opening_time ?? '';
+      const closing = branchRow?.closing_time ?? '';
+      const tz = branchRow?.timezone ?? TZ_FALLBACK;
+
+      if (autoShift && opening && closing && isWithinOperatingWindow(opening, closing, tz)) {
+        try {
+          const opened = await openShift('', cashierId, branchId, 0, null, true);
+          resolvedShiftId = opened.id;
+          captureMessage('Order created without shiftId — auto-opened new shift', 'warning', {
+            branchId, cashierId, tableId, autoOpenedShiftId: opened.id,
+          });
+        } catch (err) {
+          captureError(err, {
+            module: 'order',
+            operation: 'createOrder.autoOpenShift',
+            level: 'error',
+            extras: { branchId, cashierId, tableId },
+          });
+          throw new Error('Cannot create order: no active shift and auto-open failed');
+        }
+      } else {
+        captureMessage('Order creation blocked — no active shift', 'error', {
+          branchId, cashierId, tableId, autoShift, opening, closing,
+        });
+        throw new Error('Cannot create order without an open shift');
+      }
+    }
+  }
+
   const orderNumber = await generateOrderNumber();
 
   const newId = Crypto.randomUUID();
@@ -91,7 +147,7 @@ export async function createOrder(
       waiterId,
       null,
       customerName,
-      shiftId,
+      resolvedShiftId,
       orderType,
       ORDER_STATUS.PENDING,
       guestCount,
@@ -129,11 +185,11 @@ export async function createOrder(
     recordId: order.id,
     userId: cashierId,
     branchId: branchId,
-    newValues: { order_number: orderNumber, order_type: orderType, table_id: tableId, shift_id: shiftId },
+    newValues: { order_number: orderNumber, order_type: orderType, table_id: tableId, shift_id: resolvedShiftId },
     description: `Order created: ${orderNumber}`,
   });
 
-  addBreadcrumb('order', 'Order created', { orderId: newId, orderNumber, tableId, orderType });
+  addBreadcrumb('order', 'Order created', { orderId: newId, orderNumber, tableId, orderType, shiftId: resolvedShiftId });
   console.log('[OrderService] Created order:', orderNumber);
   return order;
   }); // end order.create span
