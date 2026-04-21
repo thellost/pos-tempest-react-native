@@ -413,11 +413,12 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
         const id = toInt(oi.menu_item_id);
         result[id] = (result[id] || 0) + toInt(oi.quantity);
       });
-      if (orderType === 'dine-in') {
-        pendingRoundItems.forEach((pi) => {
-          result[pi.menu_item_id] = (result[pi.menu_item_id] || 0) + pi.quantity;
-        });
-      }
+      // Pending round items can exist for both dine-in AND takeaway once the order
+      // is CONFIRMED/PREPARING (see use-order.ts addItemToOrderHandler), so always
+      // include them — otherwise the menu badge desyncs from handleMenuItemDecrement.
+      pendingRoundItems.forEach((pi) => {
+        result[pi.menu_item_id] = (result[pi.menu_item_id] || 0) + pi.quantity;
+      });
     } else {
       cartItems.forEach((ci) => {
         result[ci.menu_item_id] = (result[ci.menu_item_id] || 0) + ci.quantity;
