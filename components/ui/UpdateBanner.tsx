@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowDownToLine, RefreshCw, X } from 'lucide-react-native';
 
 import { useOtaUpdate } from '@/hooks/use-ota-update';
@@ -12,11 +13,18 @@ import { useOtaUpdate } from '@/hooks/use-ota-update';
 export function UpdateBanner() {
   const { isDownloading, isReady, restart } = useOtaUpdate();
   const [dismissed, setDismissed] = useState(false);
+  const insets = useSafeAreaInsets();
 
   if (dismissed || (!isDownloading && !isReady)) return null;
 
+  // On Android the status bar is translucent in this app's setup, so without an
+  // explicit top inset the banner gets hidden behind the system status / activity
+  // bar on phones. Apply the safe-area top inset (with a sane minimum) so the
+  // banner is always visible regardless of device.
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? 8 : 4);
+
   return (
-    <View className="bg-brand px-4 py-2.5">
+    <View className="bg-brand px-4 pb-2.5" style={{ paddingTop: topPadding + 10 }}>
       {isDownloading ? (
         <View className="flex-row items-center justify-center gap-2">
           <ArrowDownToLine size={14} color="#fff" />

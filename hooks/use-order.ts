@@ -18,6 +18,7 @@ import { createKOT } from '@/services/kitchen.service';
 import type { SelectedModifier } from '@/services/order.service';
 import {
   addItemToOrder,
+  calculateOrderTotals,
   confirmOrder as confirmOrderService,
   createOrder,
   getOrderWithItems,
@@ -182,6 +183,15 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       setIsLoading(true);
       try {
         if (orderId) {
+          // Recalculate persisted totals to apply current branch tax/service-charge/rounding
+          // settings before display. Mirrors the checkout screen behavior so the cart
+          // preview never shows stale rounding (e.g. nearest 100 when branch is now 1000).
+          try {
+            await calculateOrderTotals(orderId);
+          } catch (err) {
+            captureError(err, { module: 'order', operation: 'loadOrder.recalc', level: 'warning', extras: { orderId } });
+          }
+
           const orderData = await getOrderWithItems(orderId);
           if (orderData) {
             setOrder(orderData.order);
