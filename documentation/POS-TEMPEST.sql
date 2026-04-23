@@ -969,7 +969,8 @@ ALTER TABLE "menu_item_ingredients" ADD FOREIGN KEY ("menu_item_id") REFERENCES 
 
 ALTER TABLE "menu_item_ingredients" ADD FOREIGN KEY ("inventory_id") REFERENCES "inventories" ("id") ON DELETE RESTRICT;
 
-ALTER TABLE "inventory_movements" ADD FOREIGN KEY ("inventory_id") REFERENCES "inventories" ("id") ON DELETE RESTRICT;
+-- Dropped by migration 003_drop_order_items_fks.sql (extended) to unblock PowerSync uploads.
+-- ALTER TABLE "inventory_movements" ADD FOREIGN KEY ("inventory_id") REFERENCES "inventories" ("id") ON DELETE RESTRICT;
 
 ALTER TABLE "inventory_movements" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE RESTRICT;
 

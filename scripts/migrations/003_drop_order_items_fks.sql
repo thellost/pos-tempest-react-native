@@ -7,6 +7,7 @@ SET search_path TO pos_tempest;
 
 ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_menu_item_id_fkey;
 ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey;
+ALTER TABLE inventory_movements DROP CONSTRAINT IF EXISTS inventory_movements_inventory_id_fkey;
 
 -- If your constraint names differ, find them with:
 --   SELECT conname FROM pg_constraint
