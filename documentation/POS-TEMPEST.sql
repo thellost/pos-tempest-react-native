@@ -987,9 +987,11 @@ ALTER TABLE "orders" ADD FOREIGN KEY ("voided_by") REFERENCES "users" ("id") ON 
 
 ALTER TABLE "orders" ADD FOREIGN KEY ("waiter_id") REFERENCES "users" ("id");
 
-ALTER TABLE "order_items" ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
-
-ALTER TABLE "order_items" ADD FOREIGN KEY ("menu_item_id") REFERENCES "menu_items" ("id") ON DELETE RESTRICT;
+-- Dropped by migration 003_drop_order_items_fks.sql to unblock PowerSync uploads
+-- from offline devices that may reference deleted/missing parents. Re-enable once
+-- the UUID migration + quarantine layer is in place and orphan rows are cleaned.
+-- ALTER TABLE "order_items" ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id") ON DELETE CASCADE;
+-- ALTER TABLE "order_items" ADD FOREIGN KEY ("menu_item_id") REFERENCES "menu_items" ("id") ON DELETE RESTRICT;
 
 ALTER TABLE "order_items" ADD FOREIGN KEY ("voided_by") REFERENCES "users" ("id") ON DELETE SET NULL;
 
