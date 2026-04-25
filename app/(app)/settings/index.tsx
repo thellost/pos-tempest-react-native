@@ -378,32 +378,33 @@ export default function SettingsScreen() {
         </AccordionSection>
       </PermissionGate>
 
-      {/* Danger Zone */}
-      <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
+      {/* Local Data — available to any signed-in user (waiters included) so a
+          stuck terminal can be self-recovered after a backend schema migration. */}
+      <PermissionGate permission={PERMISSION.BASIC_SETTINGS}>
         <AccordionSection icon={AlertTriangle} title="Danger Zone" danger>
-        <View className="gap-3">
-          <View>
-            <Text className="text-pos-sm font-semibold text-pos-text">Reset Local Data & Sign Out</Text>
-            <Text className="mt-1 text-pos-xs text-pos-text-muted">
-              Wipes all locally cached data (orders, shifts, menus) on this device and signs you out. Device registration and printer settings are kept. Use this once after a backend schema migration.
-            </Text>
+          <View className="gap-3">
+            <View>
+              <Text className="text-pos-sm font-semibold text-pos-text">Reset Local Data & Sign Out</Text>
+              <Text className="mt-1 text-pos-xs text-pos-text-muted">
+                Wipes all locally cached data (orders, shifts, menus) on this device and signs you out. Device registration and printer settings are kept. Use this once after a backend schema migration.
+              </Text>
+            </View>
+            <Button
+              className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
+              onPress={handleResetLocalData}
+              disabled={isResettingLocalData}
+            >
+              <Text className="text-center text-pos-sm font-semibold text-white">
+                {isResettingLocalData ? 'Resetting…' : 'Reset Local Data & Sign Out'}
+              </Text>
+            </Button>
           </View>
-          <Button
-            className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
-            onPress={handleResetLocalData}
-            disabled={isResettingLocalData}
-          >
-            <Text className="text-center text-pos-sm font-semibold text-white">
-              {isResettingLocalData ? 'Resetting…' : 'Reset Local Data & Sign Out'}
-            </Text>
-          </Button>
-        </View>
         </AccordionSection>
       </PermissionGate>
 
-      {/* Device Registration — available to any signed-in user (waiters included)
-          so a stuck/misregistered terminal can be recovered without waiting for an admin. */}
-      <PermissionGate permission={PERMISSION.BASIC_SETTINGS}>
+      {/* Device Registration — admin/manager only. Re-registration changes the
+          device's branch binding and has business impact. */}
+      <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
         <AccordionSection icon={AlertTriangle} title="Device" danger>
           <View className="gap-3">
             <View>
