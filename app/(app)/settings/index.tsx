@@ -397,22 +397,28 @@ export default function SettingsScreen() {
               {isResettingLocalData ? 'Resetting…' : 'Reset Local Data & Sign Out'}
             </Text>
           </Button>
-
-          <RowDivider />
-
-          <View>
-            <Text className="text-pos-sm font-semibold text-pos-text">Reset Device Registration</Text>
-            <Text className="mt-1 text-pos-xs text-pos-text-muted">
-              Unlinks this device from its branch. Re-registration will be required to continue using the POS.
-            </Text>
-          </View>
-          <Button
-            className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
-            onPress={handleResetDevice}
-          >
-            <Text className="text-center text-pos-sm font-semibold text-white">Reset Registration</Text>
-          </Button>
         </View>
+        </AccordionSection>
+      </PermissionGate>
+
+      {/* Device Registration — available to any signed-in user (waiters included)
+          so a stuck/misregistered terminal can be recovered without waiting for an admin. */}
+      <PermissionGate permission={PERMISSION.BASIC_SETTINGS}>
+        <AccordionSection icon={AlertTriangle} title="Device" danger>
+          <View className="gap-3">
+            <View>
+              <Text className="text-pos-sm font-semibold text-pos-text">Reset Device Registration</Text>
+              <Text className="mt-1 text-pos-xs text-pos-text-muted">
+                Unlinks this device from its branch. Re-registration will be required to continue using the POS.
+              </Text>
+            </View>
+            <Button
+              className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
+              onPress={handleResetDevice}
+            >
+              <Text className="text-center text-pos-sm font-semibold text-white">Reset Registration</Text>
+            </Button>
+          </View>
         </AccordionSection>
       </PermissionGate>
     </ScrollView>
