@@ -19,6 +19,9 @@ import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ConfigProvider } from '@/hooks/use-config';
 import { DeviceProvider } from '@/hooks/use-device';
+import { POS_SCHEMA } from '@/lib/schema';
+
+import * as ExpoUpdates from 'expo-updates';
 
 import * as Sentry from '@sentry/react-native';
 import '../global.css';
@@ -85,10 +88,14 @@ Sentry.captureMessage('[env] runtime config snapshot', {
   level: 'warning',
   tags: {
     boot: 'env-snapshot',
-    schema: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? '<unset>',
+    schema: POS_SCHEMA,
+    schema_env: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? '<unset>',
+    runtime_channel: ExpoUpdates.channel || '<empty>',
     environment: appEnvironment,
   },
   extra: {
+    resolvedSchema: POS_SCHEMA,
+    runtimeChannel: ExpoUpdates.channel ?? null,
     EXPO_PUBLIC_SUPABASE_DB_SCHEMA: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? null,
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? null,
     EXPO_PUBLIC_POWERSYNC_URL: process.env.EXPO_PUBLIC_POWERSYNC_URL ?? null,

@@ -1,5 +1,6 @@
 import type { PowerSyncBackendConnector } from '@powersync/react-native';
 
+import { POS_SCHEMA } from '@/lib/schema';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
@@ -9,12 +10,9 @@ function getPowerSyncEndpoint() {
 }
 
 function getSupabaseWriteSchema() {
-	const schema = process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA;
-	// generate warning if schema is not set, as this is a common misconfiguration that can lead to upload failures
-	if (!schema || schema.trim().length === 0) {
-		console.warn('[PowerSync Connector] Warning: EXPO_PUBLIC_SUPABASE_DB_SCHEMA is not set. Defaulting to "public". This may cause upload failures if your tables are not in the public schema.');
-	}
-	return schema && schema.trim().length > 0 ? schema.trim() : 'public';
+	// Resolved from runtime EAS channel + env override + dev/release safety net.
+	// See lib/schema.ts. Release builds NEVER fall back to the dev schema.
+	return POS_SCHEMA;
 }
 
 function resolveTableTarget(rawTable: string): { schema: string; table: string } {
