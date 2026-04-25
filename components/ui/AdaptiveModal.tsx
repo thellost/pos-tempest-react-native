@@ -130,6 +130,7 @@ export function AdaptiveModal({
             width: tabletWidth,
             maxWidth: '95%',
             maxHeight: '90%',
+            flexDirection: 'column',
             // Lift the centered dialog so it stays inside the visible region
             // (above the keyboard) rather than being centered on the full screen.
             marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
@@ -149,7 +150,9 @@ export function AdaptiveModal({
               </Pressable>
             </View>
           ) : null}
-          <View onFocus={handleFocusCapture}>
+          {/* flex: 1 + minHeight: 0 ensures the scroll area shrinks to fit
+              within the dialog's maxHeight cap instead of overflowing it. */}
+          <View style={{ flex: 1, minHeight: 0 }} onFocus={handleFocusCapture}>
             <ScrollView
               ref={scrollRef}
               keyboardShouldPersistTaps="handled"
