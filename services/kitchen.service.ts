@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import type { KotStatus } from '@/constants/enums';
 import { AUDIT_ACTION, KOT_STATUS, ORDER_STATUS } from '@/constants/enums';
 import { powersync } from '@/db/provider';
@@ -9,9 +11,9 @@ import { toInt } from '@/utils/coerce';
 // ─── Public types ────────────────────────────────────────────────────────────
 
 export interface KOTItemDetail {
-  id: number;
-  kot_id: number;
-  order_item_id: number;
+  id: string;
+  kot_id: string;
+  order_item_id: string;
   menu_item_name: string;
   quantity: number;
   unit_of_measure: string;
@@ -23,7 +25,7 @@ export interface KOTItemDetail {
 }
 
 export interface KOTWithItems {
-  id: number;
+  id: string;
   order_id: string;
   ticket_number: string;
   status: KotStatus;
@@ -79,7 +81,7 @@ export async function createKOT(
 
   // Order items for this round
   const orderItems = await powersync.getAll<{
-    id: number | string;
+    id: string;
     menu_item_name: string;
     quantity: number | string;
     unit_of_measure: string;
@@ -101,10 +103,7 @@ export async function createKOT(
   // Generate identifiers
   const ticketNumber = await generateTicketNumber();
 
-  const maxKotRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM kitchen_order_tickets`
-  );
-  const kotId = (maxKotRow?.max_id ?? 0) + 1;
+  const kotId = Crypto.randomUUID();
 
   // Insert KOT header
   await powersync.execute(
@@ -112,7 +111,7 @@ export async function createKOT(
        (id, order_id, ticket_number, status, priority, round_number, printed_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      kotId.toString(),
+      kotId,
       orderId,
       ticketNumber,
       KOT_STATUS.PENDING,
@@ -124,15 +123,11 @@ export async function createKOT(
   );
 
   // Insert KOT items
-  const maxItemRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM kot_items`
-  );
-  let itemIdCounter = (maxItemRow?.max_id ?? 0) + 1;
-
   const itemDetails: KOTItemDetail[] = [];
 
   for (const oi of orderItems) {
-    const orderItemId = toInt(oi.id);
+    const orderItemId = String(oi.id);
+    const kotItemId = Crypto.randomUUID();
 
     // Collect modifier names via GROUP_CONCAT
     const modRow = await powersync.getOptional<{ names: string | null }>(
@@ -146,7 +141,7 @@ export async function createKOT(
       `INSERT INTO kot_items (id, kot_id, order_item_id, quantity, status, notes)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        itemIdCounter.toString(),
+        kotItemId,
         kotId,
         orderItemId,
         oi.quantity,
@@ -156,7 +151,7 @@ export async function createKOT(
     );
 
     itemDetails.push({
-      id: itemIdCounter,
+      id: kotItemId,
       kot_id: kotId,
       order_item_id: orderItemId,
       menu_item_name: oi.menu_item_name,
@@ -172,8 +167,6 @@ export async function createKOT(
         : [],
       status: KOT_STATUS.PENDING,
     });
-
-    itemIdCounter++;
   }
 
   // Advance order to PREPARING
@@ -228,7 +221,7 @@ export async function createKOT(
  * - READY:       sets completed_at, marks all kot_items as READY
  */
 export async function updateKOTStatus(
-  kotId: number,
+  kotId: string,
   status: KotStatus
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -275,7 +268,7 @@ export async function updateKOTStatus(
  * Updates the status of a single KOT item (e.g. mark one dish as done).
  */
 export async function updateKOTItemStatus(
-  kotItemId: number,
+  kotItemId: string,
   status: KotStatus
 ): Promise<void> {
   await powersync.execute(
@@ -294,7 +287,7 @@ export async function getKOTsForOrder(
   orderId: string
 ): Promise<KOTWithItems[]> {
   const rows = await powersync.getAll<{
-    id: number | string;
+    id: string;
     ticket_number: string;
     status: string;
     priority: number | string;
@@ -321,7 +314,7 @@ export async function getKOTsForOrder(
 
   return Promise.all(
     rows.map(async (row) => {
-      const kotId = toInt(row.id);
+      const kotId = String(row.id);
       return {
         id: kotId,
         order_id: orderId,
@@ -346,10 +339,10 @@ export async function getKOTsForOrder(
 /**
  * Fetches KOT items with modifier names (GROUP_CONCAT) for a given kot_id.
  */
-async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
+async function _getKOTItems(kotId: string): Promise<KOTItemDetail[]> {
   const rows = await powersync.getAll<{
-    id: number | string;
-    order_item_id: number | string;
+    id: string;
+    order_item_id: string;
     menu_item_name: string;
     quantity: number | string;
     unit_of_measure: string;
@@ -370,9 +363,9 @@ async function _getKOTItems(kotId: number): Promise<KOTItemDetail[]> {
   );
 
   return rows.map((row) => ({
-    id: toInt(row.id),
+    id: String(row.id),
     kot_id: kotId,
-    order_item_id: toInt(row.order_item_id),
+    order_item_id: String(row.order_item_id),
     menu_item_name: row.menu_item_name,
     quantity:
       typeof row.quantity === 'string'

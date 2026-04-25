@@ -1,7 +1,6 @@
 import { useQuery } from '@powersync/react';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { toInt } from '@/utils/coerce';
 
 import type { KotStatus } from '@/constants/enums';
 import { KOT_STATUS, ORDER_TYPE } from '@/constants/enums';
@@ -11,11 +10,11 @@ import { formatElapsed } from '@/utils/date';
 
 interface KOTCardProps {
   kot: KOTRow;
-  onAdvance: (kotId: number, currentStatus: KotStatus) => Promise<void>;
+  onAdvance: (kotId: string, currentStatus: KotStatus) => Promise<void>;
 }
 
 interface KOTItemRow {
-  id: number | string;
+  id: string;
   menu_item_name: string;
   quantity: number | string;
   unit_of_measure: string;
@@ -67,7 +66,7 @@ const STATUS_CONFIG: Record<
  * Loads its own items reactively via useQuery.
  */
 export function KOTCard({ kot, onAdvance }: KOTCardProps) {
-  const kotId = toInt(kot.id);
+  const kotId = kot.id;
   const [isAdvancing, setIsAdvancing] = useState(false);
 
   const elapsed = formatElapsed(kot.created_at);

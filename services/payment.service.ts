@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import { AUDIT_ACTION, ORDER_STATUS, PAYMENT_STATUS, TABLE_STATUS } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { Discount, Order, OrderDiscount, Payment } from '@/db/models';
@@ -72,10 +73,7 @@ export async function applyOrderDiscount(
   // Replace any existing discount first
   await removeOrderDiscount(orderId);
 
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_discounts`,
-  );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = Crypto.randomUUID();
 
   await powersync.execute(
     `INSERT INTO order_discounts (
@@ -214,7 +212,7 @@ export function calculateChange(totalDue: number, cashReceived: number): number 
  */
 export async function processPayment(
   orderId: string,
-  shiftId: number | null,
+  shiftId: string | null,
   method: string,
   amount: number,
   callerRole: string,
@@ -228,10 +226,7 @@ export async function processPayment(
   try {
   const now = new Date().toISOString();
 
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM payments`,
-  );
-  const newId = (parseInt(String(maxIdRow?.max_id || '0'), 10) + 1).toString();
+  const newId = Crypto.randomUUID();
 
   await powersync.execute(
     `INSERT INTO payments (
@@ -273,7 +268,7 @@ export async function processPayment(
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'payments',
-    recordId: parseInt(newId, 10),
+    recordId: newId,
     newValues: {
       order_id: orderId,
       shift_id: shiftId,

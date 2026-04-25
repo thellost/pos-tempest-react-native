@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import { MOVEMENT_TYPE } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
 import { powersync } from '@/db/provider';
@@ -61,10 +63,7 @@ export async function deductStockForItems(
       );
 
       // Get next movement ID
-      const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-        `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM inventory_movements`
-      );
-      const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+      const newId = Crypto.randomUUID();
 
       // Create movement record
       await powersync.execute(
@@ -93,6 +92,109 @@ export async function deductStockForItems(
   console.log('[InventoryService] Stock deducted for order:', orderId);
   } catch (error) {
     captureError(error, { module: 'inventory', operation: 'deductStockForItems', level: 'error', extras: { orderId } });
+    throw error;
+  }
+}
+
+/**
+ * Restocks inventory for a cancelled order by reversing any prior order_deduction
+ * movements recorded against the given order. Idempotent: skips items that
+ * already have a matching order_cancellation movement, so calling this twice
+ * for the same order is safe.
+ */
+export async function restockForCancelledOrder(
+  orderId: string,
+  userId: number
+): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+
+    const deductions = await powersync.getAll<{
+      id: string;
+      inventory_id: number;
+      quantity_change: number;
+    }>(
+      `SELECT id, inventory_id, quantity_change
+         FROM inventory_movements
+        WHERE reference_type = 'order'
+          AND reference_id = ?
+          AND movement_type = ?`,
+      [orderId, MOVEMENT_TYPE.ORDER_DEDUCTION]
+    );
+
+    if (deductions.length === 0) {
+      addBreadcrumb('inventory', 'No deductions to restock for cancelled order', { orderId });
+      return;
+    }
+
+    const existingRestocks = await powersync.getAll<{ count: number }>(
+      `SELECT COUNT(*) as count
+         FROM inventory_movements
+        WHERE reference_type = 'order'
+          AND reference_id = ?
+          AND movement_type = ?`,
+      [orderId, MOVEMENT_TYPE.ORDER_CANCELLATION]
+    );
+
+    if ((existingRestocks[0]?.count ?? 0) > 0) {
+      addBreadcrumb('inventory', 'Restock already applied for cancelled order', { orderId });
+      return;
+    }
+
+    for (const deduction of deductions) {
+      const restockAmount = -deduction.quantity_change;
+      if (restockAmount === 0) continue;
+
+      const inventory = await powersync.getOptional<InventoryRow>(
+        `SELECT id, stock_quantity FROM inventories WHERE id = ?`,
+        [deduction.inventory_id]
+      );
+
+      if (!inventory) continue;
+
+      const quantityBefore = inventory.stock_quantity;
+      const quantityAfter = quantityBefore + restockAmount;
+
+      await powersync.execute(
+        `UPDATE inventories SET stock_quantity = ?, updated_at = ? WHERE id = ?`,
+        [quantityAfter, now, deduction.inventory_id]
+      );
+
+      const newId = Crypto.randomUUID();
+
+      await powersync.execute(
+        `INSERT INTO inventory_movements (
+          id, inventory_id, user_id, movement_type, quantity_change,
+          quantity_before, quantity_after, reference_type, reference_id, reason, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newId,
+          deduction.inventory_id,
+          userId,
+          MOVEMENT_TYPE.ORDER_CANCELLATION,
+          restockAmount,
+          quantityBefore,
+          quantityAfter,
+          'order',
+          orderId,
+          'Auto-restock on order cancellation',
+          now,
+        ]
+      );
+    }
+
+    addBreadcrumb('inventory', 'Stock restocked for cancelled order', {
+      orderId,
+      movementCount: deductions.length,
+    });
+    console.log('[InventoryService] Stock restocked for cancelled order:', orderId);
+  } catch (error) {
+    captureError(error, {
+      module: 'inventory',
+      operation: 'restockForCancelledOrder',
+      level: 'error',
+      extras: { orderId },
+    });
     throw error;
   }
 }
@@ -137,10 +239,7 @@ export async function adjustStock(
       [quantityAfter, now, inventoryId]
     );
 
-    const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM inventory_movements`
-    );
-    const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+    const newId = Crypto.randomUUID();
 
     await powersync.execute(
       `INSERT INTO inventory_movements (

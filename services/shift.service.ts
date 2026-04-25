@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
@@ -18,7 +20,7 @@ export type AutoShiftBranch = Pick<
 > & { auto_shift?: boolean };
 
 export type ShiftRecord = {
-  id: number;
+  id: string;
   user_id: number;
   branch_id: number;
   device_id: number | null;
@@ -57,13 +59,9 @@ type CashTxSummaryRow = {
   total_cash_out: number | string | null;
 };
 
-type MaxIdRow = {
-  max_id: number | string | null;
-};
-
 export type ShiftCashTransactionRecord = {
-  id: number;
-  shift_id: number;
+  id: string;
+  shift_id: string;
   user_id: number;
   type: CashTransactionType;
   reason: CashTransactionReason;
@@ -97,7 +95,7 @@ function toNumber(value: number | string | null | undefined): number {
 
 function normalizeShift(row: ShiftRow): ShiftRecord {
   return {
-    id: toNumber(row.id),
+    id: String(row.id),
     user_id: toNumber(row.user_id),
     branch_id: toNumber(row.branch_id),
     device_id: row.device_id !== null && row.device_id !== undefined ? toNumber(row.device_id) : null,
@@ -112,7 +110,7 @@ function normalizeShift(row: ShiftRow): ShiftRecord {
   };
 }
 
-async function getShiftById(shiftId: number | string): Promise<ShiftRecord | null> {
+async function getShiftById(shiftId: string): Promise<ShiftRecord | null> {
   const row = await powersync.getOptional<ShiftRow>(
     `
       SELECT
@@ -136,16 +134,6 @@ async function getShiftById(shiftId: number | string): Promise<ShiftRecord | nul
   );
 
   return row ? normalizeShift(row) : null;
-}
-
-async function getNextShiftId(): Promise<number> {
-  const row = await powersync.getOptional<MaxIdRow>(
-    `SELECT MAX(CAST(id AS INTEGER)) AS max_id FROM shifts`,
-  );
-
-  // Math.max(..., 0) ensures we never derive a non-positive ID
-  // even if all existing rows have negative IDs (legacy local-first inserts).
-  return Math.max(toNumber(row?.max_id ?? 0), 0) + 1;
 }
 
 export async function getActiveShift(branchId: number): Promise<ShiftRecord | null> {
@@ -176,7 +164,7 @@ export async function getActiveShift(branchId: number): Promise<ShiftRecord | nu
   return row ? normalizeShift(row) : null;
 }
 
-export async function getShiftCashSummary(shiftId: number, openingCash: number): Promise<ShiftCashSummary> {
+export async function getShiftCashSummary(shiftId: string, openingCash: number): Promise<ShiftCashSummary> {
   const paymentSummary = await powersync.getOptional<CashSummaryRow>(
     `
       SELECT
@@ -237,21 +225,11 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
 
   const existingShift = await getActiveShift(branchId);
   if (existingShift) {
-    // Repair legacy negative-ID shifts created before the MAX+1 fix.
-    if (existingShift.id < 0) {
-      const newId = await getNextShiftId();
-      await powersync.execute(`UPDATE shifts   SET id = ? WHERE id = ?`, [newId, existingShift.id]);
-      await powersync.execute(`UPDATE orders   SET shift_id = ? WHERE shift_id = ?`, [newId, existingShift.id]);
-      await powersync.execute(`UPDATE payments SET shift_id = ? WHERE shift_id = ?`, [newId, existingShift.id]);
-      console.log('[ShiftService] Repaired negative shift ID', existingShift.id, '->', newId);
-      return (await getShiftById(newId)) ?? { ...existingShift, id: newId };
-    }
     return existingShift;
   }
 
   const openedAt = new Date().toISOString();
-  const localShiftId = await getNextShiftId();
-  const localShiftIdText = String(localShiftId);
+  const localShiftId = Crypto.randomUUID();
 
   await powersync.execute(
     `
@@ -265,12 +243,13 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
         opened_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-    [localShiftIdText, userId, branchId, deviceId, SHIFT_STATUS.OPEN, openingCash, openedAt],
+    [localShiftId, userId, branchId, deviceId, SHIFT_STATUS.OPEN, openingCash, openedAt],
   );
 
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'shifts',
+    recordId: localShiftId,
     userId: userId,
     branchId: branchId,
     newValues: { opening_cash: openingCash, opened_at: openedAt, device_id: deviceId },
@@ -278,7 +257,7 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
   });
   addBreadcrumb('shift', 'Shift opened', { shiftId: localShiftId, userId, openingCash });
 
-  const inserted = await getShiftById(localShiftIdText);
+  const inserted = await getShiftById(localShiftId);
   if (inserted) {
     return inserted;
   }
@@ -294,7 +273,7 @@ export async function openShift(callerRole: string, userId: number, branchId: nu
 
 export async function closeShift(
   callerRole: string,
-  shiftId: number,
+  shiftId: string,
   closingCash: number,
   options?: { auto?: boolean; system?: boolean; notes?: string | null },
 ): Promise<ShiftRecord> {
@@ -494,7 +473,7 @@ export async function ensureShiftForNow(
 // ---------------------------------------------------------------------------
 
 type ShiftCashTxRow = {
-  id: number | string;
+  id: string;
   shift_id: number | string;
   user_id: number | string;
   type: string;
@@ -507,8 +486,8 @@ type ShiftCashTxRow = {
 
 function normalizeShiftCashTx(row: ShiftCashTxRow): ShiftCashTransactionRecord {
   return {
-    id: toNumber(row.id),
-    shift_id: toNumber(row.shift_id),
+    id: String(row.id),
+    shift_id: String(row.shift_id),
     user_id: toNumber(row.user_id),
     type: row.type as CashTransactionType,
     reason: row.reason as CashTransactionReason,
@@ -530,7 +509,7 @@ function normalizeShiftCashTx(row: ShiftCashTxRow): ShiftCashTransactionRecord {
  * @returns The created transaction record
  */
 export async function addCashTransaction(
-  shiftId: number,
+  shiftId: string,
   userId: number,
   type: CashTransactionType,
   reason: CashTransactionReason,
@@ -558,11 +537,7 @@ export async function addCashTransaction(
 
   const createdAt = new Date().toISOString();
 
-  // Get next ID for the transaction
-  const maxIdRow = await powersync.getOptional<MaxIdRow>(
-    `SELECT MAX(CAST(id AS INTEGER)) AS max_id FROM shift_cash_transactions`,
-  );
-  const nextId = Math.max(toNumber(maxIdRow?.max_id ?? 0), 0) + 1;
+  const nextId = Crypto.randomUUID();
 
   await powersync.execute(
     `
@@ -570,7 +545,7 @@ export async function addCashTransaction(
         id, shift_id, user_id, type, reason, amount, note, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    [String(nextId), shiftId, userId, type, reason, amount, note ?? null, createdAt],
+    [nextId, shiftId, userId, type, reason, amount, note ?? null, createdAt],
   );
 
   const typeLabel = type === CASH_TRANSACTION_TYPE.CASH_IN ? 'Cash In' : 'Cash Out';
@@ -604,7 +579,7 @@ export async function addCashTransaction(
  * @returns Array of cash transaction records
  */
 export async function getShiftCashTransactions(
-  shiftId: number,
+  shiftId: string,
 ): Promise<ShiftCashTransactionRecord[]> {
   const rows = await powersync.getAll<ShiftCashTxRow>(
     `

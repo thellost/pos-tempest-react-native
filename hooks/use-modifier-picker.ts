@@ -73,7 +73,7 @@ export function useModifierPicker({
   const [showModifierPicker, setShowModifierPicker] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemWithInventory | null>(null);
   const [menuItemModifiers, setMenuItemModifiers] = useState<ModifierGroupWithModifiers[]>([]);
-  const [editingOrderItemId, setEditingOrderItemId] = useState<number | null>(null);
+  const [editingOrderItemId, setEditingOrderItemId] = useState<string | null>(null);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
   const [editingItemNotes, setEditingItemNotes] = useState<string>('');
   const [editingItemModifiers, setEditingItemModifiers] = useState<SelectedModifier[]>([]);
@@ -140,48 +140,48 @@ export function useModifierPicker({
   }, [selectedMenuItem, editingCartItemId, editingOrderItemId, cartItems, updateCartItem, editModifiers, addItemToOrder, reset]);
 
   const handleEditModifiers = useCallback(async (itemId: number | string) => {
-    if (typeof itemId === 'string') {
-      const cartItem = cartItems.find(item => item.id === itemId);
-      if (!cartItem) return;
-
+    // Cart items have ephemeral string IDs; check them first by direct match
+    const cartItem = cartItems.find(item => item.id === itemId);
+    if (cartItem) {
       const menuItem = menuItems.find(m => toInt(m.id) === cartItem.menu_item_id);
       if (!menuItem) return;
 
       const modifiers = await getModifierGroupsForMenuItem(cartItem.menu_item_id);
       setSelectedMenuItem(menuItem);
       setMenuItemModifiers(modifiers);
-      setEditingCartItemId(itemId);
+      setEditingCartItemId(String(itemId));
       setEditingItemModifiers(cartItem.modifiers);
       setEditingItemNotes(cartItem.notes ?? '');
       setEditingItemWeight(cartItem.weight ? cartItem.weight.toString() : '');
       setShowModifierPicker(true);
-    } else {
-      const targetItem = orderItems.find((item) => toInt(item.id) === itemId);
-      if (!targetItem) return;
-
-      const menuItemId = toInt(targetItem.menu_item_id);
-      const menuItem = menuItems.find((item) => toInt(item.id) === menuItemId);
-      if (!menuItem) return;
-
-      const modifiers = await getModifierGroupsForMenuItem(menuItemId);
-      const selectedModifiers = targetItem.modifiers.map((modifier) => ({
-        modifier_id: toInt(modifier.modifier_id),
-        modifier_name: modifier.modifier_name,
-        modifier_group_name: modifier.modifier_group_name,
-        extra_price: modifier.extra_price,
-      }));
-      setSelectedMenuItem(menuItem);
-      setMenuItemModifiers(modifiers);
-      setEditingOrderItemId(itemId);
-      setEditingItemNotes(targetItem.notes ?? '');
-      setEditingItemModifiers(selectedModifiers);
-      if (menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && menuItem.price > 0) {
-        setEditingItemWeight((targetItem.unit_price / menuItem.price).toString());
-      } else {
-        setEditingItemWeight('');
-      }
-      setShowModifierPicker(true);
+      return;
     }
+
+    const targetItem = orderItems.find((item) => String(item.id) === String(itemId));
+    if (!targetItem) return;
+
+    const menuItemId = toInt(targetItem.menu_item_id);
+    const menuItem = menuItems.find((item) => toInt(item.id) === menuItemId);
+    if (!menuItem) return;
+
+    const modifiers = await getModifierGroupsForMenuItem(menuItemId);
+    const selectedModifiers = targetItem.modifiers.map((modifier) => ({
+      modifier_id: toInt(modifier.modifier_id),
+      modifier_name: modifier.modifier_name,
+      modifier_group_name: modifier.modifier_group_name,
+      extra_price: modifier.extra_price,
+    }));
+    setSelectedMenuItem(menuItem);
+    setMenuItemModifiers(modifiers);
+    setEditingOrderItemId(String(targetItem.id));
+    setEditingItemNotes(targetItem.notes ?? '');
+    setEditingItemModifiers(selectedModifiers);
+    if (menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && menuItem.price > 0) {
+      setEditingItemWeight((targetItem.unit_price / menuItem.price).toString());
+    } else {
+      setEditingItemWeight('');
+    }
+    setShowModifierPicker(true);
   }, [getModifierGroupsForMenuItem, menuItems, orderItems, cartItems]);
 
   return {

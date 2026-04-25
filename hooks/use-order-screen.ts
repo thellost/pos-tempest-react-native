@@ -125,7 +125,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     orderType,
     menuItems,
     isShiftOpen,
-    shiftId: activeShift ? toInt(activeShift.id) : null,
+    shiftId: activeShift ? activeShift.id : null,
   });
 
   const {
@@ -379,8 +379,10 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
           !roundSentAt.has(oi.round_number || 1)
       );
       if (editableMatches.length === 0) return;
-      const target = editableMatches.slice().sort((a, b) => toInt(b.id) - toInt(a.id))[0];
-      await updateQuantity(toInt(target.id), toInt(target.quantity) - 1);
+      const target = editableMatches
+        .slice()
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      await updateQuantity(String(target.id), toInt(target.quantity) - 1);
     } else {
       const matchingItems = cartItems.filter((ci) => ci.menu_item_id === menuItemId);
       if (matchingItems.length === 0) return;

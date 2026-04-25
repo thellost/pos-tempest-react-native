@@ -295,9 +295,12 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'shifts'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
-    ALTER TABLE shifts DROP CONSTRAINT IF EXISTS shifts_pkey;
+    -- CASCADE: also drops dependent FK constraints on
+    -- orders.shift_id, payments.shift_id, shift_cash_transactions.shift_id.
+    -- Those FKs are recreated in STEP 6 against the new UUID columns.
+    ALTER TABLE shifts DROP CONSTRAINT IF EXISTS shifts_pkey CASCADE;
     ALTER TABLE shifts DROP COLUMN id;
     ALTER TABLE shifts RENAME COLUMN new_id TO id;
     ALTER TABLE shifts ADD PRIMARY KEY (id);
@@ -316,9 +319,11 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'kitchen_order_tickets'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
-    ALTER TABLE kitchen_order_tickets DROP CONSTRAINT IF EXISTS kitchen_order_tickets_pkey;
+    -- CASCADE: also drops dependent FK kot_items.kot_id_fkey.
+    -- Recreated in STEP 6 against the new UUID columns.
+    ALTER TABLE kitchen_order_tickets DROP CONSTRAINT IF EXISTS kitchen_order_tickets_pkey CASCADE;
     ALTER TABLE kitchen_order_tickets DROP COLUMN id;
     ALTER TABLE kitchen_order_tickets RENAME COLUMN new_id TO id;
     ALTER TABLE kitchen_order_tickets ADD PRIMARY KEY (id);
@@ -339,9 +344,12 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'order_items'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
-    ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey;
+    -- CASCADE: also drops dependent FKs
+    -- order_item_modifiers.order_item_id_fkey and kot_items.order_item_id_fkey.
+    -- Recreated in STEP 6 against the new UUID columns.
+    ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey CASCADE;
     ALTER TABLE order_items DROP COLUMN id;
     ALTER TABLE order_items RENAME COLUMN new_id TO id;
     ALTER TABLE order_items ADD PRIMARY KEY (id);
@@ -360,7 +368,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'kot_items'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE kot_items DROP CONSTRAINT IF EXISTS kot_items_pkey;
     -- Drop old integer FK columns (their indexes are auto-dropped)
@@ -391,7 +399,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'order_item_modifiers'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE order_item_modifiers DROP CONSTRAINT IF EXISTS order_item_modifiers_pkey;
     -- Drop old integer FK column (its index is auto-dropped)
@@ -419,7 +427,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'payments'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_pkey;
     -- Drop old integer FK column (its index is auto-dropped)
@@ -449,7 +457,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'order_discounts'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE order_discounts DROP CONSTRAINT IF EXISTS order_discounts_pkey;
     ALTER TABLE order_discounts DROP COLUMN id;
@@ -470,7 +478,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'shift_cash_transactions'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE shift_cash_transactions DROP CONSTRAINT IF EXISTS shift_cash_transactions_pkey;
     -- Drop old integer FK column (its index is auto-dropped)
@@ -502,7 +510,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'inventory_movements'
-      AND column_name = 'id' AND data_type = 'integer'
+      AND column_name = 'id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     ALTER TABLE inventory_movements DROP CONSTRAINT IF EXISTS inventory_movements_pkey;
     ALTER TABLE inventory_movements DROP COLUMN id;
@@ -525,7 +533,7 @@ DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'pos_tempest' AND table_name = 'orders'
-      AND column_name = 'shift_id' AND data_type = 'integer'
+      AND column_name = 'shift_id' AND data_type IN ('integer','bigint','smallint')
   ) THEN
     -- Drop old integer FK column (its index is auto-dropped)
     ALTER TABLE orders DROP COLUMN shift_id;
@@ -545,5 +553,79 @@ CREATE INDEX IF NOT EXISTS idx_orders_status             ON orders (status);
 CREATE INDEX IF NOT EXISTS idx_orders_payment_status     ON orders (payment_status);
 CREATE INDEX IF NOT EXISTS idx_orders_order_type         ON orders (order_type);
 CREATE INDEX IF NOT EXISTS idx_orders_branch_status_date ON orders (branch_id, status, created_at);
+
+-- ============================================================
+-- STEP 6: RECREATE FOREIGN KEY CONSTRAINTS
+--         The CASCADE drops in 5a/5b/5c removed the old integer
+--         FK constraints from child tables. Recreate them now
+--         against the new UUID parent PKs. Idempotent — guarded
+--         by pg_constraint lookup.
+-- ============================================================
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'orders_shift_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE orders
+      ADD CONSTRAINT orders_shift_id_fkey
+      FOREIGN KEY (shift_id) REFERENCES shifts (id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'payments_shift_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE payments
+      ADD CONSTRAINT payments_shift_id_fkey
+      FOREIGN KEY (shift_id) REFERENCES shifts (id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'shift_cash_transactions_shift_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE shift_cash_transactions
+      ADD CONSTRAINT shift_cash_transactions_shift_id_fkey
+      FOREIGN KEY (shift_id) REFERENCES shifts (id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'kot_items_kot_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE kot_items
+      ADD CONSTRAINT kot_items_kot_id_fkey
+      FOREIGN KEY (kot_id) REFERENCES kitchen_order_tickets (id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'kot_items_order_item_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE kot_items
+      ADD CONSTRAINT kot_items_order_item_id_fkey
+      FOREIGN KEY (order_item_id) REFERENCES order_items (id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'order_item_modifiers_order_item_id_fkey' AND connamespace = 'pos_tempest'::regnamespace
+  ) THEN
+    ALTER TABLE order_item_modifiers
+      ADD CONSTRAINT order_item_modifiers_order_item_id_fkey
+      FOREIGN KEY (order_item_id) REFERENCES order_items (id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 COMMIT;

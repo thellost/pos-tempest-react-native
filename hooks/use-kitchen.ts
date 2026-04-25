@@ -11,8 +11,8 @@ import { updateKOTStatus } from '@/services/kitchen.service';
 /** Flat KOT row returned by the reactive query (no nested items — items are
  *  loaded per-card in KOTCard to stay reactive). */
 export interface KOTRow {
-  id: number | string;
-  order_id: number | string;
+  id: string;
+  order_id: string;
   ticket_number: string;
   status: string;
   priority: number | string;
@@ -57,7 +57,7 @@ export function useKitchen() {
    *   PENDING → IN_PROGRESS → READY → SERVED
    */
   const advanceKOT = useCallback(
-    async (kotId: number, currentStatus: KotStatus) => {
+    async (kotId: string, currentStatus: KotStatus) => {
       const next: Partial<Record<KotStatus, KotStatus>> = {
         [KOT_STATUS.PENDING]: KOT_STATUS.IN_PROGRESS,
         [KOT_STATUS.IN_PROGRESS]: KOT_STATUS.READY,

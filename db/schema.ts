@@ -202,7 +202,7 @@ export const appSchema = new Schema({
 		waiter_id: column.integer,
 		customer_id: column.integer,
 		customer_name: column.text,
-		shift_id: column.integer,
+		shift_id: column.text,
 		order_type: column.text,
 		status: column.text,
 		guest_count: column.integer,
@@ -249,7 +249,7 @@ export const appSchema = new Schema({
 		},
 	}),
 	order_item_modifiers: new Table({
-		order_item_id: column.integer,
+		order_item_id: column.text,
 		modifier_id: column.integer,
 		modifier_name: column.text,
 		modifier_group_name: column.text,
@@ -271,8 +271,8 @@ export const appSchema = new Schema({
 		},
 	}),
 	kot_items: new Table({
-		kot_id: column.integer,
-		order_item_id: column.integer,
+		kot_id: column.text,
+		order_item_id: column.text,
 		quantity: column.real,
 		status: column.text,
 		notes: column.text,
@@ -283,7 +283,7 @@ export const appSchema = new Schema({
 	}),
 	payments: new Table({
 		order_id: column.text,
-		shift_id: column.integer,
+		shift_id: column.text,
 		payment_method: column.text,
 		amount: column.real,
 		change_amount: column.real,
@@ -377,7 +377,7 @@ export const appSchema = new Schema({
 		updated_at: column.text,
 	}),
 	shift_cash_transactions: new Table({
-		shift_id: column.integer,
+		shift_id: column.text,
 		user_id: column.integer,
 		type: column.text,
 		reason: column.text,

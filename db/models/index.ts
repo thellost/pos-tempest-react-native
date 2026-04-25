@@ -47,7 +47,7 @@ export interface User {
 }
 
 export interface Shift {
-	id: EntityId;
+	id: string;
 	user_id: EntityId;
 	branch_id: EntityId;
 	status: ShiftStatus;
@@ -213,7 +213,7 @@ export interface Inventory {
 }
 
 export interface InventoryMovement {
-	id: EntityId;
+	id: string;
 	inventory_id: EntityId;
 	user_id: EntityId;
 	movement_type: string;
@@ -221,7 +221,7 @@ export interface InventoryMovement {
 	quantity_before: number;
 	quantity_after: number;
 	reference_type: string | null;
-	reference_id: EntityId | null;
+	reference_id: string | null;
 	reason: string | null;
 	created_at: Timestamp;
 }
@@ -244,7 +244,7 @@ export interface Order {
 	waiter_id: EntityId | null;
 	customer_id: EntityId | null;
 	customer_name: string | null;
-	shift_id: EntityId | null;
+	shift_id: string | null;
 	order_type: OrderType;
 	status: OrderStatus;
 	guest_count: number | null;
@@ -264,7 +264,7 @@ export interface Order {
 }
 
 export interface OrderItem {
-	id: EntityId;
+	id: string;
 	order_id: OrderId;
 	menu_item_id: EntityId;
 	menu_item_name: string;
@@ -285,8 +285,8 @@ export interface OrderItem {
 }
 
 export interface OrderItemModifier {
-	id: EntityId;
-	order_item_id: EntityId;
+	id: string;
+	order_item_id: string;
 	modifier_id: EntityId;
 	modifier_name: string;
 	modifier_group_name: string;
@@ -294,7 +294,7 @@ export interface OrderItemModifier {
 }
 
 export interface KitchenOrderTicket {
-	id: EntityId;
+	id: string;
 	order_id: OrderId;
 	ticket_number: string;
 	status: KotStatus;
@@ -307,18 +307,18 @@ export interface KitchenOrderTicket {
 }
 
 export interface KotItem {
-	id: EntityId;
-	kot_id: EntityId;
-	order_item_id: EntityId;
+	id: string;
+	kot_id: string;
+	order_item_id: string;
 	quantity: number;
 	status: KotStatus;
 	notes: string | null;
 }
 
 export interface Payment {
-	id: EntityId;
+	id: string;
 	order_id: OrderId;
-	shift_id: EntityId | null;
+	shift_id: string | null;
 	payment_method: PaymentMethodType;
 	amount: number;
 	change_amount: number;
@@ -342,7 +342,7 @@ export interface Discount {
 }
 
 export interface OrderDiscount {
-	id: EntityId;
+	id: string;
 	order_id: OrderId;
 	discount_id: EntityId | null;
 	discount_name: string;
@@ -430,8 +430,8 @@ export interface Device {
 }
 
 export interface ShiftCashTransaction {
-	id: EntityId;
-	shift_id: EntityId;
+	id: string;
+	shift_id: string;
 	user_id: EntityId;
 	type: CashTransactionType;
 	reason: CashTransactionReason;

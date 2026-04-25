@@ -83,7 +83,7 @@ function CheckoutContent({
     return itemRows.map(item => ({
       ...item,
       modifiers: (allModifiers ?? []).filter(
-        m => toFloat(m.order_item_id) === toFloat(item.id),
+        m => String(m.order_item_id) === String(item.id),
       ),
     }));
   }, [itemRows, allModifiers]);
@@ -130,11 +130,7 @@ function CheckoutContent({
     if (!canComplete || !order) return;
     setIsProcessing(true);
     try {
-      const shiftId = activeShift
-        ? typeof activeShift.id === 'string'
-          ? parseInt(activeShift.id, 10)
-          : activeShift.id
-        : null;
+      const shiftId = activeShift ? String(activeShift.id) : null;
 
       let balanceLeft = orderTotal;
       for (let i = 0; i < payment.pendingPayments.length; i++) {

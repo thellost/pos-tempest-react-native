@@ -19,7 +19,7 @@ export interface InventoryItem {
 }
 
 export interface InventoryMovement {
-  id: number;
+  id: string;
   inventory_id: number;
   user_id: number;
   movement_type: string;
@@ -27,7 +27,7 @@ export interface InventoryMovement {
   quantity_before: number;
   quantity_after: number;
   reference_type: string | null;
-  reference_id: number | null;
+  reference_id: string | null;
   reason: string | null;
   created_at: string;
   user_name: string;

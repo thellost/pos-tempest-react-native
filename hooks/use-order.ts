@@ -44,7 +44,7 @@ interface UseOrderOptions {
    * Defaults to `true`.
    */
   isShiftOpen?: boolean;
-  shiftId?: number | null;
+  shiftId?: string | null;
 }
 
 interface OrderItemWithModifiers extends OrderItem {
@@ -68,7 +68,7 @@ interface UseOrderReturn {
   addItemToOrder: (item: MenuItemWithInventory, modifiers: SelectedModifier[], weight: number | null, notes: string) => Promise<void>;
   updateQuantity: (itemId: number | string, qty: number) => Promise<void>;
   removeItem: (itemId: number | string) => Promise<void>;
-  updateNotes: (itemId: number, notes: string) => Promise<void>;
+  updateNotes: (itemId: string, notes: string) => Promise<void>;
   editModifiers: (itemId: number | string, modifiers: SelectedModifier[], weight: number | null, notes: string, unitPrice?: number) => Promise<void>;
 
   // Order lifecycle
@@ -348,54 +348,49 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
   // Update item quantity
   const updateQuantity = useCallback(async (itemId: number | string, qty: number) => {
-    // Check if it's a cart item (string ID)
-    if (typeof itemId === 'string') {
-      // Check cart items first
-      const cartItem = cartItems.find(item => item.id === itemId);
-      if (cartItem) {
-        if (qty <= 0) {
-          setCartItems(prev => prev.filter(item => item.id !== itemId));
-        } else {
-          setCartItems(prev =>
-            prev.map(item => {
-              if (item.id !== itemId) return item;
-              return {
-                ...item,
-                quantity: qty,
-                total: (item.unit_price + item.modifier_total) * qty,
-              };
-            })
-          );
-        }
-        return;
+    // Check cart items first
+    const cartItem = cartItems.find(item => item.id === itemId);
+    if (cartItem) {
+      if (qty <= 0) {
+        setCartItems(prev => prev.filter(item => item.id !== itemId));
+      } else {
+        setCartItems(prev =>
+          prev.map(item => {
+            if (item.id !== itemId) return item;
+            return {
+              ...item,
+              quantity: qty,
+              total: (item.unit_price + item.modifier_total) * qty,
+            };
+          })
+        );
       }
-
-      // Check pending round items
-      const pendingItem = pendingRoundItems.find(item => item.id === itemId);
-      if (pendingItem) {
-        if (qty <= 0) {
-          setPendingRoundItems(prev => prev.filter(item => item.id !== itemId));
-        } else {
-          setPendingRoundItems(prev =>
-            prev.map(item => {
-              if (item.id !== itemId) return item;
-              return {
-                ...item,
-                quantity: qty,
-                total: (item.unit_price + item.modifier_total) * qty,
-              };
-            })
-          );
-        }
-        return;
-      }
-      // String ID not found in local state — do not fall through to DB
       return;
     }
 
-    // It's an order item (number ID)
+    // Check pending round items
+    const pendingItem = pendingRoundItems.find(item => item.id === itemId);
+    if (pendingItem) {
+      if (qty <= 0) {
+        setPendingRoundItems(prev => prev.filter(item => item.id !== itemId));
+      } else {
+        setPendingRoundItems(prev =>
+          prev.map(item => {
+            if (item.id !== itemId) return item;
+            return {
+              ...item,
+              quantity: qty,
+              total: (item.unit_price + item.modifier_total) * qty,
+            };
+          })
+        );
+      }
+      return;
+    }
+
+    // Otherwise it's a persisted order item (UUID)
     try {
-      await updateItemQuantity(itemId as number, qty);
+      await updateItemQuantity(String(itemId), qty);
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
@@ -404,24 +399,18 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
   // Remove item
   const removeItem = useCallback(async (itemId: number | string) => {
-    if (typeof itemId === 'string') {
-      // Check cart items first
-      if (cartItems.some(item => item.id === itemId)) {
-        setCartItems(prev => prev.filter(item => item.id !== itemId));
-        return;
-      }
-      // Check pending round items
-      if (pendingRoundItems.some(item => item.id === itemId)) {
-        setPendingRoundItems(prev => prev.filter(item => item.id !== itemId));
-        return;
-      }
-      // String ID not found in local state — do not fall through to DB
+    if (cartItems.some(item => item.id === itemId)) {
+      setCartItems(prev => prev.filter(item => item.id !== itemId));
+      return;
+    }
+    if (pendingRoundItems.some(item => item.id === itemId)) {
+      setPendingRoundItems(prev => prev.filter(item => item.id !== itemId));
       return;
     }
 
-    // It's an order item
+    // It's a persisted order item
     try {
-      await removeItemFromOrder(itemId as number);
+      await removeItemFromOrder(String(itemId));
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'removeItem', level: 'error' });
@@ -429,7 +418,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   }, [cartItems, pendingRoundItems, reload]);
 
   // Update item notes
-  const updateNotes = useCallback(async (itemId: number, notes: string) => {
+  const updateNotes = useCallback(async (itemId: string, notes: string) => {
     try {
       await updateItemNotes(itemId, notes);
       await reload();
@@ -446,65 +435,62 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     notes: string,
     unitPrice?: number
   ) => {
-    if (typeof itemId === 'string') {
-      const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
+    const modifierTotal = modifiers.reduce((sum, m) => sum + m.extra_price, 0);
 
-      // Check cart items
-      const cartItem = cartItems.find(item => item.id === itemId);
-      if (cartItem) {
-        setCartItems(prev =>
-          prev.map(item => {
-            if (item.id !== itemId) return item;
-            const basePrice = weight && item.unit_price > 0
-              ? (item.unit_price / (item.weight || 1)) * weight
-              : item.unit_price;
-            return {
-              ...item,
-              modifiers,
-              notes: notes || null,
-              weight,
-              unit_price: basePrice,
-              modifier_total: modifierTotal,
-              total: (basePrice + modifierTotal) * item.quantity,
-            };
-          })
-        );
-        return;
-      }
-
-      // Check pending round items
-      const pendingItem = pendingRoundItems.find(item => item.id === itemId);
-      if (pendingItem) {
-        setPendingRoundItems(prev =>
-          prev.map(item => {
-            if (item.id !== itemId) return item;
-            const basePrice = weight && item.unit_price > 0
-              ? (item.unit_price / (item.weight || 1)) * weight
-              : item.unit_price;
-            return {
-              ...item,
-              modifiers,
-              notes: notes || null,
-              weight,
-              unit_price: basePrice,
-              modifier_total: modifierTotal,
-              total: (basePrice + modifierTotal) * item.quantity,
-            };
-          })
-        );
-        return;
-      }
-      // String ID not found in local state — do not fall through to DB
+    // Check cart items first
+    const cartItem = cartItems.find(item => item.id === itemId);
+    if (cartItem) {
+      setCartItems(prev =>
+        prev.map(item => {
+          if (item.id !== itemId) return item;
+          const basePrice = weight && item.unit_price > 0
+            ? (item.unit_price / (item.weight || 1)) * weight
+            : item.unit_price;
+          return {
+            ...item,
+            modifiers,
+            notes: notes || null,
+            weight,
+            unit_price: basePrice,
+            modifier_total: modifierTotal,
+            total: (basePrice + modifierTotal) * item.quantity,
+          };
+        })
+      );
       return;
     }
 
-    // It's an order item
+    // Check pending round items
+    const pendingItem = pendingRoundItems.find(item => item.id === itemId);
+    if (pendingItem) {
+      setPendingRoundItems(prev =>
+        prev.map(item => {
+          if (item.id !== itemId) return item;
+          const basePrice = weight && item.unit_price > 0
+            ? (item.unit_price / (item.weight || 1)) * weight
+            : item.unit_price;
+          return {
+            ...item,
+            modifiers,
+            notes: notes || null,
+            weight,
+            unit_price: basePrice,
+            modifier_total: modifierTotal,
+            total: (basePrice + modifierTotal) * item.quantity,
+          };
+        })
+      );
+      return;
+    }
+
+    // It's a persisted order item
     try {
-      await updateItemModifiers(itemId as number, modifiers);
+      const persistedId = String(itemId);
+      await updateItemModifiers(persistedId, modifiers);
       if (unitPrice !== undefined) {
-        await updateItemUnitPrice(itemId as number, unitPrice);
+        await updateItemUnitPrice(persistedId, unitPrice);
       }
-      await updateItemNotes(itemId as number, notes);
+      await updateItemNotes(persistedId, notes);
       // Note: weight/unit price update would need the menu item price
       await reload();
     } catch (error) {

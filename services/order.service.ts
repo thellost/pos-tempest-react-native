@@ -6,7 +6,7 @@ import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models'
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, captureMessage, startSpan } from '@/lib/sentry';
 import { insertAuditLog } from '@/services/audit.service';
-import { deductStockForItems } from '@/services/inventory.service';
+import { deductStockForItems, restockForCancelledOrder } from '@/services/inventory.service';
 import { getActiveShift, openShift } from '@/services/shift.service';
 import { isWithinOperatingWindow, TZ_FALLBACK } from '@/utils/branch-schedule';
 import { generateOrderNumber } from '@/utils/order-number';
@@ -51,7 +51,7 @@ export async function createOrder(
   branchId: number,
   tableId: number | null,
   cashierId: number,
-  shiftId: number | null,
+  shiftId: string | null,
   orderType: string,
   guestCount: number | null,
   customerName: string | null = null,
@@ -77,7 +77,7 @@ export async function createOrder(
   // Safeguard: if no shiftId was provided, resolve or auto-open one.
   // This prevents orders with null shift_id which would orphan revenue from
   // any shift report. Auto-creation triggers a Sentry warning for visibility.
-  let resolvedShiftId: number | null = shiftId;
+  let resolvedShiftId: string | null = shiftId;
 
   if (resolvedShiftId == null) {
     const active = await getActiveShift(branchId);
@@ -350,7 +350,7 @@ export async function addItemToOrder(
       const existingIds = existingMods.map(m => String(m.modifier_id));
 
       if (incomingIds.length === existingIds.length && incomingIds.every((id, i) => id === existingIds[i])) {
-        await updateItemQuantity(toInt(candidate.id), toInt(candidate.quantity) + quantity);
+        await updateItemQuantity(String(candidate.id), toInt(candidate.quantity) + quantity);
         addBreadcrumb('order', 'Item quantity increased', { orderId, menuItemId: menuItem.id, itemName: menuItem.name, qty: quantity });
         console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
         return;
@@ -358,11 +358,8 @@ export async function addItemToOrder(
     }
   }
 
-  // Get the next order item ID
-  const maxIdRow = await powersync.getOptional<{ max_id: number }>(
-    `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_items`
-  );
-  const newId = ((maxIdRow?.max_id || 0) + 1).toString();
+  // Generate UUID for new order item
+  const newId = Crypto.randomUUID();
 
   // Insert order item
   await powersync.execute(
@@ -393,10 +390,7 @@ export async function addItemToOrder(
 
   // Insert order item modifiers
   for (const modifier of modifiers) {
-    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
-    );
-    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+    const modId = Crypto.randomUUID();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (
@@ -413,7 +407,7 @@ export async function addItemToOrder(
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
     tableName: 'order_items',
-    recordId: parseInt(newId, 10),  // order_items.id is still INTEGER
+    recordId: newId,
     newValues: {
       order_id: orderId,
       menu_item_name: menuItem.name,
@@ -430,7 +424,7 @@ export async function addItemToOrder(
 /**
  * Removes an item from an order
  */
-export async function removeItemFromOrder(orderItemId: number): Promise<void> {
+export async function removeItemFromOrder(orderItemId: string): Promise<void> {
   const orderItem = await powersync.getOptional<OrderItem>(
     `SELECT * FROM order_items WHERE id = ?`,
     [orderItemId]
@@ -474,7 +468,7 @@ export async function removeItemFromOrder(orderItemId: number): Promise<void> {
 /**
  * Updates the quantity of an order item
  */
-export async function updateItemQuantity(orderItemId: number, newQuantity: number): Promise<void> {
+export async function updateItemQuantity(orderItemId: string, newQuantity: number): Promise<void> {
   if (newQuantity <= 0) {
     await removeItemFromOrder(orderItemId);
     return;
@@ -509,7 +503,7 @@ export async function updateItemQuantity(orderItemId: number, newQuantity: numbe
 /**
  * Updates the base unit price of an order item (used for weight-based pricing updates)
  */
-export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: number): Promise<void> {
+export async function updateItemUnitPrice(orderItemId: string, newUnitPrice: number): Promise<void> {
   if (newUnitPrice < 0) {
     throw new Error('Unit price cannot be negative');
   }
@@ -549,7 +543,7 @@ export async function updateItemUnitPrice(orderItemId: number, newUnitPrice: num
 /**
  * Updates the notes for an order item
  */
-export async function updateItemNotes(orderItemId: number, notes: string): Promise<void> {
+export async function updateItemNotes(orderItemId: string, notes: string): Promise<void> {
   await powersync.execute(
     `UPDATE order_items SET notes = ? WHERE id = ?`,
     [notes, orderItemId]
@@ -562,7 +556,7 @@ export async function updateItemNotes(orderItemId: number, notes: string): Promi
  * Updates modifiers for an order item
  */
 export async function updateItemModifiers(
-  orderItemId: number,
+  orderItemId: string,
   modifiers: SelectedModifier[]
 ): Promise<void> {
   const orderItem = await powersync.getOptional<OrderItem>(
@@ -580,10 +574,7 @@ export async function updateItemModifiers(
   );
 
   for (const modifier of modifiers) {
-    const modMaxIdRow = await powersync.getOptional<{ max_id: number }>(
-      `SELECT MAX(CAST(id AS INTEGER)) as max_id FROM order_item_modifiers`
-    );
-    const modId = ((modMaxIdRow?.max_id || 0) + 1).toString();
+    const modId = Crypto.randomUUID();
 
     await powersync.execute(
       `INSERT INTO order_item_modifiers (
@@ -714,12 +705,23 @@ export async function voidOrder(orderId: string, voidedBy: number, reason: strin
     throw new Error('Order not found');
   }
 
+  if (existingOrder.status === ORDER_STATUS.CANCELLED) {
+    console.log('[OrderService] Order already cancelled, skipping void:', orderId);
+    return;
+  }
+
   await powersync.execute(
     `UPDATE orders 
      SET status = ?, voided_by = ?, voided_at = ?, void_reason = ?, updated_at = ?
      WHERE id = ?`,
     [ORDER_STATUS.CANCELLED, voidedBy, now, reason, now, orderId]
   );
+
+  try {
+    await restockForCancelledOrder(orderId, voidedBy);
+  } catch (error) {
+    captureError(error, { module: 'order', operation: 'voidOrder.restock', level: 'error', extras: { orderId } });
+  }
 
   const updatedOrder = await powersync.getOptional<Order>(
     `SELECT * FROM orders WHERE id = ?`,
@@ -760,7 +762,7 @@ export async function voidOrder(orderId: string, voidedBy: number, reason: strin
 /**
  * Voids a single order item
  */
-export async function voidItem(orderItemId: number, voidedBy: number, reason: string): Promise<void> {
+export async function voidItem(orderItemId: string, voidedBy: number, reason: string): Promise<void> {
   await powersync.execute(
     `UPDATE order_items 
      SET is_voided = 1, voided_by = ?, void_reason = ?

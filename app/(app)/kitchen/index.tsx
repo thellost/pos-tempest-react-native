@@ -46,7 +46,7 @@ interface KDSColumnProps {
   label: string;
   accentColor: string;
   kots: KOTRow[];
-  onAdvance: (kotId: number, currentStatus: KotStatus) => Promise<void>;
+  onAdvance: (kotId: string, currentStatus: KotStatus) => Promise<void>;
   emptyMessage: string;
 }
 

@@ -48,8 +48,8 @@ export function cartItemToDisplay(item: CartItem, categoryGroup?: string): Order
     is_voided: false,
     round_number: item.round_number,
     modifiers: item.modifiers.map(m => ({
-      id: 0,
-      order_item_id: 0,
+      id: '',
+      order_item_id: '',
       modifier_id: m.modifier_id,
       modifier_name: m.modifier_name,
       modifier_group_name: m.modifier_group_name,
