@@ -87,7 +87,7 @@ export function useShift(): UseShiftReturn {
         autoBranch.closing_time
       ) {
         const rawDeviceId = registration?.device?.id ?? null;
-        const deviceId = rawDeviceId !== null ? Number(rawDeviceId) : null;
+        const deviceId = rawDeviceId !== null ? String(rawDeviceId) : null;
 
         if (deviceId === null) {
           console.warn('[useShift] deviceId is null — shift will have no device_id');

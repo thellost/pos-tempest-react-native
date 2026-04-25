@@ -23,7 +23,7 @@ export type ShiftRecord = {
   id: string;
   user_id: number;
   branch_id: number;
-  device_id: number | null;
+  device_id: string | null;
   status: string;
   opening_cash: number;
   closing_cash: number | null;
@@ -38,7 +38,7 @@ type ShiftRow = {
   id: number | string;
   user_id: number | string;
   branch_id: number | string;
-  device_id: number | string | null;
+  device_id: string | null;
   status: string;
   opening_cash: number | string | null;
   closing_cash: number | string | null;
@@ -93,12 +93,17 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_REGEX.test(value);
+}
+
 function normalizeShift(row: ShiftRow): ShiftRecord {
   return {
     id: String(row.id),
     user_id: toNumber(row.user_id),
     branch_id: toNumber(row.branch_id),
-    device_id: row.device_id !== null && row.device_id !== undefined ? toNumber(row.device_id) : null,
+    device_id: row.device_id ?? null,
     status: row.status,
     opening_cash: toNumber(row.opening_cash),
     closing_cash: row.closing_cash === null ? null : toNumber(row.closing_cash),
@@ -161,7 +166,21 @@ export async function getActiveShift(branchId: number): Promise<ShiftRecord | nu
     [branchId, SHIFT_STATUS.OPEN],
   );
 
-  return row ? normalizeShift(row) : null;
+  if (!row) return null;
+
+  if (!isUuid(String(row.id))) {
+    captureMessage('getActiveShift: stale non-UUID shift id in local cache — ignoring', 'warning', {
+      branchId,
+      staleShiftId: String(row.id),
+    });
+    captureMessage('getActiveShift: stale non-UUID shift id in local cache — ignoring', 'warning', {
+      branchId,
+      staleShiftId: String(row.id),
+    });
+    return null;
+  }
+
+  return normalizeShift(row);
 }
 
 export async function getShiftCashSummary(shiftId: string, openingCash: number): Promise<ShiftCashSummary> {
@@ -205,7 +224,7 @@ export async function getShiftCashSummary(shiftId: string, openingCash: number):
   };
 }
 
-export async function openShift(callerRole: string, userId: number, branchId: number, openingCash: number = 0, deviceId: number | null = null, system: boolean = false): Promise<ShiftRecord> {
+export async function openShift(callerRole: string, userId: number, branchId: number, openingCash: number = 0, deviceId: string | null = null, system: boolean = false): Promise<ShiftRecord> {
   if (!system && !hasPermission(callerRole, PERMISSION.MANAGE_SHIFT)) {
     throw new Error('[ShiftService] Permission denied: manage_shift required');
   }
@@ -434,7 +453,7 @@ export async function autoCloseStaleShifts(branch: AutoShiftBranch): Promise<num
 export async function ensureShiftForNow(
   branch: AutoShiftBranch,
   userId: number,
-  deviceId: number | null,
+  deviceId: string | null,
 ): Promise<ShiftRecord | null> {
   const branchId = toNumber(branch.id);
 

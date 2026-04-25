@@ -5,9 +5,10 @@ import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, captureMessage, startSpan } from '@/lib/sentry';
+import { getOrCreateDeviceId } from '@/lib/device';
 import { insertAuditLog } from '@/services/audit.service';
 import { deductStockForItems, restockForCancelledOrder } from '@/services/inventory.service';
-import { getActiveShift, openShift } from '@/services/shift.service';
+import { getActiveShift, isUuid, openShift } from '@/services/shift.service';
 import { isWithinOperatingWindow, TZ_FALLBACK } from '@/utils/branch-schedule';
 import { generateOrderNumber } from '@/utils/order-number';
 import { toInt } from '@/utils/coerce';
@@ -79,6 +80,13 @@ export async function createOrder(
   // any shift report. Auto-creation triggers a Sentry warning for visibility.
   let resolvedShiftId: string | null = shiftId;
 
+  if (resolvedShiftId != null && !isUuid(resolvedShiftId)) {
+    captureMessage('createOrder: discarding non-UUID shiftId from caller (stale local data)', 'warning', {
+      branchId, cashierId, tableId, staleShiftId: resolvedShiftId,
+    });
+    resolvedShiftId = null;
+  }
+
   if (resolvedShiftId == null) {
     const active = await getActiveShift(branchId);
     if (active) {
@@ -105,10 +113,11 @@ export async function createOrder(
 
       if (autoShift && opening && closing && isWithinOperatingWindow(opening, closing, tz)) {
         try {
-          const opened = await openShift('', cashierId, branchId, 0, null, true);
+          const deviceUid = await getOrCreateDeviceId();
+          const opened = await openShift('', cashierId, branchId, 0, deviceUid, true);
           resolvedShiftId = opened.id;
           captureMessage('Order created without shiftId — auto-opened new shift', 'warning', {
-            branchId, cashierId, tableId, autoOpenedShiftId: opened.id,
+            branchId, cashierId, tableId, autoOpenedShiftId: opened.id, deviceUid,
           });
         } catch (err) {
           captureError(err, {

@@ -54,10 +54,24 @@ Sentry.init({
     navigationIntegration,
   ],
 
-  beforeSend(event) {
+  beforeSend(event, hint) {
     // Scrub Authorization headers from outbound events
     if (event.request?.headers) {
       delete event.request.headers['Authorization'];
+    }
+    // Drop benign printer transport errors — they are user-recoverable
+    // (printer off / out of range / busy) and not actionable bugs.
+    const message =
+      (hint?.originalException as Error | undefined)?.message ??
+      event.exception?.values?.[0]?.value ??
+      event.message ??
+      '';
+    if (
+      typeof message === 'string' &&
+      (message.includes('[escpos] Bluetooth connect timed out') ||
+        message.includes('Already attempting connection'))
+    ) {
+      return null;
     }
     return event;
   },
