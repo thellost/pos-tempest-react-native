@@ -19,9 +19,6 @@ import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ConfigProvider } from '@/hooks/use-config';
 import { DeviceProvider } from '@/hooks/use-device';
-import { POS_SCHEMA } from '@/lib/schema';
-
-import * as ExpoUpdates from 'expo-updates';
 
 import * as Sentry from '@sentry/react-native';
 import '../global.css';
@@ -62,50 +59,7 @@ Sentry.init({
     if (event.request?.headers) {
       delete event.request.headers['Authorization'];
     }
-    // Drop benign printer transport errors — they are user-recoverable
-    // (printer off / out of range / busy) and not actionable bugs.
-    const message =
-      (hint?.originalException as Error | undefined)?.message ??
-      event.exception?.values?.[0]?.value ??
-      event.message ??
-      '';
-    if (
-      typeof message === 'string' &&
-      (message.includes('[escpos] Bluetooth connect timed out') ||
-        message.includes('Already attempting connection'))
-    ) {
-      return null;
-    }
     return event;
-  },
-});
-
-// One-shot Sentry diagnostic so we can verify which schema/PowerSync URL the
-// shipped binary + active OTA bundle is actually using in production.
-// Sent as a `warning` so it appears prominently in the Sentry feed without
-// being noisy. Includes channel/release/runtime so you can correlate with EAS.
-Sentry.captureMessage('[env] runtime config snapshot', {
-  level: 'warning',
-  tags: {
-    boot: 'env-snapshot',
-    schema: POS_SCHEMA,
-    schema_env: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? '<unset>',
-    runtime_channel: ExpoUpdates.channel || '<empty>',
-    environment: appEnvironment,
-  },
-  extra: {
-    resolvedSchema: POS_SCHEMA,
-    runtimeChannel: ExpoUpdates.channel ?? null,
-    EXPO_PUBLIC_SUPABASE_DB_SCHEMA: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? null,
-    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? null,
-    EXPO_PUBLIC_POWERSYNC_URL: process.env.EXPO_PUBLIC_POWERSYNC_URL ?? null,
-    appVersion: Constants.expoConfig?.version ?? null,
-    runtimeVersion:
-      (Constants.expoConfig?.runtimeVersion as string | undefined) ?? null,
-    updateChannel:
-      (Constants.expoConfig?.updates as { channel?: string } | undefined)?.channel ?? null,
-    isDev: __DEV__,
-    platform: Platform.OS,
   },
 });
 

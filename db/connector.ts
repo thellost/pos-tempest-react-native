@@ -1,8 +1,9 @@
-import type { PowerSyncBackendConnector } from '@powersync/react-native';
+import type { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from '@powersync/react-native';
 
 import { POS_SCHEMA } from '@/lib/schema';
 import { addBreadcrumb, captureError, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
+import { notifyUnrecoverableUpload } from '@/lib/sync-warnings';
 
 function getPowerSyncEndpoint() {
 	const endpoint = process.env.EXPO_PUBLIC_POWERSYNC_URL;
@@ -178,6 +179,60 @@ async function applyCrudOperation(op: CrudOp) {
 	throw new Error(`[PowerSync upload] Unsupported CRUD operation: ${op.op}`);
 }
 
+/**
+ * Returns true when the upload error is "unrecoverable" — the row will never be
+ * accepted by the server in its current shape, so retrying forever just blocks
+ * the upload queue. We drop the row locally and surface a one-shot warning to
+ * the user (see lib/sync-warnings.ts).
+ *
+ * Common cases:
+ *   - integer id sent to a uuid column (legacy pre-UUID-migration ghost rows)
+ *   - uuid sent to a (still-)integer column (migration not yet applied)
+ *   - other type-cast failures
+ *   - FK violation pointing at a row that does not exist anywhere
+ */
+function isUnrecoverableUploadError(message: string): boolean {
+	const m = message.toLowerCase();
+	return (
+		m.includes('invalid input syntax for type uuid') ||
+		m.includes('invalid input syntax for type integer') ||
+		m.includes('invalid input syntax for type bigint') ||
+		m.includes('invalid input syntax for type numeric') ||
+		m.includes('invalid input syntax for type timestamp') ||
+		m.includes('column') && m.includes('does not exist') ||
+		m.includes('value too long for type') ||
+		m.includes('violates foreign key constraint')
+	);
+}
+
+/**
+ * Best-effort: delete the offending row from the local SQLite so PowerSync
+ * stops retrying it. The op is also implicitly cleared when the surrounding
+ * batch.complete() runs without rethrow.
+ *
+ * Some tables use `device_uid` or `id` as PK locally; we attempt both safely.
+ */
+async function deleteLocalRow(
+	database: AbstractPowerSyncDatabase,
+	table: string,
+	id: string,
+): Promise<void> {
+	const safeTable = table.replace(/[^a-zA-Z0-9_]/g, '');
+	if (!safeTable) return;
+	try {
+		await database.execute(`DELETE FROM ${safeTable} WHERE id = ?`, [id]);
+	} catch (err) {
+		console.warn(`[PowerSync upload] Local cleanup of ${safeTable}#${id} failed:`, err);
+	}
+	if (safeTable === 'devices') {
+		try {
+			await database.execute(`DELETE FROM devices WHERE device_uid = ?`, [id]);
+		} catch {
+			/* ignore */
+		}
+	}
+}
+
 export const powerSyncConnector: PowerSyncBackendConnector = {
 	fetchCredentials: async () => {
 		try {
@@ -227,6 +282,22 @@ export const powerSyncConnector: PowerSyncBackendConnector = {
 			try {
 				await applyCrudOperation(op);
 			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+
+				if (isUnrecoverableUploadError(message)) {
+					// Drop the row locally so the queue can drain, surface a
+					// Sentry error + one-shot user prompt asking them to reset.
+					await deleteLocalRow(database, op.table, op.id);
+					notifyUnrecoverableUpload({
+						table: op.table,
+						id: op.id,
+						op: op.op,
+						reason: message,
+					});
+					addBreadcrumb('sync', `Dropped unrecoverable ${op.op} ${op.table}#${op.id}`);
+					continue;
+				}
+
 				captureError(error, { module: 'powersync', operation: 'uploadData', level: 'error', extras: { table: op.table, opType: op.op, recordId: op.id } });
 				throw error;
 			}
