@@ -40,8 +40,9 @@ export function AdaptiveModal({
       >
         <SafeAreaView className="flex-1 bg-surface">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1"
+            keyboardVerticalOffset={0}
           >
             <View className="flex-row items-center justify-between border-b border-border bg-surface-card px-4 py-3">
               {title ? (
@@ -53,7 +54,12 @@ export function AdaptiveModal({
                 <X size={20} color={ThemeColors.text.muted} />
               </Pressable>
             </View>
-            <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
+            <ScrollView
+              className="flex-1"
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+            >
               {children}
             </ScrollView>
             {footer}
@@ -76,7 +82,8 @@ export function AdaptiveModal({
         onPress={onClose}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
         >
           <Pressable
             className="overflow-hidden rounded-xl border border-border bg-surface-card"
@@ -103,6 +110,8 @@ export function AdaptiveModal({
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={{ paddingBottom: 24 }}
             >
               {children}
             </ScrollView>
