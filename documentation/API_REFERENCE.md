@@ -766,7 +766,7 @@ List shifts with optional filters.
   "success": true,
   "data": [
     {
-      "id": 1,
+      "id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "device_id": "550e8400-e29b-41d4-a716-446655440000",
       "branch_id": 1,
@@ -815,7 +815,7 @@ Get the financial summary for a shift.
 {
   "success": true,
   "data": {
-    "shift_id": 1,
+    "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
     "total_orders": 45,
     "total_revenue": 6750000.00,
     "total_discount": 250000.00,
@@ -850,8 +850,8 @@ Get the financial summary for a shift.
     ],
     "cash_transactions": [
       {
-        "id": 1,
-        "shift_id": 1,
+        "id": "a1c2e3d4-5678-49ab-9cde-0123456789ab",
+        "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_out",
         "reason": "owner_withdrawal",
@@ -939,7 +939,7 @@ Record a non-order cash movement (e.g., owner withdrawal, petty cash, cash depos
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | int | Shift ID |
+| `id` | string (UUID) | Shift ID |
 
 **Request Body:**
 ```json
@@ -963,8 +963,8 @@ Record a non-order cash movement (e.g., owner withdrawal, petty cash, cash depos
 {
   "success": true,
   "data": {
-    "id": 1,
-    "shift_id": 1,
+    "id": "a1c2e3d4-5678-49ab-9cde-0123456789ab",
+    "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
     "user_id": 2,
     "type": "cash_out",
     "reason": "owner_withdrawal",
@@ -992,7 +992,7 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | int | Shift ID |
+| `id` | string (UUID) | Shift ID |
 
 **Response `200 OK`:**
 ```json
@@ -1000,8 +1000,8 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
   "success": true,
   "data": [
     {
-      "id": 1,
-      "shift_id": 1,
+      "id": "a1c2e3d4-5678-49ab-9cde-0123456789ab",
+      "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "type": "cash_out",
       "reason": "owner_withdrawal",
@@ -1011,8 +1011,8 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
       "user_name": "Sarah Cashier"
     },
     {
-      "id": 2,
-      "shift_id": 1,
+      "id": "b2d3f4e5-6789-4abc-8def-112233445566",
+      "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "type": "cash_in",
       "reason": "change_refill",
@@ -2403,7 +2403,7 @@ Change reservation status.
 | `order_type` | string | `dine_in` or `takeaway` |
 | `cashier_id` | int | Filter by cashier |
 | `customer_id` | int | Filter by customer |
-| `shift_id` | int | Filter by shift |
+| `shift_id` | string (UUID) | Filter by shift |
 | `table_id` | int | Filter by table |
 | `date_from` | string | Start date `YYYY-MM-DD` |
 | `date_to` | string | End date `YYYY-MM-DD` |
@@ -2417,13 +2417,13 @@ Change reservation status.
   "success": true,
   "data": [
     {
-      "id": 1,
+      "id": "550e8400-e29b-41d4-a716-446655440010",
       "order_number": "ORD-20260303-0001",
       "branch_id": 1,
       "table_id": 2,
       "cashier_id": 2,
       "customer_id": 1,
-      "shift_id": 1,
+      "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "order_type": "dine_in",
       "status": "completed",
       "guest_count": 2,
@@ -2468,13 +2468,13 @@ Get full order detail with nested items, modifiers, payments, and discounts.
 {
   "success": true,
   "data": {
-    "id": 1,
+    "id": "550e8400-e29b-41d4-a716-446655440010",
     "order_number": "ORD-20260303-0001",
     "branch_id": 1,
     "table_id": 2,
     "cashier_id": 2,
     "customer_id": 1,
-    "shift_id": 1,
+    "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
     "order_type": "dine_in",
     "status": "completed",
     "guest_count": 2,
@@ -2497,8 +2497,8 @@ Get full order detail with nested items, modifiers, payments, and discounts.
     "branch_name": "Tempest Cafe - Sudirman",
     "items": [
       {
-        "id": 1,
-        "order_id": 1,
+        "id": "7f9c2e60-aa11-4b22-9c33-d44e55f66001",
+        "order_id": "550e8400-e29b-41d4-a716-446655440010",
         "menu_item_id": 1,
         "menu_item_name": "Nasi Goreng Spesial",
         "quantity": 2.000,
@@ -2515,8 +2515,8 @@ Get full order detail with nested items, modifiers, payments, and discounts.
         "created_at": "2026-03-03T12:30:00Z",
         "modifiers": [
           {
-            "id": 1,
-            "order_item_id": 1,
+            "id": "8a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9",
+            "order_item_id": "7f9c2e60-aa11-4b22-9c33-d44e55f66001",
             "modifier_id": 3,
             "modifier_name": "Extra Spicy",
             "modifier_group_name": "Spice Level",
@@ -2525,8 +2525,8 @@ Get full order detail with nested items, modifiers, payments, and discounts.
         ]
       },
       {
-        "id": 2,
-        "order_id": 1,
+        "id": "7f9c2e60-aa11-4b22-9c33-d44e55f66002",
+        "order_id": "550e8400-e29b-41d4-a716-446655440010",
         "menu_item_id": 5,
         "menu_item_name": "Es Teh Manis",
         "quantity": 2.000,
@@ -2546,9 +2546,9 @@ Get full order detail with nested items, modifiers, payments, and discounts.
     ],
     "payments": [
       {
-        "id": 1,
-        "order_id": 1,
-        "shift_id": 1,
+        "id": "4b3c2d1e-0f9a-48b7-c6d5-e4f3a2b1c0d9",
+        "order_id": "550e8400-e29b-41d4-a716-446655440010",
+        "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "payment_method": "cash",
         "amount": 150000.00,
         "change_amount": 19500.00,
@@ -2558,8 +2558,8 @@ Get full order detail with nested items, modifiers, payments, and discounts.
     ],
     "discounts": [
       {
-        "id": 1,
-        "order_id": 1,
+        "id": "3a2b1c0d-9e8f-4756-b4c3-d2e1f0a9b8c7",
+        "order_id": "550e8400-e29b-41d4-a716-446655440010",
         "discount_id": 1,
         "discount_name": "Weekday Lunch 10%",
         "discount_type": "percentage",
@@ -3042,7 +3042,7 @@ Get the stock movement historyfor a raw ingredient.
   "success": true,
   "data": [
     {
-      "id": 5,
+      "id": "2f1e0d9c-8b7a-4655-93b2-c1d0e9f8a7b6",
       "inventory_id": 8,
       "user_id": 1,
       "movement_type": "adjustment",
@@ -3056,7 +3056,7 @@ Get the stock movement historyfor a raw ingredient.
       "user_name": "John Admin"
     },
     {
-      "id": 3,
+      "id": "1e0d9c8b-7a65-4544-82a1-b0c9d8e7f6a5",
       "inventory_id": 8,
       "user_id": 1,
       "movement_type": "purchase_in",
@@ -3837,7 +3837,7 @@ Get a detailed financial report for a specific shift.
   "success": true,
   "data": {
     "shift": {
-      "id": 1,
+      "id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "device_id": "550e8400-e29b-41d4-a716-446655440000",
       "branch_id": 1,
@@ -3888,8 +3888,8 @@ Get a detailed financial report for a specific shift.
     ],
     "cash_transactions": [
       {
-        "id": 1,
-        "shift_id": 1,
+        "id": "a1c2e3d4-5678-49ab-9cde-0123456789ab",
+        "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_in",
         "reason": "change_refill",
@@ -3899,8 +3899,8 @@ Get a detailed financial report for a specific shift.
         "user_name": "Sarah Cashier"
       },
       {
-        "id": 2,
-        "shift_id": 1,
+        "id": "b2d3f4e5-6789-4abc-8def-112233445566",
+        "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_out",
         "reason": "supply_purchase",
@@ -3910,8 +3910,8 @@ Get a detailed financial report for a specific shift.
         "user_name": "Sarah Cashier"
       },
       {
-        "id": 3,
-        "shift_id": 1,
+        "id": "c3e4f506-789a-4bcd-9ef0-223344556677",
+        "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_out",
         "reason": "petty_cash",

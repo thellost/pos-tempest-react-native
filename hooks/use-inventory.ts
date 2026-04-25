@@ -97,13 +97,25 @@ export function useInventory() {
   }, []);
 
   const updateThreshold = useCallback(
-    async (inventoryId: number, threshold: number): Promise<InventoryItem> => {
-      const updated = await api.patch<InventoryItem>(
+    async (inventoryId: number, threshold: number): Promise<void> => {
+      // Endpoint returns { message: string } per API_REFERENCE §21, not an InventoryItem.
+      // Optimistically patch local state from the request value instead of the response.
+      await api.patch<{ message: string }>(
         `/api/v1/inventory/${inventoryId}/threshold`,
         { low_stock_threshold: threshold },
       );
-      setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      return updated;
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === inventoryId
+            ? {
+                ...item,
+                low_stock_threshold: threshold,
+                is_low_stock: item.stock_quantity <= threshold,
+                updated_at: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
     },
     [],
   );

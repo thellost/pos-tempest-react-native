@@ -42,7 +42,7 @@ export interface StockDetailModalProps {
   item: InventoryItem | null;
   onClose: () => void;
   onAdjust: (inventoryId: number, qty: number, type: AdjustmentType, reason: string) => Promise<void>;
-  onThreshold: (inventoryId: number, threshold: number) => Promise<InventoryItem>;
+  onThreshold: (inventoryId: number, threshold: number) => Promise<void>;
   getMovements: (inventoryId: number) => Promise<InventoryMovement[]>;
 }
 

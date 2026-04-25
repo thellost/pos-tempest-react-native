@@ -9,7 +9,9 @@ import { PermissionGate } from '@/components/ui/PermissionGate';
 import { PERMISSION } from '@/constants/permissions';
 import { Config } from '@/constants/config';
 import { Brand } from '@/constants/theme';
+import { resetLocalData } from '@/db/provider';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useConfig } from '@/hooks/use-config';
 import { useDevice } from '@/hooks/use-device';
 import { updateBranchRoundingPrecision } from '@/services/branch.service';
@@ -35,6 +37,7 @@ if (Platform.OS === 'android') {
 
 export default function SettingsScreen() {
   const { colorScheme, setColorScheme } = useAppTheme();
+  const { signOut } = useAuth();
   const { config, overrides, updateConfig, resetConfig } = useConfig();
   const { registration, deviceInfo, refresh: refreshDevice, clearDevice } = useDevice();
   const {
@@ -46,6 +49,7 @@ export default function SettingsScreen() {
   } = usePrinter();
 
   const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
+  const [isResettingLocalData, setIsResettingLocalData] = useState(false);
   const [roundingPrecision, setRoundingPrecision] = useState<number>(
     (registration?.branch?.rounding_precision as number) ?? Config.DEFAULT_ROUNDING_PRECISION,
   );
@@ -67,6 +71,44 @@ export default function SettingsScreen() {
       setSavingRounding(false);
     }
   }
+
+  const handleResetLocalData = () => {
+    Alert.alert(
+      'Reset Local Data?',
+      'This will erase all locally stored orders, shifts, menus, and other cached data, then sign you out. Make sure all open shifts are closed and all orders have synced. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset & Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            setIsResettingLocalData(true);
+            let resetError: unknown = null;
+            try {
+              await resetLocalData();
+            } catch (error) {
+              resetError = error;
+              console.error('[Settings] resetLocalData failed:', error);
+            }
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('[Settings] signOut after reset failed:', error);
+            } finally {
+              setIsResettingLocalData(false);
+            }
+            if (resetError) {
+              const message = resetError instanceof Error ? resetError.message : 'Unknown error';
+              Alert.alert(
+                'Reset Incomplete',
+                `Local data may not be fully cleared: ${message}\n\nYou have been signed out. Please reopen the app to retry.`,
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleResetDevice= () => {
     Alert.alert(
@@ -340,6 +382,24 @@ export default function SettingsScreen() {
       <PermissionGate permission={PERMISSION.BRANCH_SETTINGS}>
         <AccordionSection icon={AlertTriangle} title="Danger Zone" danger>
         <View className="gap-3">
+          <View>
+            <Text className="text-pos-sm font-semibold text-pos-text">Reset Local Data & Sign Out</Text>
+            <Text className="mt-1 text-pos-xs text-pos-text-muted">
+              Wipes all locally cached data (orders, shifts, menus) on this device and signs you out. Device registration and printer settings are kept. Use this once after a backend schema migration.
+            </Text>
+          </View>
+          <Button
+            className="items-center justify-center rounded-xl bg-pos-danger py-3.5"
+            onPress={handleResetLocalData}
+            disabled={isResettingLocalData}
+          >
+            <Text className="text-center text-pos-sm font-semibold text-white">
+              {isResettingLocalData ? 'Resetting…' : 'Reset Local Data & Sign Out'}
+            </Text>
+          </Button>
+
+          <RowDivider />
+
           <View>
             <Text className="text-pos-sm font-semibold text-pos-text">Reset Device Registration</Text>
             <Text className="mt-1 text-pos-xs text-pos-text-muted">

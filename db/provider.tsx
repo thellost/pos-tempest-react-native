@@ -18,6 +18,26 @@ export const powersync = new PowerSyncDatabase({
 let initPromise: Promise<void> | null = null;
 const POWERSYNC_ENVIRONMENT = __DEV__ ? 'development' : 'production';
 
+/**
+ * Wipes all locally cached PowerSync data and resets the sync state.
+ * The schema is preserved; on the next `connect()` the database is
+ * re-hydrated from the backend. Intended for one-shot recovery after a
+ * backend schema migration (e.g. UUID PK rollout) that left local rows
+ * incompatible with the server. Caller is responsible for signing the
+ * user out and routing back to login.
+ */
+export async function resetLocalData(): Promise<void> {
+	addBreadcrumb('sync', 'Resetting local PowerSync data');
+	try {
+		await powersync.disconnectAndClear();
+		initPromise = null;
+		console.log('[PowerSync] Local data reset complete');
+	} catch (error) {
+		console.error('[PowerSync] Failed to reset local data:', error);
+		throw error;
+	}
+}
+
 export function getPowerSyncStatusSnapshot() {
 	const status = powersync.currentStatus;
 
