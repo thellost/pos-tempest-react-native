@@ -77,6 +77,31 @@ Sentry.init({
   },
 });
 
+// One-shot Sentry diagnostic so we can verify which schema/PowerSync URL the
+// shipped binary + active OTA bundle is actually using in production.
+// Sent as a `warning` so it appears prominently in the Sentry feed without
+// being noisy. Includes channel/release/runtime so you can correlate with EAS.
+Sentry.captureMessage('[env] runtime config snapshot', {
+  level: 'warning',
+  tags: {
+    boot: 'env-snapshot',
+    schema: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? '<unset>',
+    environment: appEnvironment,
+  },
+  extra: {
+    EXPO_PUBLIC_SUPABASE_DB_SCHEMA: process.env.EXPO_PUBLIC_SUPABASE_DB_SCHEMA ?? null,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? null,
+    EXPO_PUBLIC_POWERSYNC_URL: process.env.EXPO_PUBLIC_POWERSYNC_URL ?? null,
+    appVersion: Constants.expoConfig?.version ?? null,
+    runtimeVersion:
+      (Constants.expoConfig?.runtimeVersion as string | undefined) ?? null,
+    updateChannel:
+      (Constants.expoConfig?.updates as { channel?: string } | undefined)?.channel ?? null,
+    isDev: __DEV__,
+    platform: Platform.OS,
+  },
+});
+
 function ThemedApp() {
   const navigationRef = useNavigationContainerRef();
   const { themeVars, isThemeChanging } = useAppTheme();
