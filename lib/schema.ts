@@ -31,7 +31,7 @@ export function resolvePosSchema(): string {
   const channel = (Updates.channel ?? '').toLowerCase();
 
   if (channel === 'production') return 'pos_tempest_prod';
-  if (channel === 'preview') return 'pos_tempest';
+  if (channel === 'preview') return 'pos_tempest_prod';
   if (channel === 'development') return 'pos_tempest';
 
   if (!__DEV__) return 'pos_tempest_prod';
