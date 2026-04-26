@@ -155,6 +155,7 @@ export function AdaptiveModal({
           <View style={{ flex: 1, minHeight: 0 }} onFocus={handleFocusCapture}>
             <ScrollView
               ref={scrollRef}
+              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
