@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   findNodeHandle,
+  type LayoutChangeEvent,
   Modal,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -16,6 +19,81 @@ import { X } from 'lucide-react-native';
 import { ThemeColors } from '@/constants/theme';
 import { useLayout } from '@/hooks/use-layout';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+
+/** Simulated gradient fade overlay at top or bottom of a scroll area.
+ *  Uses a power-easing opacity curve across 16 thin slices for a smooth look
+ *  without requiring react-native-linear-gradient. */
+function ScrollFade({ position, color }: { position: 'top' | 'bottom'; color: string }) {
+  const steps = 16;
+  const height = 48;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height,
+        ...(position === 'bottom' ? { bottom: 0 } : { top: 0 }),
+        // Reverse slice order so slice 0 (transparent) is at the content edge
+        flexDirection: position === 'bottom' ? 'column' : 'column-reverse',
+      }}
+    >
+      {Array.from({ length: steps }).map((_, i) => {
+        // Cubic ease-in: transparent at content edge → opaque at boundary
+        const t = i / (steps - 1);
+        const opacity = Math.pow(t, 2.5) * 0.9;
+        return <View key={i} style={{ flex: 1, backgroundColor: color, opacity }} />;
+      })}
+    </View>
+  );
+}
+
+interface ScrollFadeState {
+  canScrollUp: boolean;
+  canScrollDown: boolean;
+}
+
+function useScrollFade(visible: boolean) {
+  const [fade, setFade] = useState<ScrollFadeState>({ canScrollUp: false, canScrollDown: false });
+  const metrics = useRef({ contentH: 0, layoutH: 0, scrollY: 0 });
+
+  useEffect(() => {
+    if (!visible) {
+      setFade({ canScrollUp: false, canScrollDown: false });
+      metrics.current = { contentH: 0, layoutH: 0, scrollY: 0 };
+    }
+  }, [visible]);
+
+  const update = useCallback(() => {
+    const { contentH, layoutH, scrollY } = metrics.current;
+    setFade({
+      canScrollUp: scrollY > 6,
+      canScrollDown: contentH > layoutH + 6 && scrollY + layoutH < contentH - 6,
+    });
+  }, []);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    metrics.current.scrollY = contentOffset.y;
+    metrics.current.contentH = contentSize.height;
+    metrics.current.layoutH = layoutMeasurement.height;
+    update();
+  }, [update]);
+
+  const onContentSizeChange = useCallback((_w: number, h: number) => {
+    metrics.current.contentH = h;
+    update();
+  }, [update]);
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    metrics.current.layoutH = e.nativeEvent.layout.height;
+    update();
+  }, [update]);
+
+  return { fade, onScroll, onContentSizeChange, onLayout };
+}
 
 interface AdaptiveModalProps {
   visible: boolean;
@@ -49,8 +127,13 @@ export function AdaptiveModal({
   const { isPhone } = useLayout();
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
+  const { fade, onScroll, onContentSizeChange, onLayout } = useScrollFade(visible);
 
   const contentPaddingBottom = (keyboardHeight > 0 ? keyboardHeight : 0) + 24;
+
+  // Surface colors for the fade overlays — must match the modal background
+  const phoneFadeColor = ThemeColors.surfaces.base;       // bg-surface  (#0C0F14)
+  const tabletFadeColor = ThemeColors.surfaces.card;      // bg-surface-card (#1A1F2C)
 
   /**
    * Bubble-phase focus handler. RN forwards inner TextInput focus events up
@@ -101,9 +184,15 @@ export function AdaptiveModal({
                 keyboardShouldPersistTaps="handled"
                 automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: contentPaddingBottom }}
+                onScroll={onScroll}
+                onContentSizeChange={onContentSizeChange}
+                onLayout={onLayout}
+                scrollEventThrottle={16}
               >
                 {children}
               </ScrollView>
+              {fade.canScrollUp && <ScrollFade position="top" color={phoneFadeColor} />}
+              {fade.canScrollDown && <ScrollFade position="bottom" color={phoneFadeColor} />}
             </View>
             {footer}
           </View>
@@ -150,19 +239,26 @@ export function AdaptiveModal({
               </Pressable>
             </View>
           ) : null}
-          {/* flex: 1 + minHeight: 0 ensures the scroll area shrinks to fit
-              within the dialog's maxHeight cap instead of overflowing it. */}
-          <View style={{ flex: 1, minHeight: 0 }} onFocus={handleFocusCapture}>
+          {/* flexShrink: 1 lets this area grow with content by default,
+              and shrink when the dialog hits its maxHeight cap — making
+              the ScrollView scrollable. Using flex:1 (flexBasis:0) caused
+              0-height because the parent Pressable has no explicit height. */}
+          <View style={{ flexShrink: 1 }} onFocus={handleFocusCapture}>
             <ScrollView
               ref={scrollRef}
-              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator
               automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
               contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+              onScroll={onScroll}
+              onContentSizeChange={onContentSizeChange}
+              onLayout={onLayout}
+              scrollEventThrottle={16}
             >
               {children}
             </ScrollView>
+            {fade.canScrollUp && <ScrollFade position="top" color={tabletFadeColor} />}
+            {fade.canScrollDown && <ScrollFade position="bottom" color={tabletFadeColor} />}
           </View>
           {footer}
         </Pressable>

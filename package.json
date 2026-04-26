@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "version:patch": "npx expo-version patch",
-    "version:minor": "npx expo-version minor"
+    "version:minor": "npx expo-version minor",
+    "update:all": "node scripts/eas-update-all.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
