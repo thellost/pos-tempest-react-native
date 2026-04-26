@@ -8,9 +8,9 @@ import type { MenuItemWithInventory } from '@/hooks/use-menu';
 import { MenuItemCard } from './MenuItemCard';
 
 const GRID_PADDING = 10;
-const GAP = 6;
-const MIN_ITEM_WIDTH = 140;
-const ASPECT_RATIO = 0.42;
+const GAP = 8;
+const MIN_ITEM_WIDTH = 150;
+const ASPECT_RATIO = 0.52;
 
 function toNumberId(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -133,7 +133,7 @@ export function MenuGrid({
 
   const gridWidth = containerWidth - GRID_PADDING * 2;
   const columns = gridWidth > 0
-    ? Math.min(2, Math.max(1, Math.floor((gridWidth + GAP) / (MIN_ITEM_WIDTH + GAP))))
+    ? Math.max(1, Math.floor((gridWidth + GAP) / (MIN_ITEM_WIDTH + GAP)))
     : 2;
   const itemWidth = gridWidth > 0 ? (gridWidth - GAP * (columns - 1)) / columns : MIN_ITEM_WIDTH;
   const itemHeight = itemWidth * ASPECT_RATIO;
