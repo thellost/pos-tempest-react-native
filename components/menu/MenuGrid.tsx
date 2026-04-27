@@ -46,8 +46,6 @@ interface MenuItemCellProps {
   categoryName?: string | null;
   onItemPress: (item: MenuItemWithInventory) => void;
   onDecrementItem?: (item: MenuItemWithInventory) => void;
-  marginRight?: number;
-  marginBottom?: number;
 }
 
 /**
@@ -67,13 +65,11 @@ const MenuItemCell = memo(
     categoryName,
     onItemPress,
     onDecrementItem,
-    marginRight = 0,
-    marginBottom = 0,
   }: MenuItemCellProps) {
     return (
       <View
         style={[
-          { width: itemWidth, height: itemHeight, marginRight, marginBottom },
+          { width: itemWidth, height: itemHeight },
           !isVisible && ({ display: 'none' } as object),
         ]}
       >
@@ -249,17 +245,10 @@ export function MenuGrid({
         }
       >
         {/* flex-wrap: display:'none' items are removed from layout flow */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {allCells.map((cell, idx) => {
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
+          {allCells.map((cell) => {
             const quantity =
               cell.idNum !== null ? (quantitiesByMenuItemId?.[cell.idNum] ?? 0) : 0;
-            // Calculate row/col for margin logic
-            const col = idx % columns;
-            const row = Math.floor(idx / columns);
-            const isLastCol = col === columns - 1;
-            const isLastRow = row === Math.floor((allCells.length - 1) / columns);
-            const marginRight = isLastCol ? 0 : GAP;
-            const marginBottom = isLastRow ? 0 : GAP;
             return (
               <MenuItemCell
                 key={cell.idKey}
@@ -272,8 +261,6 @@ export function MenuGrid({
                 categoryName={cell.categoryName}
                 onItemPress={handleItemPress}
                 onDecrementItem={handleDecrementItem}
-                marginRight={marginRight}
-                marginBottom={marginBottom}
               />
             );
           })}
