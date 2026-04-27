@@ -173,10 +173,11 @@ export async function getActiveShift(branchId: number): Promise<ShiftRecord | nu
       branchId,
       staleShiftId: String(row.id),
     });
-    captureMessage('getActiveShift: stale non-UUID shift id in local cache — ignoring', 'warning', {
-      branchId,
-      staleShiftId: String(row.id),
-    });
+    // Remove the invalid shift from local DB
+    await powersync.execute(
+      'DELETE FROM shifts WHERE id = ?',
+      [row.id]
+    );
     return null;
   }
 
