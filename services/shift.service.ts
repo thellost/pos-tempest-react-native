@@ -141,37 +141,80 @@ async function getShiftById(shiftId: string): Promise<ShiftRecord | null> {
   return row ? normalizeShift(row) : null;
 }
 
-export async function getActiveShift(branchId: number): Promise<ShiftRecord | null> {
-  const row = await powersync.getOptional<ShiftRow>(
-    `
-      SELECT
-        id,
-        user_id,
-        branch_id,
-        device_id,
-        status,
-        opening_cash,
-        closing_cash,
-        expected_cash,
-        cash_difference,
-        opened_at,
-        closed_at,
-        notes
-      FROM shifts
-      WHERE branch_id = ?
-        AND status = ?
-      ORDER BY opened_at DESC
-      LIMIT 1
-    `,
-    [branchId, SHIFT_STATUS.OPEN],
-  );
+import { captureError } from '@/lib/sentry';
 
-  if (!row) return null;
+export async function getActiveShift(branchId: number, context?: { deviceId?: string | null; userId?: number | null; sessionId?: string }): Promise<ShiftRecord | null> {
+  let row: ShiftRow | null = null;
+  try {
+    row = await powersync.getOptional<ShiftRow>(
+      `
+        SELECT
+          id,
+          user_id,
+          branch_id,
+          device_id,
+          status,
+          opening_cash,
+          closing_cash,
+          expected_cash,
+          cash_difference,
+          opened_at,
+          closed_at,
+          notes
+        FROM shifts
+        WHERE branch_id = ?
+          AND status = ?
+        ORDER BY opened_at DESC
+        LIMIT 1
+      `,
+      [branchId, SHIFT_STATUS.OPEN],
+    );
+  } catch (error) {
+    captureError(error, {
+      module: 'shift.service',
+      operation: 'getActiveShift.query',
+      tags: {
+        branchId: String(branchId),
+        deviceId: context?.deviceId ?? 'unknown',
+        userId: context?.userId ? String(context.userId) : 'unknown',
+        sessionId: context?.sessionId ?? 'unknown',
+      },
+      extras: {
+        query: 'SELECT ... FROM shifts WHERE branch_id = ? AND status = ? ORDER BY opened_at DESC LIMIT 1',
+        params: [branchId, SHIFT_STATUS.OPEN],
+      },
+      level: 'error',
+    });
+    return null;
+  }
+
+  if (!row) {
+    captureError('No active shift found', {
+      module: 'shift.service',
+      operation: 'getActiveShift.null',
+      tags: {
+        branchId: String(branchId),
+        deviceId: context?.deviceId ?? 'unknown',
+        userId: context?.userId ? String(context.userId) : 'unknown',
+        sessionId: context?.sessionId ?? 'unknown',
+      },
+      level: 'info',
+    });
+    return null;
+  }
 
   if (!isUuid(String(row.id))) {
-    captureMessage('getActiveShift: stale non-UUID shift id in local cache — ignoring', 'warning', {
-      branchId,
-      staleShiftId: String(row.id),
+    captureError('getActiveShift: stale non-UUID shift id in local cache — ignoring', {
+      module: 'shift.service',
+      operation: 'getActiveShift.staleId',
+      tags: {
+        branchId: String(branchId),
+        deviceId: context?.deviceId ?? 'unknown',
+        userId: context?.userId ? String(context.userId) : 'unknown',
+        sessionId: context?.sessionId ?? 'unknown',
+        staleShiftId: String(row.id),
+      },
+      level: 'warning',
     });
     // Remove the invalid shift from local DB
     await powersync.execute(
@@ -305,7 +348,20 @@ export async function closeShift(
   }
 
   return startSpan({ name: 'shift.close', op: 'db.powersync' }, async () => {
+
   const shift = await getShiftById(shiftId);
+
+  // Monitoring: Log if shift is closed unexpectedly during user activity
+  if (!options?.auto && !options?.system && shift) {
+    void insertAuditLog({
+      action: AUDIT_ACTION.STATUS_CHANGE,
+      tableName: 'shifts',
+      recordId: shiftId,
+      userId: shift.user_id,
+      newValues: { status: SHIFT_STATUS.CLOSED },
+      description: `Shift closed (monitor): shiftId=${shiftId}, user=${shift.user_id}, device=${shift.device_id}`,
+    });
+  }
 
   if (!shift || shift.status !== SHIFT_STATUS.OPEN) {
     if (auto || system) {

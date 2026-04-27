@@ -166,15 +166,29 @@ async function applyCrudOperation(op: CrudOp) {
 	}
 
 	if (op.op === 'DELETE') {
-		const { error } = await schemaClient.from(target.table).delete().eq('id', rowId);
-		if (error) {
-			const hint = error.message.toLowerCase().includes('invalid schema')
-				? ' (hint: add this schema to Supabase API Exposed schemas, or set EXPO_PUBLIC_SUPABASE_DB_SCHEMA correctly)'
-				: '';
-			throw new Error(`[PowerSync upload] DELETE failed for ${tableRef}#${rowId}: ${error.message}${hint}`);
-		}
-		return;
-	}
+    // Monitoring: Log if a shift is deleted unexpectedly
+    if (target.table === 'shifts') {
+      try {
+        const { insertAuditLog } = await import('@/services/audit.service');
+        void insertAuditLog({
+          action: 'DELETE',
+          tableName: 'shifts',
+          recordId: rowId,
+          description: `Shift deleted (monitor): shiftId=${rowId}`,
+        });
+      } catch (err) {
+        // Logging import or call failure should not block delete
+      }
+    }
+    const { error } = await schemaClient.from(target.table).delete().eq('id', rowId);
+    if (error) {
+      const hint = error.message.toLowerCase().includes('invalid schema')
+        ? ' (hint: add this schema to Supabase API Exposed schemas, or set EXPO_PUBLIC_SUPABASE_DB_SCHEMA correctly)'
+        : '';
+      throw new Error(`[PowerSync upload] DELETE failed for ${tableRef}#${rowId}: ${error.message}${hint}`);
+    }
+    return;
+  }
 
 	throw new Error(`[PowerSync upload] Unsupported CRUD operation: ${op.op}`);
 }

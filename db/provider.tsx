@@ -27,11 +27,12 @@ const POWERSYNC_ENVIRONMENT = __DEV__ ? 'development' : 'production';
  * user out and routing back to login.
  */
 export async function resetLocalData(): Promise<void> {
-	addBreadcrumb('sync', 'Resetting local PowerSync data');
+	const timestamp = new Date().toISOString();
+	addBreadcrumb('sync', `PowerSync RESET at ${timestamp}`);
 	try {
 		await powersync.disconnectAndClear();
 		initPromise = null;
-		console.log('[PowerSync] Local data reset complete');
+		console.log(`[PowerSync] Local data reset complete at ${timestamp}`);
 	} catch (error) {
 		console.error('[PowerSync] Failed to reset local data:', error);
 		throw error;
@@ -64,6 +65,11 @@ export async function initializePowerSync() {
 				await powersync.connect(powerSyncConnector, {
 					params: { environment: POWERSYNC_ENVIRONMENT },
 				});
+
+				// Log PowerSync SYNC event
+				const syncTimestamp = new Date().toISOString();
+				addBreadcrumb('sync', `PowerSync SYNC at ${syncTimestamp}`);
+				console.log(`[PowerSync] Sync event at ${syncTimestamp}`);
 			}
 		} catch (error) {
 			initPromise = null;
