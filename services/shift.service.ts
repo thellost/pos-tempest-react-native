@@ -544,17 +544,7 @@ export async function addCashTransaction(
     throw new Error('Cannot add cash transaction: shift is not open');
   }
 
-  // For cash-out, validate there's enough cash in the drawer
-  if (type === CASH_TRANSACTION_TYPE.CASH_OUT) {
-    const summary = await getShiftCashSummary(shiftId, shift.opening_cash);
-    if (amount > summary.expectedCash) {
-      throw new Error(
-        `Insufficient cash in drawer. Available: ${summary.expectedCash}, Requested: ${amount}`,
-      );
-    }
-  }
-
-  const createdAt = new Date().toISOString();
+  const createdAt= new Date().toISOString();
 
   const nextId = Crypto.randomUUID();
 

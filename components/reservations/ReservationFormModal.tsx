@@ -292,7 +292,7 @@ export function ReservationFormModal({
     setIsSubmitting(true);
     try {
       await onCreate({
-        table_id: selectedTableId,
+        table_id: selectedTableId ?? 0,
         customer_id: selectedCustomerId,
         customer_name: guestName.trim(),
         customer_phone: guestPhone.trim() || null,

@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 
 interface CashTransactionListProps {
   transactions: ShiftCashTransactionRecord[];
-  openingCash: number;
 }
 
 function formatTimestamp(value: string): string {
@@ -22,34 +21,20 @@ function formatReasonLabel(reason: string): string {
     .join(' ');
 }
 
-export function CashTransactionList({ transactions, openingCash }: CashTransactionListProps) {
+export function CashTransactionList({ transactions }: CashTransactionListProps) {
   if (transactions.length === 0) {
     return (
       <View className="mt-4 rounded-xl border border-border bg-surface p-4">
-        <Text className="text-center text-pos-sm text-pos-text-muted">No cash transactions yet</Text>
+        <Text className="text-center text-pos-sm text-pos-text-muted">No cash out records yet</Text>
       </View>
     );
   }
 
-  // Calculate running balance (reverse chronologically since transactions are DESC)
-  let runningBalance = openingCash;
-  const transactionsWithBalance = [...transactions]
-    .reverse()
-    .map((tx) => {
-      if (tx.type === CASH_TRANSACTION_TYPE.CASH_IN) {
-        runningBalance += tx.amount;
-      } else {
-        runningBalance -= tx.amount;
-      }
-      return { ...tx, balance: runningBalance };
-    })
-    .reverse(); // Back to DESC order for display
-
   return (
     <View className="mt-4 rounded-xl border border-border bg-surface-card p-4">
-      <Text className="text-pos-base font-semibold text-pos-text">Cash Transaction History</Text>
+      <Text className="text-pos-base font-semibold text-pos-text">Cash Out History</Text>
       <View className="mt-3 gap-3">
-        {transactionsWithBalance.map((tx) => {
+        {transactions.map((tx) => {
           const isCashIn = tx.type === CASH_TRANSACTION_TYPE.CASH_IN;
           return (
             <View key={tx.id} className="rounded-xl border border-border bg-surface p-3">
@@ -81,7 +66,6 @@ export function CashTransactionList({ transactions, openingCash }: CashTransacti
                     {isCashIn ? '+' : '-'}
                     {formatIDR(tx.amount)}
                   </Text>
-                  <Text className="mt-1 text-pos-xs text-pos-text-muted">Balance: {formatIDR(tx.balance)}</Text>
                 </View>
               </View>
             </View>

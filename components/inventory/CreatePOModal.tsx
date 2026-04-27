@@ -147,7 +147,8 @@ export function CreatePOModal({ visible, suppliers, branchId, onClose, onCreate 
 
     setSaving(true);
     try {
-      await onCreate({
+      if (!selectedSupplier) { Alert.alert('Select a supplier'); setSaving(false); return; }
+        await onCreate({
         supplier_id: selectedSupplier.id,
         branch_id: branchId,
         notes: notes || undefined,

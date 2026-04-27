@@ -2,7 +2,8 @@ import { CashTransactionList } from '@/components/shift/CashTransactionList';
 import { CashTransactionModal } from '@/components/shift/CashTransactionModal';
 import { Button } from '@/components/ui';
 import { PermissionGate } from '@/components/ui/PermissionGate';
-import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import type { CashTransactionReason } from '@/constants/enums';
+import { CASH_TRANSACTION_TYPE } from '@/constants/enums';
 import { PERMISSION } from '@/constants/permissions';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
@@ -73,12 +74,11 @@ export default function CashScreen() {
   }
 
   async function handleCashTransaction(
-    type: CashTransactionType,
     reason: CashTransactionReason,
     amount: number,
     note?: string,
   ) {
-    await addCashTransaction(type, reason, amount, note);
+    await addCashTransaction(CASH_TRANSACTION_TYPE.CASH_OUT, reason, amount, note);
   }
 
   return (
@@ -107,13 +107,8 @@ export default function CashScreen() {
               <Text className="mt-1 text-pos-sm text-pos-text-muted">
                 Net sales: <Text className="font-mono">{formatIDR(summary.netCashSales)}</Text>
               </Text>
-              {(summary.totalCashIn > 0 || summary.totalCashOut > 0) && (
+              {(summary.totalCashOut > 0) && (
                 <View className="mt-2 border-t border-border pt-2">
-                  {summary.totalCashIn > 0 && (
-                    <Text className="text-pos-sm text-pos-success">
-                      + Cash In: <Text className="font-mono">{formatIDR(summary.totalCashIn)}</Text>
-                    </Text>
-                  )}
                   {summary.totalCashOut > 0 && (
                     <Text className="text-pos-sm text-pos-danger">
                       - Cash Out: <Text className="font-mono">{formatIDR(summary.totalCashOut)}</Text>
@@ -132,16 +127,15 @@ export default function CashScreen() {
           <Button
             className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
             onPress={() => setShowCashTxModal(true)}>
-            <Text className="text-center text-pos-base font-semibold text-accent">Cash In / Out</Text>
+            <Text className="text-center text-pos-base font-semibold text-accent">Record Cash Out</Text>
           </Button>
         </PermissionGate>
 
-        <CashTransactionList transactions={cashTransactions} openingCash={activeShift.opening_cash} />
+        <CashTransactionList transactions={cashTransactions} />
       </ScrollView>
 
       <CashTransactionModal
         visible={showCashTxModal}
-        availableCash={summary?.expectedCash ?? 0}
         onClose={() => setShowCashTxModal(false)}
         onSubmit={handleCashTransaction}
       />

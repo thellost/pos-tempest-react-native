@@ -152,12 +152,12 @@ export function BottomTabBar() {
                 icon={tab.icon}
                 isActive={isActive}
                 onPress={() => router.push(tab.href as Parameters<typeof router.push>[0])}
-                colors={colors}
+                colors={colors as any}
               />
             );
           })}
 
-          <MoreTabButton onPress={() => setMoreVisible(true)} colors={colors} />
+          <MoreTabButton onPress={() => setMoreVisible(true)} colors={colors as any} />
         </View>
       </View>
 
