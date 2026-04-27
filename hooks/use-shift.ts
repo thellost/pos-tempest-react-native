@@ -52,6 +52,9 @@ export function useShift(): UseShiftReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Internal flag to track transient background checks without toggling global loading
+  const isCheckingRef = useRef(false);
+
   // All roles that create/manage orders (cashier, manager, admin) require an open shift.
   // Chefs only work in the kitchen display and do not create orders, so they are exempt.
   const requiresShift = user?.role_name !== ROLE_TYPE.CHEF;
@@ -69,17 +72,8 @@ export function useShift(): UseShiftReturn {
     }
 
     try {
-      captureError('[useShift] setLoading(true) called', {
-  module: 'shift',
-  operation: 'refresh',
-  extras: {
-    user,
-    registration,
-    branch,
-    previousLoading: loading
-  }
-});
-setLoading(true);
+      // Background-only check: avoid toggling the global `loading` flag after initial load.
+      isCheckingRef.current = true;
       setError(null);
 
       const autoBranch: AutoShiftBranch = {
@@ -133,6 +127,7 @@ setLoading(true);
       captureError(err, { module: 'shift', operation: 'refresh', level: 'warning' });
       setError(err instanceof Error ? err.message : 'Failed to load shift data');
     } finally {
+      isCheckingRef.current = false;
       setLoading(false);
     }
   }, [user?.id, user?.branch_id, user?.role_name, requiresShift, registration]);
