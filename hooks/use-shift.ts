@@ -69,7 +69,17 @@ export function useShift(): UseShiftReturn {
     }
 
     try {
-      setLoading(true);
+      captureError('[useShift] setLoading(true) called', {
+  module: 'shift',
+  operation: 'refresh',
+  extras: {
+    user,
+    registration,
+    branch,
+    previousLoading: loading
+  }
+});
+setLoading(true);
       setError(null);
 
       const autoBranch: AutoShiftBranch = {
