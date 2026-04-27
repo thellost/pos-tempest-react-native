@@ -36,18 +36,6 @@ export default function AppLayout() {
   const { can } = usePermissions();
   const segments = useSegments();
 
-  useEffect(() => {
-    if (!user) return;
-
-    // Find the first segment after "(app)" that matches a guarded route.
-    const routeSegment = segments.find((s) => s in ROUTE_PERMISSIONS);
-    if (!routeSegment) return;
-
-    const required = ROUTE_PERMISSIONS[routeSegment];
-    if (!can(required)) {
-      router.replace('/(app)/floor');
-    }
-  }, [segments, user, can]);
 
   const {
     loading: deviceLoading,
@@ -58,6 +46,23 @@ export default function AppLayout() {
     refresh: refreshDevice,
   } = useDevice();
   const { loading: shiftLoading, requiresShift, isShiftOpen } = useShift();
+
+  useEffect(() => {
+    // Avoid redirecting while auth/profile/device/shift state is still stabilizing.
+    // Redirects should only happen once the app has a definitive user profile and shift state.
+    if (!user) return;
+    if (loading || profileLoading || deviceLoading || shiftLoading) return;
+
+    // Find the first segment after "(app)" that matches a guarded route.
+    const routeSegment = segments.find((s) => s in ROUTE_PERMISSIONS);
+    if (!routeSegment) return;
+
+    const required = ROUTE_PERMISSIONS[routeSegment];
+    // Only redirect when user definitively lacks the required permission.
+    if (!can(required)) {
+      router.replace('/(app)/floor');
+    }
+  }, [segments, user, can, loading, profileLoading, deviceLoading, shiftLoading]);
   const { isPhone } = useLayout();
   const pathname = usePathname();
   const onDeviceSetupScreen = pathname === '/device-setup';
