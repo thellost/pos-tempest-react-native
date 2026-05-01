@@ -99,13 +99,7 @@ export default function CashScreen() {
             <Text className="text-pos-base font-semibold text-pos-text">Cash Summary</Text>
             <View className="mt-3 rounded-sm border border-border bg-surface p-4">
               <Text className="text-pos-sm text-pos-text-muted">
-                Cash received: <Text className="font-mono">{formatIDR(summary.cashReceived)}</Text>
-              </Text>
-              <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                Change given: <Text className="font-mono">{formatIDR(summary.changeGiven)}</Text>
-              </Text>
-              <Text className="mt-1 text-pos-sm text-pos-text-muted">
-                Net sales: <Text className="font-mono">{formatIDR(summary.netCashSales)}</Text>
+                Cash sales: <Text className="font-mono">{formatIDR(summary.cashReceived)}</Text>
               </Text>
               {(summary.totalCashOut > 0) && (
                 <View className="mt-2 border-t border-border pt-2">

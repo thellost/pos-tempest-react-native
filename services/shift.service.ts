@@ -231,8 +231,8 @@ export async function getShiftCashSummary(shiftId: string, openingCash: number):
   const paymentSummary = await powersync.getOptional<CashSummaryRow>(
     `
       SELECT
-        COALESCE(SUM(amount), 0) as cash_received,
-        COALESCE(SUM(change_amount), 0) as change_given
+        COALESCE(SUM(amount - change_amount), 0) as cash_received,
+        0 as change_given
       FROM payments
       WHERE shift_id = ?
         AND payment_method = 'cash'

@@ -58,7 +58,7 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
               className={`flex-row items-start py-2 ${index > 0 ? 'border-t border-border' : ''}`}
             >
               <View className="mr-2.5 mt-0.5 h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent-muted">
-                <Text className="text-[11px] font-black text-accent-hover">
+                <Text className="text-pos-xs font-extrabold text-accent-hover">
                   {qty % 1 === 0 ? qty : qty.toFixed(2)}
                 </Text>
               </View>
@@ -114,7 +114,7 @@ export function OrderSummaryPanel({ order, items, viewOnly, appliedDiscount, onB
         <Text className="text-pos-sm font-extrabold tracking-widest text-pos-text-muted">
           TOTAL DUE
         </Text>
-        <Text className="text-pos-3xl font-black text-accent">{formatIDR(orderTotal)}</Text>
+        <Text className="text-pos-3xl font-extrabold text-accent">{formatIDR(orderTotal)}</Text>
       </View>
     </View>
   );

@@ -170,8 +170,7 @@ export function CheckoutPaymentPanel({
             ) : (
               <>
                 <Text
-                  className={`font-black ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
-                  style={{ fontSize: 15, letterSpacing: 0.3 }}
+                  className={`text-pos-base font-extrabold ${canComplete ? 'text-pos-text-strong' : 'text-pos-text-faint'}`}
                 >
                   Complete &amp; Print Receipt
                 </Text>
