@@ -1015,7 +1015,7 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
       "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "type": "cash_in",
-      "reason": "change_refill",
+      "reason": "operasional",
       "amount": 100000.00,
       "note": "Added change supply",
       "created_at": "2026-03-03T11:15:00Z",
@@ -3757,9 +3757,9 @@ Get the full change history for a specific record.
 | `owner_withdrawal` | Manual cash-out: owner withdrawal |
 | `staff_advance` | Manual cash-out: staff advance |
 | `petty_cash` | Manual cash-out: petty cash |
-| `tip_out` | Manual cash-out: tip distribution |
+| `angsuran` | Manual cash-out: angsuran |
 | `cash_deposit` | Manual cash-out: cash deposit |
-| `change_refill` | Manual cash-out: change refill |
+| `operasional` | Manual cash-out: operational expense |
 | `other` | Manual cash-out: other |
 
 ---
@@ -3892,7 +3892,7 @@ Get a detailed financial report for a specific shift.
         "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_in",
-        "reason": "change_refill",
+        "reason": "operasional",
         "amount": 150000.00,
         "note": "Added coins for change",
         "created_at": "2026-03-03T09:30:00Z",
@@ -4105,7 +4105,7 @@ Get a detailed financial report for a specific shift.
 | `supply_purchase` | Cash paid out for a supply/vendor purchase |
 | `staff_advance` | Cash advance given to a staff member |
 | `petty_cash` | Petty cash disbursement |
-| `tip_out` | Tip payout to staff |
+| `angsuran` | Angsuran cash-out |
 | `cash_deposit` | Cash deposited into drawer |
-| `change_refill` | Adding coins/notes for making change |
+| `operasional` | Operational cash-out |
 | `other` | Other reason (use `note` field for details) |

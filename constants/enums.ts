@@ -154,9 +154,9 @@ export const CASH_TRANSACTION_REASON = {
 	SUPPLY_PURCHASE: 'supply_purchase',
 	STAFF_ADVANCE: 'staff_advance',
 	PETTY_CASH: 'petty_cash',
-	TIP_OUT: 'tip_out',
+	ANGSURAN: 'angsuran',
 	CASH_DEPOSIT: 'cash_deposit',
-	CHANGE_REFILL: 'change_refill',
+	OPERASIONAL: 'operasional',
 	OTHER: 'other',
 } as const;
 

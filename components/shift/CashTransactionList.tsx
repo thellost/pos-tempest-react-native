@@ -1,5 +1,6 @@
 import { CASH_TRANSACTION_TYPE } from '@/constants/enums';
 import type { ShiftCashTransactionRecord } from '@/services/shift.service';
+import { getCashTransactionReasonLabel } from '@/utils/cash-transaction-reason';
 import { formatIDR } from '@/utils/currency';
 import { Text, View } from 'react-native';
 
@@ -12,13 +13,6 @@ function formatTimestamp(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function formatReasonLabel(reason: string): string {
-  return reason
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
 
 export function CashTransactionList({ transactions }: CashTransactionListProps) {
@@ -51,7 +45,7 @@ export function CashTransactionList({ transactions }: CashTransactionListProps) 
                   </View>
 
                   <Text className="mt-1 text-pos-sm font-semibold text-pos-text">
-                    {formatReasonLabel(tx.reason)}
+                    {getCashTransactionReasonLabel(tx.reason)}
                   </Text>
 
                   {tx.note && <Text className="mt-1 text-pos-xs text-pos-text-muted">{tx.note}</Text>}

@@ -1,9 +1,10 @@
-import type { CashTransactionReason } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON } from '@/constants/enums';
+import type { CashTransactionReason } from '@/constants/enums';
 import { Config } from '@/constants/config';
 import { ThemeColors } from '@/constants/theme';
 import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
+import { CASH_TRANSACTION_REASON_LABELS } from '@/utils/cash-transaction-reason';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
@@ -13,17 +14,6 @@ interface CashTransactionModalProps {
   onClose: () => void;
   onSubmit: (reason: CashTransactionReason, amount: number, note?: string) => Promise<void>;
 }
-
-const REASON_LABELS: Record<CashTransactionReason, string> = {
-  [CASH_TRANSACTION_REASON.OWNER_WITHDRAWAL]: 'Owner Withdrawal',
-  [CASH_TRANSACTION_REASON.SUPPLY_PURCHASE]: 'Supply Purchase',
-  [CASH_TRANSACTION_REASON.STAFF_ADVANCE]: 'Staff Advance',
-  [CASH_TRANSACTION_REASON.PETTY_CASH]: 'Petty Cash',
-  [CASH_TRANSACTION_REASON.TIP_OUT]: 'Tip Out',
-  [CASH_TRANSACTION_REASON.CASH_DEPOSIT]: 'Cash Deposit',
-  [CASH_TRANSACTION_REASON.CHANGE_REFILL]: 'Change Refill',
-  [CASH_TRANSACTION_REASON.OTHER]: 'Other',
-};
 
 const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
@@ -108,7 +98,7 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
           {/* Reason Selector */}
           <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
-            {Object.entries(REASON_LABELS).map(([key, label]) => (
+            {Object.entries(CASH_TRANSACTION_REASON_LABELS).map(([key, label]) => (
               <SelectButton
                 key={key}
                 selected={reason === key}

@@ -12,6 +12,7 @@ import {
   operatingDayKey,
   TZ_FALLBACK,
 } from '@/utils/branch-schedule';
+import { getCashTransactionReasonLabel } from '@/utils/cash-transaction-reason';
 
 /** Minimal branch shape required by the auto-shift safeguard helpers. */
 export type AutoShiftBranch = Pick<
@@ -615,6 +616,7 @@ export async function addCashTransaction(
   );
 
   const typeLabel = type === CASH_TRANSACTION_TYPE.CASH_IN ? 'Cash In' : 'Cash Out';
+  const reasonLabel = getCashTransactionReasonLabel(reason);
 
   void insertAuditLog({
     action: AUDIT_ACTION.INSERT,
@@ -623,7 +625,7 @@ export async function addCashTransaction(
     userId,
     branchId: shift.branch_id,
     newValues: { shift_id: shiftId, type, reason, amount, note },
-    description: `${typeLabel}: ${amount} (${reason})${note ? ` — ${note}` : ''}`,
+    description: `${typeLabel}: ${amount} (${reasonLabel})${note ? ` — ${note}` : ''}`,
   });
 
   return {
