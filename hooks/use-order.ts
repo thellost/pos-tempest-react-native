@@ -389,13 +389,15 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     // Otherwise it's a persisted order item (UUID)
+    if (!user) return;
+
     try {
-      await updateItemQuantity(String(itemId), qty);
+      await updateItemQuantity(String(itemId), qty, toInt(user.id));
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
     }
-  }, [cartItems, pendingRoundItems, reload]);
+  }, [cartItems, pendingRoundItems, reload, user]);
 
   // Remove item
   const removeItem = useCallback(async (itemId: number | string) => {
@@ -409,13 +411,15 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     // It's a persisted order item
+    if (!user) return;
+
     try {
-      await removeItemFromOrder(String(itemId));
+      await removeItemFromOrder(String(itemId), toInt(user.id));
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'removeItem', level: 'error' });
     }
-  }, [cartItems, pendingRoundItems, reload]);
+  }, [cartItems, pendingRoundItems, reload, user]);
 
   // Update item notes
   const updateNotes = useCallback(async (itemId: string, notes: string) => {

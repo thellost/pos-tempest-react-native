@@ -15,7 +15,7 @@ interface OrderItemRowProps {
   onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
   onRemove: (itemId: number | string) => void;
   onEditModifiers: (itemId: number | string) => void;
-  /** When true, the row is read-only (past round items cannot be edited). */
+  /** When true, the row is read-only. */
   locked?: boolean;
 }
 

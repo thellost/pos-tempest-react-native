@@ -7,7 +7,7 @@ import { powersync } from '@/db/provider';
 import { addBreadcrumb, captureError, captureMessage, startSpan } from '@/lib/sentry';
 import { getOrCreateDeviceId } from '@/lib/device';
 import { insertAuditLog } from '@/services/audit.service';
-import { deductStockForItems, restockForCancelledOrder } from '@/services/inventory.service';
+import { adjustStockForConfirmedOrderItem, deductStockForItems, restockForCancelledOrder } from '@/services/inventory.service';
 import { getActiveShift, isUuid, openShift } from '@/services/shift.service';
 import { isWithinOperatingWindow, TZ_FALLBACK } from '@/utils/branch-schedule';
 import { generateOrderNumber } from '@/utils/order-number';
@@ -36,6 +36,13 @@ export interface OrderTotals {
   total: number;
 }
 
+const STOCK_ADJUSTABLE_ORDER_STATUSES = new Set<string>([
+  ORDER_STATUS.CONFIRMED,
+  ORDER_STATUS.PREPARING,
+  ORDER_STATUS.READY,
+  ORDER_STATUS.SERVED,
+]);
+
 /**
  * Order Service
  * Handles all order-related business logic:
@@ -44,6 +51,32 @@ export interface OrderTotals {
  * - Calculating totals (subtotal, tax, service charge, discounts, rounding)
  * - Voiding orders and items
  */
+
+function hasItemStockDeducted(order: Order, orderItem: OrderItem): boolean {
+  return STOCK_ADJUSTABLE_ORDER_STATUSES.has(order.status) && Number(orderItem.is_voided) !== 1;
+}
+
+async function adjustPersistedItemStockIfNeeded(
+  orderItem: OrderItem,
+  quantityDelta: number,
+  actingUserId: number | null | undefined,
+  reason: string
+): Promise<void> {
+  if (quantityDelta === 0) return;
+
+  const order = await powersync.getOptional<Order>(
+    `SELECT * FROM orders WHERE id = ?`,
+    [orderItem.order_id]
+  );
+
+  if (!order || !hasItemStockDeducted(order, orderItem)) return;
+
+  if (actingUserId == null) {
+    throw new Error('[OrderService] Acting user ID is required to adjust stock for confirmed order items');
+  }
+
+  await adjustStockForConfirmedOrderItem(orderItem, quantityDelta, actingUserId, reason);
+}
 
 /**
  * Creates a new order
@@ -433,7 +466,7 @@ export async function addItemToOrder(
 /**
  * Removes an item from an order
  */
-export async function removeItemFromOrder(orderItemId: string): Promise<void> {
+export async function removeItemFromOrder(orderItemId: string, actingUserId?: number | null): Promise<void> {
   const orderItem = await powersync.getOptional<OrderItem>(
     `SELECT * FROM order_items WHERE id = ?`,
     [orderItemId]
@@ -442,6 +475,13 @@ export async function removeItemFromOrder(orderItemId: string): Promise<void> {
   if (!orderItem) {
     throw new Error('Order item not found');
   }
+
+  await adjustPersistedItemStockIfNeeded(
+    orderItem,
+    -toInt(orderItem.quantity),
+    actingUserId,
+    'Confirmed order item removed from order'
+  );
 
   // Delete order item modifiers
   await powersync.execute(
@@ -477,9 +517,9 @@ export async function removeItemFromOrder(orderItemId: string): Promise<void> {
 /**
  * Updates the quantity of an order item
  */
-export async function updateItemQuantity(orderItemId: string, newQuantity: number): Promise<void> {
+export async function updateItemQuantity(orderItemId: string, newQuantity: number, actingUserId?: number | null): Promise<void> {
   if (newQuantity <= 0) {
-    await removeItemFromOrder(orderItemId);
+    await removeItemFromOrder(orderItemId, actingUserId);
     return;
   }
 
@@ -495,6 +535,14 @@ export async function updateItemQuantity(orderItemId: string, newQuantity: numbe
   // Recalculate subtotal and total
   const itemPrice = orderItem.unit_price + orderItem.modifier_total;
   const newSubtotal = itemPrice * newQuantity;
+  const quantityDelta = newQuantity - toInt(orderItem.quantity);
+
+  await adjustPersistedItemStockIfNeeded(
+    orderItem,
+    quantityDelta,
+    actingUserId,
+    'Confirmed order item quantity updated'
+  );
 
   await powersync.execute(
     `UPDATE order_items 

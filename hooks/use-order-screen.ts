@@ -360,36 +360,111 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     }
   }, [orderType, isSubmitting, order, user, confirmOrderHook, reload, screenLabel]);
 
+  const hasConfirmedOrActiveOrderStatus = useMemo(() => {
+    const orderStatus = order?.status;
+    return (
+      orderStatus === ORDER_STATUS.CONFIRMED ||
+      orderStatus === ORDER_STATUS.PREPARING ||
+      orderStatus === ORDER_STATUS.READY ||
+      orderStatus === ORDER_STATUS.SERVED ||
+      orderStatus === ORDER_STATUS.COMPLETED
+    );
+  }, [order?.status]);
+
+  const findConfirmedOrSentPersistedItem = useCallback((itemId: number | string) => {
+    const persistedItem = orderItems.find((item) => String(item.id) === String(itemId));
+    if (!persistedItem || persistedItem.is_voided) return null;
+
+    const isSentRoundItem = roundSentAt.has(persistedItem.round_number || 1);
+
+    return hasConfirmedOrActiveOrderStatus || isSentRoundItem ? persistedItem : null;
+  }, [hasConfirmedOrActiveOrderStatus, orderItems, roundSentAt]);
+
+  const confirmConfirmedItemDelete = useCallback((
+    itemName: string,
+    onConfirm: () => void
+  ) => {
+    Alert.alert(
+      'Delete Confirmed Item',
+      `${itemName} has already been confirmed/sent. Deleting it will affect this order.`,
+      [
+        { text: 'Keep Item', style: 'cancel' },
+        {
+          text: 'Delete Item',
+          style: 'destructive',
+          onPress: onConfirm,
+        },
+      ]
+    );
+  }, []);
+
+  const handleUpdateQuantity = useCallback((itemId: number | string, newQuantity: number) => {
+    if (newQuantity > 0) {
+      void updateQuantity(itemId, newQuantity);
+      return;
+    }
+
+    const confirmedOrSentItem = findConfirmedOrSentPersistedItem(itemId);
+    if (!confirmedOrSentItem) {
+      void updateQuantity(itemId, newQuantity);
+      return;
+    }
+
+    confirmConfirmedItemDelete(confirmedOrSentItem.menu_item_name, () => {
+      void updateQuantity(itemId, newQuantity);
+    });
+  }, [confirmConfirmedItemDelete, findConfirmedOrSentPersistedItem, updateQuantity]);
+
+  const handleRemoveItem = useCallback((itemId: number | string) => {
+    const confirmedOrSentItem = findConfirmedOrSentPersistedItem(itemId);
+    if (!confirmedOrSentItem) {
+      void removeItem(itemId);
+      return;
+    }
+
+    confirmConfirmedItemDelete(confirmedOrSentItem.menu_item_name, () => {
+      void removeItem(itemId);
+    });
+  }, [confirmConfirmedItemDelete, findConfirmedOrSentPersistedItem, removeItem]);
+
   const handleMenuItemDecrement = useCallback(async (item: MenuItemWithInventory) => {
     const menuItemId = toInt(item.id);
     if (order) {
-      // Prefer locally-staged pending-round items (not yet persisted) — always editable.
+      // Menu-grid decrement is scoped to staged/unconfirmed quantities. Prefer
+      // local pending-round items (not yet persisted); confirmed/sent persisted
+      // cart rows are edited from the cart instead of the menu badge.
       const pendingMatches = pendingRoundItems.filter((pi) => pi.menu_item_id === menuItemId);
       if (pendingMatches.length > 0) {
         const target = pendingMatches[pendingMatches.length - 1];
         await updateQuantity(target.id, target.quantity - 1);
         return;
       }
-      // Otherwise fall back to persisted items, but only those in rounds that have NOT
-      // yet been sent to the kitchen. Once a round is sent/confirmed it's locked.
+      // Only decrement persisted items while their round has not been sent yet.
+      // Sent/confirmed persisted items remain editable from cart row controls.
       const editableMatches = orderItems.filter(
         (oi) =>
           toInt(oi.menu_item_id) === menuItemId &&
           !oi.is_voided &&
+          !hasConfirmedOrActiveOrderStatus &&
           !roundSentAt.has(oi.round_number || 1)
       );
       if (editableMatches.length === 0) return;
       const target = editableMatches
         .slice()
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-      await updateQuantity(String(target.id), toInt(target.quantity) - 1);
+      const nextQuantity = toInt(target.quantity) - 1;
+      if (nextQuantity <= 0) {
+        handleUpdateQuantity(String(target.id), nextQuantity);
+        return;
+      }
+      await updateQuantity(String(target.id), nextQuantity);
     } else {
       const matchingItems = cartItems.filter((ci) => ci.menu_item_id === menuItemId);
       if (matchingItems.length === 0) return;
       const target = matchingItems[matchingItems.length - 1];
       await updateQuantity(target.id, target.quantity - 1);
     }
-  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, updateQuantity]);
+  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, updateQuantity, handleUpdateQuantity, hasConfirmedOrActiveOrderStatus]);
 
   const handleGuestCountChange = useCallback((count: number) => {
     if (orderType !== 'takeaway') setGuestCount(count);
@@ -408,9 +483,10 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     if (order) {
       orderItems.forEach((oi) => {
         if (oi.is_voided) return;
-        // Items in rounds that have already been sent to the kitchen are locked
-        // and cannot be decremented from the menu grid — exclude from the badge so
-        // users don't see a count they can't act on.
+        // Menu badges mirror the menu-grid decrement target: only staged or
+        // unconfirmed quantities are counted here. Confirmed/sent persisted cart
+        // rows are still editable from the cart, but excluded from menu badges.
+        if (hasConfirmedOrActiveOrderStatus) return;
         if (roundSentAt.has(oi.round_number || 1)) return;
         const id = toInt(oi.menu_item_id);
         result[id] = (result[id] || 0) + toInt(oi.quantity);
@@ -430,7 +506,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
       itemCount: order ? orderItems.length : cartItems.length,
     });
     return result;
-  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, orderType]);
+  }, [order, orderItems, cartItems, pendingRoundItems, roundSentAt, hasConfirmedOrActiveOrderStatus]);
 
   const allMenuItems = useMemo(() => {
     const start = nowMs();
@@ -551,8 +627,8 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     guestCount: orderType === 'takeaway' ? null : guestCount,
     lastKOT,
     lastBill,
-    updateQuantity,
-    removeItem,
+    updateQuantity: handleUpdateQuantity,
+    removeItem: handleRemoveItem,
     dismissKOT,
     dismissBill,
     handleConfirmRound,
