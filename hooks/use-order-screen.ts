@@ -371,8 +371,8 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     );
   }, [order?.status]);
 
-  const findConfirmedOrSentPersistedItem = useCallback((itemId: number | string) => {
-    const persistedItem = orderItems.find((item) => String(item.id) === String(itemId));
+  const findConfirmedOrSentPersistedItem = useCallback((itemId: string) => {
+    const persistedItem = orderItems.find((item) => item.id === itemId);
     if (!persistedItem || persistedItem.is_voided) return null;
 
     const isSentRoundItem = roundSentAt.has(persistedItem.round_number || 1);
@@ -398,7 +398,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     );
   }, []);
 
-  const handleUpdateQuantity = useCallback((itemId: number | string, newQuantity: number) => {
+  const handleUpdateQuantity = useCallback((itemId: string, newQuantity: number) => {
     if (newQuantity > 0) {
       void updateQuantity(itemId, newQuantity);
       return;
@@ -415,7 +415,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     });
   }, [confirmConfirmedItemDelete, findConfirmedOrSentPersistedItem, updateQuantity]);
 
-  const handleRemoveItem = useCallback((itemId: number | string) => {
+  const handleRemoveItem = useCallback((itemId: string) => {
     const confirmedOrSentItem = findConfirmedOrSentPersistedItem(itemId);
     if (!confirmedOrSentItem) {
       void removeItem(itemId);
@@ -596,10 +596,8 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     if (order) {
       return orderItems.map((item) => {
         const groupName = resolveGroupName(toInt(item.menu_item_id));
-        const numericId = toInt(item.id);
         return {
           ...item,
-          id: Number.isFinite(numericId) ? numericId : item.id,
           category_group: groupName,
         } as OrderItemDisplay;
       });

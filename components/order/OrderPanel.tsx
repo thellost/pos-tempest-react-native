@@ -25,10 +25,10 @@ interface OrderPanelProps {
   currentRound: number;
   roundSentAt: Map<number, string>;
   onGuestCountChange: (count: number) => void;
-  onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
-  onEditModifiers: (itemId: number | string) => void;
+  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
+  onEditModifiers: (itemId: string) => void;
   onConfirmOrder: () => void;
-  onRemoveItem: (itemId: number | string) => void;
+  onRemoveItem: (itemId: string) => void;
   onSendToKitchen: (round: number) => void;
   onPayment: () => void;
   onCancelOrder: () => void;

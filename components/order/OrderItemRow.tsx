@@ -12,9 +12,9 @@ import { formatIDR } from '@/utils/currency';
 
 interface OrderItemRowProps {
   item: OrderItemDisplay;
-  onUpdateQuantity: (itemId: number | string, newQuantity: number) => void;
-  onRemove: (itemId: number | string) => void;
-  onEditModifiers: (itemId: number | string) => void;
+  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
+  onRemove: (itemId: string) => void;
+  onEditModifiers: (itemId: string) => void;
   /** When true, the row is read-only. */
   locked?: boolean;
 }

@@ -2,7 +2,7 @@ import type { OrderItemModifier } from '@/db/models';
 import type { SelectedModifier } from '@/services/order.service';
 
 export interface OrderItemDisplay {
-  id: number | string;
+  id: string;
   menu_item_id: number | string;
   menu_item_name: string;
   quantity: number;

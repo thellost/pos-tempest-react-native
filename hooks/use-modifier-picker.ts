@@ -8,7 +8,7 @@ import { toInt } from '@/utils/coerce';
 
 // Minimal shape of an order item that the hook needs
 interface OrderItemForPicker {
-  id: number | string;
+  id: string;
   menu_item_id: number | string;
   notes: string | null;
   unit_price: number;
@@ -33,7 +33,7 @@ interface UseModifierPickerOptions {
   ) => Promise<void>;
   updateCartItem: (id: string, updates: Partial<CartItem>) => void;
   editModifiers: (
-    itemId: number | string,
+    itemId: string,
     modifiers: SelectedModifier[],
     weight: number | null,
     notes: string,
@@ -56,7 +56,7 @@ interface UseModifierPickerReturn {
     weight: number | null,
     notes: string
   ) => Promise<void>;
-  handleEditModifiers: (itemId: number | string) => Promise<void>;
+  handleEditModifiers: (itemId: string) => Promise<void>;
   handleCancel: () => void;
 }
 
@@ -139,7 +139,7 @@ export function useModifierPicker({
     reset();
   }, [selectedMenuItem, editingCartItemId, editingOrderItemId, cartItems, updateCartItem, editModifiers, addItemToOrder, reset]);
 
-  const handleEditModifiers = useCallback(async (itemId: number | string) => {
+  const handleEditModifiers = useCallback(async (itemId: string) => {
     // Cart items have ephemeral string IDs; check them first by direct match
     const cartItem = cartItems.find(item => item.id === itemId);
     if (cartItem) {
@@ -149,7 +149,7 @@ export function useModifierPicker({
       const modifiers = await getModifierGroupsForMenuItem(cartItem.menu_item_id);
       setSelectedMenuItem(menuItem);
       setMenuItemModifiers(modifiers);
-      setEditingCartItemId(String(itemId));
+      setEditingCartItemId(itemId);
       setEditingItemModifiers(cartItem.modifiers);
       setEditingItemNotes(cartItem.notes ?? '');
       setEditingItemWeight(cartItem.weight ? cartItem.weight.toString() : '');
@@ -157,7 +157,7 @@ export function useModifierPicker({
       return;
     }
 
-    const targetItem = orderItems.find((item) => String(item.id) === String(itemId));
+    const targetItem = orderItems.find((item) => item.id === itemId);
     if (!targetItem) return;
 
     const menuItemId = toInt(targetItem.menu_item_id);
@@ -173,7 +173,7 @@ export function useModifierPicker({
     }));
     setSelectedMenuItem(menuItem);
     setMenuItemModifiers(modifiers);
-    setEditingOrderItemId(String(targetItem.id));
+    setEditingOrderItemId(targetItem.id);
     setEditingItemNotes(targetItem.notes ?? '');
     setEditingItemModifiers(selectedModifiers);
     if (menuItem.pricing_type === PRICING_TYPE.WEIGHT_BASED && menuItem.price > 0) {

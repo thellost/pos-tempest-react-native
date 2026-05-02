@@ -66,10 +66,10 @@ interface UseOrderReturn {
 
   // Item actions
   addItemToOrder: (item: MenuItemWithInventory, modifiers: SelectedModifier[], weight: number | null, notes: string) => Promise<void>;
-  updateQuantity: (itemId: number | string, qty: number) => Promise<void>;
-  removeItem: (itemId: number | string) => Promise<void>;
+  updateQuantity: (itemId: string, qty: number) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   updateNotes: (itemId: string, notes: string) => Promise<void>;
-  editModifiers: (itemId: number | string, modifiers: SelectedModifier[], weight: number | null, notes: string, unitPrice?: number) => Promise<void>;
+  editModifiers: (itemId: string, modifiers: SelectedModifier[], weight: number | null, notes: string, unitPrice?: number) => Promise<void>;
 
   // Order lifecycle
   confirmOrder: () => Promise<void>;
@@ -347,7 +347,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   }, [order, user, currentRound, reload]);
 
   // Update item quantity
-  const updateQuantity = useCallback(async (itemId: number | string, qty: number) => {
+  const updateQuantity = useCallback(async (itemId: string, qty: number) => {
     // Check cart items first
     const cartItem = cartItems.find(item => item.id === itemId);
     if (cartItem) {
@@ -392,7 +392,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     if (!user) return;
 
     try {
-      await updateItemQuantity(String(itemId), qty, toInt(user.id));
+      await updateItemQuantity(itemId, qty, toInt(user.id));
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
@@ -400,7 +400,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   }, [cartItems, pendingRoundItems, reload, user]);
 
   // Remove item
-  const removeItem = useCallback(async (itemId: number | string) => {
+  const removeItem = useCallback(async (itemId: string) => {
     if (cartItems.some(item => item.id === itemId)) {
       setCartItems(prev => prev.filter(item => item.id !== itemId));
       return;
@@ -414,7 +414,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     if (!user) return;
 
     try {
-      await removeItemFromOrder(String(itemId), toInt(user.id));
+      await removeItemFromOrder(itemId, toInt(user.id));
       await reload();
     } catch (error) {
       captureError(error, { module: 'order', operation: 'removeItem', level: 'error' });
@@ -433,7 +433,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
   // Edit modifiers
   const editModifiers = useCallback(async (
-    itemId: number | string,
+    itemId: string,
     modifiers: SelectedModifier[],
     weight: number | null,
     notes: string,
@@ -489,12 +489,11 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
     // It's a persisted order item
     try {
-      const persistedId = String(itemId);
-      await updateItemModifiers(persistedId, modifiers);
+      await updateItemModifiers(itemId, modifiers);
       if (unitPrice !== undefined) {
-        await updateItemUnitPrice(persistedId, unitPrice);
+        await updateItemUnitPrice(itemId, unitPrice);
       }
-      await updateItemNotes(persistedId, notes);
+      await updateItemNotes(itemId, notes);
       // Note: weight/unit price update would need the menu item price
       await reload();
     } catch (error) {
