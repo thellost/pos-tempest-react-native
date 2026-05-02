@@ -16,6 +16,7 @@ export interface TableWithOrder extends DiningTable {
   floor_area_name: string;
   active_order_id: string | null;
   active_order_number: string | null;
+  active_order_customer_name: string | null;
   guest_count: number | null;
   order_total: number | null;
   order_created_at: string | null;
@@ -48,6 +49,7 @@ export function useTables() {
       fa.name as floor_area_name,
       o.id as active_order_id,
       o.order_number as active_order_number,
+      COALESCE(c.name, o.customer_name) as active_order_customer_name,
       o.guest_count,
       o.total as order_total,
       o.created_at as order_created_at,
@@ -56,6 +58,7 @@ export function useTables() {
      LEFT JOIN floor_areas fa ON t.floor_area_id = fa.id
      LEFT JOIN orders o ON t.id = o.table_id 
        AND o.status NOT IN (?, ?, ?)
+     LEFT JOIN customers c ON c.id = o.customer_id
      WHERE t.branch_id = ? AND t.is_active = 1
      ORDER BY t.table_number ASC, o.created_at DESC`,
     [
@@ -121,6 +124,7 @@ export function useTables() {
           fa.name as floor_area_name,
           o.id as active_order_id,
           o.order_number as active_order_number,
+          COALESCE(c.name, o.customer_name) as active_order_customer_name,
           o.guest_count,
           o.total as order_total,
           o.created_at as order_created_at,
@@ -129,6 +133,7 @@ export function useTables() {
          LEFT JOIN floor_areas fa ON t.floor_area_id = fa.id
          LEFT JOIN orders o ON t.id = o.table_id 
            AND o.status NOT IN (?, ?, ?)
+         LEFT JOIN customers c ON c.id = o.customer_id
          WHERE t.id = ?`,
         [
           ORDER_STATUS.COMPLETED,

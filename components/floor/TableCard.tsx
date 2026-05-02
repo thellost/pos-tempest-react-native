@@ -42,6 +42,7 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
     : isReserved
     ? 'Reserved'
     : 'Maintenance';
+  const customerName = table.active_order_customer_name?.trim();
 
   return (
     <Pressable
@@ -73,25 +74,32 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
       {/* Row 2: Order info / reservation / action */}
       <View className="mt-1">
         {isOccupied && table.active_order_id ? (
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="shrink font-mono text-pos-xs text-pos-text-muted" numberOfLines={1}>
-              {table.active_order_number}
-            </Text>
-            {elapsedMinutes > 0 && (
-              <Text
-                className={`shrink-0 font-mono text-pos-xs font-bold ${
-                  elapsedMinutes > 90
-                    ? 'text-pos-danger'
-                    : elapsedMinutes > 60
-                    ? 'text-pos-warning'
-                    : 'text-pos-text-muted'
-                }`}
-              >
-                {elapsedMinutes >= 60
-                  ? `${Math.floor(elapsedMinutes / 60)}h${elapsedMinutes % 60}m`
-                  : `${elapsedMinutes}m`}
+          <View className="gap-0.5">
+            <View className="flex-row items-center justify-between gap-2">
+              <Text className="shrink font-mono text-pos-xs text-pos-text-muted" numberOfLines={1}>
+                {table.active_order_number}
               </Text>
-            )}
+              {elapsedMinutes > 0 && (
+                <Text
+                  className={`shrink-0 font-mono text-pos-xs font-bold ${
+                    elapsedMinutes > 90
+                      ? 'text-pos-danger'
+                      : elapsedMinutes > 60
+                      ? 'text-pos-warning'
+                      : 'text-pos-text-muted'
+                  }`}
+                >
+                  {elapsedMinutes >= 60
+                    ? `${Math.floor(elapsedMinutes / 60)}h${elapsedMinutes % 60}m`
+                    : `${elapsedMinutes}m`}
+                </Text>
+              )}
+            </View>
+            {customerName ? (
+              <Text className="text-pos-xs font-semibold text-pos-text" numberOfLines={1}>
+                {customerName}
+              </Text>
+            ) : null}
           </View>
         ) : isReserved ? (
           <View className="flex-row items-center justify-between gap-2">
