@@ -165,7 +165,7 @@ export async function getActiveShift(branchId: number, context?: { deviceId?: st
         FROM shifts
         WHERE branch_id = ?
           AND status = ?
-        ORDER BY opened_at DESC
+        ORDER BY opened_at ASC
         LIMIT 1
       `,
       [branchId, SHIFT_STATUS.OPEN],
@@ -190,17 +190,6 @@ export async function getActiveShift(branchId: number, context?: { deviceId?: st
   }
 
   if (!row) {
-    captureError('No active shift found', {
-      module: 'shift.service',
-      operation: 'getActiveShift.null',
-      tags: {
-        branchId: String(branchId),
-        deviceId: context?.deviceId ?? 'unknown',
-        userId: context?.userId ? String(context.userId) : 'unknown',
-        sessionId: context?.sessionId ?? 'unknown',
-      },
-      level: 'info',
-    });
     return null;
   }
 
@@ -496,6 +485,56 @@ export async function autoCloseStaleShifts(branch: AutoShiftBranch): Promise<num
     }
   }
 
+  try {
+    await deduplicateOpenShifts(branchId);
+  } catch (err) {
+    console.warn('[ShiftService] autoCloseStaleShifts: deduplication failed', err);
+  }
+
+  return closedCount;
+}
+
+/**
+ * Close all but the oldest open shift for a branch.
+ * Guards against the race condition where the backend scheduler and the
+ * device both insert an OPEN shift before PowerSync can sync the server
+ * record to the device. Oldest shift wins — it is most likely the
+ * backend-authoritative one. Returns the number of duplicate shifts closed.
+ */
+async function deduplicateOpenShifts(branchId: number): Promise<number> {
+  const rows = await powersync.getAll<ShiftRow>(
+    `
+      SELECT
+        id, user_id, branch_id, device_id, status,
+        opening_cash, closing_cash, expected_cash, cash_difference,
+        opened_at, closed_at, notes
+      FROM shifts
+      WHERE branch_id = ?
+        AND status = ?
+      ORDER BY opened_at ASC
+    `,
+    [branchId, SHIFT_STATUS.OPEN],
+  );
+
+  if (rows.length <= 1) return 0;
+
+  const [, ...duplicates] = rows;
+  captureMessage(
+    `[ShiftService] deduplicateOpenShifts: found ${rows.length} open shifts for branch ${branchId}, closing ${duplicates.length} duplicate(s)`,
+    'warning',
+    { branchId, keepShiftId: String(rows[0].id), duplicateCount: duplicates.length },
+  );
+
+  let closedCount = 0;
+  for (const row of duplicates) {
+    try {
+      await closeShift('', String(row.id), 0, { auto: true, system: true, notes: 'auto-closed: duplicate shift deduplication' });
+      closedCount += 1;
+    } catch (err) {
+      console.warn('[ShiftService] deduplicateOpenShifts: failed to close duplicate shift', row.id, err);
+    }
+  }
+
   return closedCount;
 }
 
@@ -538,7 +577,15 @@ export async function ensureShiftForNow(
   }
 
   try {
-    return await openShift('', userId, branchId, 0, deviceId, true);
+    const result = await openShift('', userId, branchId, 0, deviceId, true);
+    // Deduplicate in case a backend-created shift synced in after we queried
+    // getActiveShift above but before/during our insert.
+    try {
+      await deduplicateOpenShifts(branchId);
+    } catch (err) {
+      console.warn('[ShiftService] ensureShiftForNow: deduplication failed', err);
+    }
+    return result;
   } catch (err) {
     console.warn('[ShiftService] ensureShiftForNow: openShift failed', err);
     return null;
