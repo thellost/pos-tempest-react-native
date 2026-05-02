@@ -45,6 +45,8 @@ interface UseOrderOptions {
    */
   isShiftOpen?: boolean;
   shiftId?: string | null;
+  /** Guest/customer name to persist when the order is first created. */
+  guestName?: string | null;
 }
 
 interface OrderItemWithModifiers extends OrderItem {
@@ -141,7 +143,7 @@ function toMenuItem(item: MenuItemWithInventory): MenuItem {
  * Handles draft → confirmed → pending round flow.
  */
 export function useOrder(options: UseOrderOptions): UseOrderReturn {
-  const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true, shiftId = null } = options;
+  const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true, shiftId = null, guestName = null } = options;
   const router = useRouter();
   const { user } = useAuth();
 
@@ -513,7 +515,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         shiftId,
         orderType === 'takeaway' ? ORDER_TYPE.TAKEAWAY : ORDER_TYPE.DINE_IN,
         guestCount || 0,
-        null,                 // customerName
+        guestName,            // customerName — passed from use-order-screen state
         user.id,              // waiterId — the user creating the order is the waiter
       );
 
@@ -545,7 +547,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       captureError(error, { module: 'order', operation: 'confirmOrder', level: 'error' });
       throw error;
     }
-  }, [user, cartItems, tableId, orderType, guestCount, menuItems, shiftId]);
+  }, [user, cartItems, tableId, orderType, guestCount, guestName, menuItems, shiftId]);
 
   // Confirm round (pending → confirmed)
   const confirmRound = useCallback(async () => {

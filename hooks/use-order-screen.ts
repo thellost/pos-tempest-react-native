@@ -126,6 +126,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     menuItems,
     isShiftOpen,
     shiftId: activeShift ? activeShift.id : null,
+    guestName,
   });
 
   const {
