@@ -1,16 +1,18 @@
-import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { ArrowRightLeft, UtensilsCrossed } from 'lucide-react-native';
 
-import { Button, SelectButton } from '@/components/ui';
-import { ThemeColors } from '@/constants/theme';
-
 import type { OrderItemDisplay } from '@/components/order/types';
+import { Button, SelectButton } from '@/components/ui';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
+import { ThemeColors } from '@/constants/theme';
 import type { Order } from '@/db/models';
+import { useStableCallback } from '@/hooks/use-stable-callback';
 import { formatIDR } from '@/utils/currency';
 import { formatTime } from '@/utils/date';
+
 import { CustomerPickerRow, type AssignedCustomer } from './CustomerPickerRow';
 import { OrderActions } from './OrderActions';
 import { OrderItemRow } from './OrderItemRow';
@@ -52,6 +54,68 @@ interface OrderPanelProps {
   onClearGuestName?: () => void;
 }
 
+type ListRow =
+  | { type: 'round-divider'; roundNumber: number; sentAt?: string | null }
+  | { type: 'group-header'; roundNumber: number; groupName: string; isPending: boolean }
+  | { type: 'order-item'; item: OrderItemDisplay }
+  | { type: 'pending-item'; item: OrderItemDisplay };
+
+interface GroupHeaderProps {
+  groupName: string;
+  isPending: boolean;
+}
+
+const GroupHeader = memo(function GroupHeader({ groupName, isPending }: GroupHeaderProps) {
+  return (
+    <View className={`mb-1 mt-1 rounded-sm px-2 py-1 ${isPending ? 'bg-amber-500/20' : 'bg-surface-raised'}`}>
+      <Text className={`text-[10px] font-semibold uppercase tracking-wider ${isPending ? 'text-pos-price' : 'text-pos-text-muted'}`}>
+        {isPending ? `${groupName} (PENDING)` : groupName}
+      </Text>
+    </View>
+  );
+});
+
+function groupItemsByCategory(items: OrderItemDisplay[]): [string, OrderItemDisplay[]][] {
+  const groupedItems = new Map<string, OrderItemDisplay[]>();
+
+  items.forEach((item) => {
+    const groupName = item.category_group?.trim() || 'Lainnya';
+    const existingItems = groupedItems.get(groupName);
+
+    if (existingItems) {
+      existingItems.push(item);
+      return;
+    }
+
+    groupedItems.set(groupName, [item]);
+  });
+
+  return Array.from(groupedItems.entries());
+}
+
+function appendGroupedRows(
+  rows: ListRow[],
+  roundNumber: number,
+  items: OrderItemDisplay[],
+  isPending: boolean
+): void {
+  groupItemsByCategory(items).forEach(([groupName, groupItems]) => {
+    rows.push({
+      type: 'group-header',
+      roundNumber,
+      groupName,
+      isPending,
+    });
+
+    groupItems.forEach((item) => {
+      rows.push({
+        type: isPending ? 'pending-item' : 'order-item',
+        item,
+      });
+    });
+  });
+}
+
 /**
  * Order panel component with round tracking support.
  * Displays order items grouped by round with visual dividers.
@@ -83,27 +147,29 @@ export const OrderPanel = memo(function OrderPanel({
   onSetGuestName,
   onClearGuestName,
 }: OrderPanelProps) {
-  const activeItems = useMemo(() => items.filter(i => !i.is_voided), [items]);
+  const activeItems = useMemo(() => items.filter((item) => !item.is_voided), [items]);
   const hasItems = activeItems.length > 0;
   const hasPendingRound = pendingRoundItems.length > 0;
+  const hasCartRows = hasItems || hasPendingRound;
   const orderStatus = order?.status ?? ORDER_STATUS.PENDING;
   const isDineIn = order?.order_type === ORDER_TYPE.DINE_IN;
   const isTakeaway = order?.order_type === ORDER_TYPE.TAKEAWAY;
   const isConfirmed = orderStatus === ORDER_STATUS.CONFIRMED;
   const showConfirmButton = !isConfirmed && hasItems;
 
-  // Which round to print — defaults to latest round, user can select older rounds.
   const [printRound, setPrintRound] = useState(currentRound);
   useEffect(() => {
     setPrintRound(currentRound);
   }, [currentRound]);
 
-  // Wrap onSendToKitchen so it always uses the currently selected printRound.
+  const stableUpdateQuantity = useStableCallback(onUpdateQuantity);
+  const stableEditModifiers = useStableCallback(onEditModifiers);
+  const stableRemoveItem = useStableCallback(onRemoveItem);
+
   const handleSendToKitchenForRound = useCallback(() => {
     onSendToKitchen(printRound);
   }, [onSendToKitchen, printRound]);
 
-  // Format the sent-at time for the selected print round.
   const currentRoundSentAt = roundSentAt.get(printRound);
   const sentAtFormatted: string | null = currentRoundSentAt
     ? (() => {
@@ -127,129 +193,110 @@ export const OrderPanel = memo(function OrderPanel({
     }
   }, [guestCount, onGuestCountChange]);
 
-  // Group items by round number
   const itemsByRound = useMemo(() => {
-    const grouped = new Map<number, OrderItemDisplay[]>();
-    
-    for (const item of activeItems) {
-      const round = item.round_number || 1;
-      if (!grouped.has(round)) {
-        grouped.set(round, []);
+    const groupedItems = new Map<number, OrderItemDisplay[]>();
+
+    activeItems.forEach((item) => {
+      const roundNumber = item.round_number || 1;
+      const existingItems = groupedItems.get(roundNumber);
+
+      if (existingItems) {
+        existingItems.push(item);
+        return;
       }
-      grouped.get(round)!.push(item);
-    }
-    
-    return grouped;
+
+      groupedItems.set(roundNumber, [item]);
+    });
+
+    return groupedItems;
   }, [activeItems]);
 
-  // Rounds that have actual items in the DB (for the round selector).
   const availableRounds = useMemo(
-    () => Array.from(itemsByRound.keys()).sort((a, b) => a - b),
+    () => Array.from(itemsByRound.keys()).sort((left, right) => left - right),
     [itemsByRound]
   );
 
-  // Render items with round dividers
-  const renderedItemsWithRounds = useMemo(() => {
-    const result: React.ReactNode[] = [];
-    const rounds = Array.from(itemsByRound.keys()).sort((a, b) => a - b);
+  const listData = useMemo<ListRow[]>(() => {
+    const rows: ListRow[] = [];
+    const rounds = Array.from(itemsByRound.keys()).sort((left, right) => left - right);
 
-    for (const round of rounds) {
-      const roundItems = itemsByRound.get(round) || [];
-      
-      // Add round divider (except for first round if no sent timestamp)
-      if (round > 1 || roundSentAt.has(round)) {
-        result.push(
-          <RoundDivider
-            key={`round-${round}`}
-            roundNumber={round}
-            sentAt={roundSentAt.get(round)}
-          />
-        );
+    rounds.forEach((roundNumber) => {
+      const roundItems = itemsByRound.get(roundNumber) ?? [];
+
+      if (roundNumber > 1 || roundSentAt.has(roundNumber)) {
+        rows.push({
+          type: 'round-divider',
+          roundNumber,
+          sentAt: roundSentAt.get(roundNumber),
+        });
       }
 
-      // Group items by category within the round
-      const grouped = roundItems.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
-        const groupName = item.category_group?.trim() || 'Lainnya';
-        if (!accumulator[groupName]) {
-          accumulator[groupName] = [];
-        }
-        accumulator[groupName].push(item);
-        return accumulator;
-      }, {});
+      appendGroupedRows(rows, roundNumber, roundItems, false);
+    });
 
-      for (const [groupName, groupItems] of Object.entries(grouped)) {
-        result.push(
-          <Fragment key={`round-${round}-group-${groupName}`}>
-            <View className="mb-1 mt-1 rounded-sm bg-surface-raised px-2 py-1">
-              <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-text-muted">
-                {groupName}
-              </Text>
-            </View>
-
-            {groupItems.map((item) => (
-              <OrderItemRow
-                key={`order-item-${item.id}`}
-                item={item}
-                onUpdateQuantity={onUpdateQuantity}
-                onEditModifiers={onEditModifiers}
-                onRemove={onRemoveItem}
-              />
-            ))}
-          </Fragment>
-        );
-      }
-    }
-
-    // Render pending round items
     if (pendingRoundItems.length > 0) {
-      result.push(
-        <RoundDivider
-          key={`round-${currentRound}-pending`}
-          roundNumber={currentRound}
-          sentAt={null}
-        />
-      );
-
-      const grouped = pendingRoundItems.reduce<Record<string, OrderItemDisplay[]>>((accumulator, item) => {
-        const groupName = item.category_group?.trim() || 'Lainnya';
-        if (!accumulator[groupName]) {
-          accumulator[groupName] = [];
-        }
-        accumulator[groupName].push(item);
-        return accumulator;
-      }, {});
-
-      for (const [groupName, groupItems] of Object.entries(grouped)) {
-        result.push(
-          <Fragment key={`round-${currentRound}-pending-group-${groupName}`}>
-            <View className="mb-1 mt-1 rounded-sm bg-amber-500/20 px-2 py-1">
-              <Text className="text-[10px] font-semibold uppercase tracking-wider text-pos-price">
-                {groupName} (PENDING)
-              </Text>
-            </View>
-
-            {groupItems.map((item) => (
-              <OrderItemRow
-                key={`pending-item-${item.id}`}
-                item={item}
-                onUpdateQuantity={onUpdateQuantity}
-                onEditModifiers={onEditModifiers}
-                onRemove={onRemoveItem}
-              />
-            ))}
-          </Fragment>
-        );
-      }
+      rows.push({
+        type: 'round-divider',
+        roundNumber: currentRound,
+        sentAt: null,
+      });
+      appendGroupedRows(rows, currentRound, pendingRoundItems, true);
     }
 
-    return result;
-  }, [itemsByRound, pendingRoundItems, currentRound, roundSentAt, onEditModifiers, onUpdateQuantity, onRemoveItem]);
+    return rows;
+  }, [currentRound, itemsByRound, pendingRoundItems, roundSentAt]);
 
-  // Calculate totals including pending items
   const allItemsTotal = useMemo(
     () => [...activeItems, ...pendingRoundItems].reduce((sum, item) => sum + item.total, 0),
     [activeItems, pendingRoundItems]
   );
+
+  const keyExtractor = useCallback((row: ListRow): string => {
+    if (row.type === 'order-item') {
+      return `item-${row.item.id}`;
+    }
+
+    if (row.type === 'pending-item') {
+      return `pending-item-${row.item.id}`;
+    }
+
+    if (row.type === 'round-divider') {
+      return `divider-${row.roundNumber}-${row.sentAt ?? 'pending'}`;
+    }
+
+    return `group-${row.roundNumber}-${row.groupName}-${row.isPending ? 'pending' : 'sent'}`;
+  }, []);
+
+  const getItemType = useCallback((row: ListRow) => row.type, []);
+
+  const renderListItem = useCallback(({ item: row }: ListRenderItemInfo<ListRow>) => {
+    if (row.type === 'round-divider') {
+      return (
+        <RoundDivider
+          roundNumber={row.roundNumber}
+          sentAt={row.sentAt}
+        />
+      );
+    }
+
+    if (row.type === 'group-header') {
+      return (
+        <GroupHeader
+          groupName={row.groupName}
+          isPending={row.isPending}
+        />
+      );
+    }
+
+    return (
+        <OrderItemRow
+          item={row.item}
+          onUpdateQuantity={stableUpdateQuantity}
+          onEditModifiers={stableEditModifiers}
+          onRemove={stableRemoveItem}
+        />
+      );
+  }, [stableEditModifiers, stableRemoveItem, stableUpdateQuantity]);
 
   return (
     <View className="flex-1 border-r border-border bg-surface-soft">
@@ -290,7 +337,6 @@ export const OrderPanel = memo(function OrderPanel({
           </View>
         )}
 
-        {/* Customer picker */}
         {onAssignCustomer && onClearCustomer && (
           <CustomerPickerRow
             assignedCustomer={assignedCustomer}
@@ -326,12 +372,8 @@ export const OrderPanel = memo(function OrderPanel({
         )}
       </View>
 
-      <ScrollView
-        className="flex-1 px-3"
-        contentContainerStyle={{ paddingVertical: 12 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {activeItems.length === 0 && pendingRoundItems.length === 0 ? (
+      <View className="flex-1 px-3">
+        {!hasCartRows ? (
           <View className="items-center justify-center py-8">
             <View className="mb-3 h-12 w-12 items-center justify-center rounded-full bg-surface-card">
               <UtensilsCrossed size={24} color={ThemeColors.text.muted} />
@@ -342,9 +384,17 @@ export const OrderPanel = memo(function OrderPanel({
             </Text>
           </View>
         ) : (
-          renderedItemsWithRounds
+          <FlashList
+            data={listData}
+            renderItem={renderListItem}
+            keyExtractor={keyExtractor}
+            getItemType={getItemType}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 12 }}
+            style={{ flex: 1 }}
+          />
         )}
-      </ScrollView>
+      </View>
 
       <View className="px-3">
         {order ? (
@@ -361,23 +411,22 @@ export const OrderPanel = memo(function OrderPanel({
         )}
       </View>
 
-      {/* Round selector — shown when the order has items in 2 or more rounds */}
       {order && availableRounds.length > 1 && (
         <View className="flex-row items-center border-t border-border bg-surface-card px-3 py-1.5">
           <Text className="mr-2 text-pos-xs text-pos-text-muted">Ticket:</Text>
-          {availableRounds.map((r) => (
+          {availableRounds.map((roundNumber) => (
             <SelectButton
-              key={r}
-              selected={printRound === r}
+              key={roundNumber}
+              selected={printRound === roundNumber}
               selectedClassName="bg-accent"
               unselectedClassName="bg-surface-raised"
               className="mr-1 rounded px-2.5 py-1"
-              onPress={() => setPrintRound(r)}
+              onPress={() => setPrintRound(roundNumber)}
             >
               <Text
-                className={`text-pos-xs font-bold ${printRound === r ? 'text-white' : 'text-pos-text-muted'}`}
+                className={`text-pos-xs font-bold ${printRound === roundNumber ? 'text-white' : 'text-pos-text-muted'}`}
               >
-                R{r}
+                R{roundNumber}
               </Text>
             </SelectButton>
           ))}

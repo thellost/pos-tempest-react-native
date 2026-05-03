@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { PRICING_TYPE } from '@/constants/enums';
@@ -17,25 +17,54 @@ interface MenuItemCardProps {
   onDecrementItem?: (item: MenuItemWithInventory) => void;
 }
 
-function MenuItemCardComponent({ 
-  item, 
-  categoryColor, 
+function MenuItemCardComponent({
+  item,
+  categoryColor,
   categoryName,
-  quantity = 0, 
-  onPressItem, 
-  onDecrementItem 
+  quantity = 0,
+  onPressItem,
+  onDecrementItem,
 }: MenuItemCardProps) {
+  const lastPressRef = useRef(0);
+  const recentPressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [recentlyPressed, setRecentlyPressed] = useState(false);
+
   const isWeightBased = item.pricing_type === PRICING_TYPE.WEIGHT_BASED;
   const isAvailable = Boolean(item.is_available);
   const isLowStock = item.isLowStock;
   const accentColor = categoryColor || DEFAULT_BUTTON_COLOR;
   const displayCategory = categoryName || 'Food & Drink';
 
-  const handleAdd = useCallback(() => {
-    if (isAvailable) {
-      onPressItem(item);
+  useEffect(() => () => {
+    if (recentPressTimeoutRef.current) {
+      clearTimeout(recentPressTimeoutRef.current);
     }
-  }, [isAvailable, onPressItem, item]);
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    if (!isAvailable) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastPressRef.current < 800) {
+      return;
+    }
+
+    lastPressRef.current = now;
+    setRecentlyPressed(true);
+
+    if (recentPressTimeoutRef.current) {
+      clearTimeout(recentPressTimeoutRef.current);
+    }
+
+    recentPressTimeoutRef.current = setTimeout(() => {
+      setRecentlyPressed(false);
+      recentPressTimeoutRef.current = null;
+    }, 400);
+
+    onPressItem(item);
+  }, [isAvailable, item, onPressItem]);
 
   const handleDecrement = useCallback(() => {
     if (!isAvailable || !onDecrementItem || quantity <= 0) return;
@@ -43,18 +72,16 @@ function MenuItemCardComponent({
   }, [isAvailable, onDecrementItem, quantity, item]);
 
   const activeStyle = quantity > 0
-    ? { borderColor: accentColor + '99' }  // accent at ~60% opacity when in cart
+    ? { borderColor: `${accentColor}99` }
     : undefined;
 
   return (
     <View
-      className={`overflow-hidden rounded-sm border border-border bg-surface-card flex-row ${!isAvailable ? 'opacity-50' : ''}`}
+      className={`overflow-hidden rounded-sm border border-border flex-row ${recentlyPressed ? 'bg-surface-raised opacity-80' : 'bg-surface-card'} ${!isAvailable ? 'opacity-50' : ''}`}
       style={[{ minHeight: 72 }, activeStyle]}
     >
-      {/* Left accent bar */}
       <View className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accentColor }} />
 
-      {/* Content area — the whole left side is the "add" press target */}
       <Pressable
         onPress={handleAdd}
         disabled={!isAvailable}
@@ -73,13 +100,11 @@ function MenuItemCardComponent({
           )}
         </Text>
 
-        {/* LOW STOCK badge */}
         {isLowStock && isAvailable && (
           <View className="absolute right-1 top-1 rounded bg-pos-warning px-1 py-px">
             <Text className="text-[7px] font-bold uppercase text-pos-text-strong">low</Text>
           </View>
         )}
-        {/* SOLD OUT badge */}
         {!isAvailable && (
           <View className="absolute bottom-1 right-1 rounded bg-pos-danger px-1 py-px">
             <Text className="text-[7px] font-bold uppercase text-pos-text-strong">sold</Text>
@@ -87,9 +112,7 @@ function MenuItemCardComponent({
         )}
       </Pressable>
 
-      {/* Right panel — separate from the add Pressable so decrement works reliably */}
       {quantity > 0 ? (
-        /* Entire panel = decrement press target → max touch area, no nested conflict */
         <Pressable
           onPress={handleDecrement}
           disabled={!isAvailable}
@@ -105,7 +128,6 @@ function MenuItemCardComponent({
           <Text className="text-[20px] font-bold leading-none text-pos-danger">−</Text>
         </Pressable>
       ) : (
-        /* Faint + hint: tapping the right side also adds */
         <Pressable
           onPress={handleAdd}
           disabled={!isAvailable}

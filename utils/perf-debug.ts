@@ -12,6 +12,10 @@ import {
 const TAG = '[⏱ perf]';
 const ENABLE_RENDER_PROFILER = process.env.EXPO_PUBLIC_ENABLE_RENDER_PROFILER === 'true';
 
+export function isRenderProfilerEnabled(): boolean {
+  return __DEV__ && ENABLE_RENDER_PROFILER;
+}
+
 /**
  * High-resolution timestamp in milliseconds.
  * Uses performance.now() when available, falls back to Date.now().
@@ -63,6 +67,8 @@ export function useRenderTimer(componentName: string): void {
   renderStart.current = nowMs();
 
   useLayoutEffect(() => {
+    if (!isRenderProfilerEnabled()) return;
+
     const elapsed = nowMs() - renderStart.current;
     logPerf(`render:${componentName}`, elapsed);
   });
@@ -158,7 +164,7 @@ export function PerfProfiler({ id, children }: PerfProfilerProps) {
     return child.trim().length > 0;
   });
 
-  if (!__DEV__ || !ENABLE_RENDER_PROFILER) {
+  if (!isRenderProfilerEnabled()) {
     return createElement(Fragment, null, ...normalizedChildren);
   }
 

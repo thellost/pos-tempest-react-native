@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Text, View } from 'react-native';
 
 import { formatTime } from '@/utils/date';
@@ -11,7 +12,7 @@ interface RoundDividerProps {
  * Visual divider component to separate order item rounds.
  * Shows round number and optional timestamp when sent to kitchen.
  */
-export function RoundDivider({ roundNumber, sentAt }: RoundDividerProps) {
+function RoundDividerComponent({ roundNumber, sentAt }: RoundDividerProps) {
   return (
     <View className="my-2 flex-row items-center">
       <View className="h-px flex-1 bg-border" />
@@ -29,3 +30,5 @@ export function RoundDivider({ roundNumber, sentAt }: RoundDividerProps) {
     </View>
   );
 }
+
+export const RoundDivider = memo(RoundDividerComponent);

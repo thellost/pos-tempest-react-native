@@ -158,6 +158,10 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const [lastBill, setLastBill] = useState<BillData | null>(null);
 
   const lastLoadedOrderIdRef = useRef<string | null | undefined>(undefined);
+  const persistedQuantityWritesRef = useRef(new Map<string, {
+    isWriting: boolean;
+    queuedQuantity: number | null;
+  }>());
 
   // Calculate current round from order items
   const currentRound = useMemo(() => {
@@ -234,6 +238,75 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       captureError(error, { module: 'order', operation: 'reloadOrder', level: 'warning', extras: { orderId: currentOrderId } });
     }
   }, [currentOrderId]);
+
+  const applyOptimisticOrderItemQuantity = useCallback((itemId: string, qty: number) => {
+    setOrderItems((prevItems) => {
+      if (qty <= 0) {
+        return prevItems.filter((item) => item.id !== itemId);
+      }
+
+      return prevItems.map((item) => {
+        if (item.id !== itemId) return item;
+
+        const itemSubtotal = (item.unit_price + item.modifier_total) * qty;
+
+        return {
+          ...item,
+          quantity: qty,
+          subtotal: itemSubtotal,
+          total: itemSubtotal,
+        };
+      });
+    });
+  }, []);
+
+  const persistOrderItemQuantity = useCallback(async (itemId: string, qty: number) => {
+    if (!user) return;
+
+    applyOptimisticOrderItemQuantity(itemId, qty);
+
+    const existingWrite = persistedQuantityWritesRef.current.get(itemId);
+    if (existingWrite?.isWriting) {
+      existingWrite.queuedQuantity = qty;
+      return;
+    }
+
+    const writeState = { isWriting: true, queuedQuantity: null as number | null };
+    persistedQuantityWritesRef.current.set(itemId, writeState);
+
+    let quantityToPersist = qty;
+
+    try {
+      while (true) {
+        await updateItemQuantity(itemId, quantityToPersist, toInt(user.id));
+
+        const queuedQuantity = writeState.queuedQuantity;
+        writeState.queuedQuantity = null;
+
+        if (queuedQuantity !== null && queuedQuantity !== quantityToPersist) {
+          quantityToPersist = queuedQuantity;
+          continue;
+        }
+
+        await reload();
+
+        const queuedDuringReload = writeState.queuedQuantity;
+        writeState.queuedQuantity = null;
+
+        if (queuedDuringReload === null || queuedDuringReload === quantityToPersist) {
+          break;
+        }
+
+        applyOptimisticOrderItemQuantity(itemId, queuedDuringReload);
+        quantityToPersist = queuedDuringReload;
+      }
+    } catch (error) {
+      captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
+      await reload();
+    } finally {
+      persistedQuantityWritesRef.current.delete(itemId);
+    }
+  }, [applyOptimisticOrderItemQuantity, reload, user]);
 
   // Add item to order - handles draft, confirmed, and pending round states
   const addItemToOrderHandler = useCallback(async (
@@ -391,15 +464,8 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     }
 
     // Otherwise it's a persisted order item (UUID)
-    if (!user) return;
-
-    try {
-      await updateItemQuantity(itemId, qty, toInt(user.id));
-      await reload();
-    } catch (error) {
-      captureError(error, { module: 'order', operation: 'updateQuantity', level: 'error' });
-    }
-  }, [cartItems, pendingRoundItems, reload, user]);
+    await persistOrderItemQuantity(itemId, qty);
+  }, [cartItems, pendingRoundItems, persistOrderItemQuantity]);
 
   // Remove item
   const removeItem = useCallback(async (itemId: string) => {
