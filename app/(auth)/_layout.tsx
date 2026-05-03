@@ -26,7 +26,7 @@ export default function AuthLayout() {
     );
   }
 
-  // If authenticated and not locked, redirect to main app
+  // If authenticated, redirect to main app
   if (isAuthenticated && !isLocked) {
     return <Redirect href="/(app)/floor" />;
   }

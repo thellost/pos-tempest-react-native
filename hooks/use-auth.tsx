@@ -20,6 +20,7 @@ import {
 import { addBreadcrumb, captureError, clearUserContext, setUserContext, startSpan } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 import { setAuditUserContext } from '@/services/audit.service';
+import { useConfig } from '@/hooks/use-config';
 
 export type UserRow = {
   id: number;
@@ -116,6 +117,8 @@ const PROFILE_FETCH_MAX_RETRIES = Config.PROFILE_FETCH_MAX_RETRIES;
 const PROFILE_FETCH_INITIAL_DELAY_MS = Config.PROFILE_FETCH_INITIAL_DELAY_MS;
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const { config } = useConfig();
+  const pinLockEnabled = config.PIN_LOCK_ENABLED !== 0;
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
@@ -124,6 +127,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [idleTimeoutMs, setIdleTimeoutMs] = useState(Config.IDLE_TIMEOUT_MS);
   const [sessionLoginTime, setSessionLoginTime] = useState<number | null>(null);
   const lastActivityRef = useRef(Date.now());
+
+  // Auto-unlock immediately whenever PIN lock is disabled
+  useEffect(() => {
+    if (!pinLockEnabled) setIsLocked(false);
+  }, [pinLockEnabled]);
   
   // Rate limiting state
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -204,9 +212,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [session?.user?.id]);
 
   const lock = useCallback(() => {
+    if (!pinLockEnabled) return;
     addBreadcrumb('auth', 'Screen locked (idle)');
     setIsLocked(true);
-  }, []);
+  }, [pinLockEnabled]);
 
   const markActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -677,7 +686,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const appStateSubscription = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state !== 'active') {
-        setIsLocked(true);
+        if (pinLockEnabled) setIsLocked(true);
       } else {
         markActivity();
         checkSessionValidity();
@@ -685,7 +694,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
 
     const intervalId = setInterval(() => {
-      if (isLocked || !session) {
+      if (!pinLockEnabled || isLocked || !session) {
         return;
       }
 
@@ -700,7 +709,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearInterval(intervalId);
       clearInterval(sessionCheckInterval);
     };
-  }, [idleTimeoutMs, isLocked, markActivity, session, sessionLoginTime, signOut]);
+  }, [idleTimeoutMs, isLocked, pinLockEnabled, markActivity, session, sessionLoginTime, signOut]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

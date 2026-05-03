@@ -20,6 +20,7 @@ import Constants from 'expo-constants';
 import {
   AlertTriangle,
   Clock,
+  Lock,
   Monitor,
   Moon,
   Palette,
@@ -29,7 +30,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, UIManager, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Switch, Text, UIManager, View } from 'react-native';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -377,6 +378,26 @@ export default function SettingsScreen() {
           )}
         </AccordionSection>
       </PermissionGate>
+
+      {/* Security — visible to all users */}
+      <AccordionSection icon={Lock} title="Security">
+        <View className="overflow-hidden rounded-xl border border-border bg-surface">
+          <View className="flex-row items-center justify-between px-3.5 py-3">
+            <View className="flex-1 pr-4">
+              <Text className="text-pos-sm font-semibold text-pos-text">PIN Lock</Text>
+              <Text className="mt-0.5 text-pos-xs text-pos-text-muted">
+                Require PIN when the app is backgrounded or idle
+              </Text>
+            </View>
+            <Switch
+              value={config.PIN_LOCK_ENABLED !== 0}
+              onValueChange={(enabled) => updateConfig('PIN_LOCK_ENABLED', enabled ? 1 : 0)}
+              trackColor={{ false: '#3f3f46', true: Brand.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+      </AccordionSection>
 
       {/* Local Data — available to any signed-in user (waiters included) so a
           stuck terminal can be self-recovered after a backend schema migration. */}

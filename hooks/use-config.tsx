@@ -24,7 +24,8 @@ export type EditableConfigKey =
   | 'ORDER_PREFIX'
   | 'TICKET_PREFIX'
   | 'CURRENCY'
-  | 'TIMEZONE';
+  | 'TIMEZONE'
+  | 'PIN_LOCK_ENABLED';
 
 type ConfigOverrides = Partial<Pick<typeof Config, EditableConfigKey>>;
 type ResolvedConfig = typeof Config;

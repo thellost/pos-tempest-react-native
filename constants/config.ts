@@ -10,6 +10,9 @@ export const Config = {
   /** Auto-lock timeout in milliseconds */
   IDLE_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
   
+  /** Whether the PIN lock screen is enabled (1 = enabled, 0 = disabled) */
+  PIN_LOCK_ENABLED: 1 as 0 | 1,
+  
   /** Maximum session duration in hours */
   MAX_SESSION_DURATION_HOURS: 12,
   
