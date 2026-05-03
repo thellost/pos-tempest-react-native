@@ -310,15 +310,6 @@ export default function SettingsScreen() {
       {/* Configuration */}
       <PermissionGate permission={PERMISSION.SYSTEM_CONFIG}>
         <AccordionSection icon={Settings2} title="Configuration" summary={configSummary}>
-          <ConfigSection
-            title="Session"
-            rows={sessionRows}
-            overrides={overrides}
-            draft={configDraft}
-            setDraft={setConfigDraft}
-            updateConfig={updateConfig}
-            resetConfig={resetConfig}
-          />
           <View className="mt-3">
             <ConfigSection
               title="Business"
@@ -396,6 +387,17 @@ export default function SettingsScreen() {
               thumbColor="#fff"
             />
           </View>
+        </View>
+        <View className="mt-3">
+          <ConfigSection
+            title="Session Timeouts"
+            rows={sessionRows}
+            overrides={overrides}
+            draft={configDraft}
+            setDraft={setConfigDraft}
+            updateConfig={updateConfig}
+            resetConfig={resetConfig}
+          />
         </View>
       </AccordionSection>
 
