@@ -71,7 +71,7 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
         </View>
       </View>
 
-      {/* Row 2: Order info / reservation / action */}
+      {/* Row 2: Order info / reservation / action — always two lines tall */}
       <View className="mt-1">
         {isOccupied && table.active_order_id ? (
           <View className="gap-0.5">
@@ -95,25 +95,38 @@ export function TableCard({ table, elapsedMinutes, onPress, onLongPress, reserva
                 </Text>
               )}
             </View>
-            {customerName ? (
-              <Text className="text-pos-xs font-semibold text-pos-text" numberOfLines={1}>
-                {customerName}
-              </Text>
-            ) : null}
+            {/* Always render second line — customer name or empty placeholder */}
+            <Text
+              className={`text-pos-xs font-semibold ${customerName ? 'text-pos-text' : 'text-transparent'}`}
+              numberOfLines={1}
+            >
+              {customerName || '.'}
+            </Text>
           </View>
         ) : isReserved ? (
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="shrink text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
-              {reservationName || 'Reserved'}
-            </Text>
-            {reservationTime ? (
-              <Text className="shrink-0 font-mono text-pos-xs text-pos-text-muted">{reservationTime}</Text>
-            ) : null}
+          <View className="gap-0.5">
+            <View className="flex-row items-center justify-between gap-2">
+              <Text className="shrink text-pos-xs font-semibold text-pos-warning" numberOfLines={1}>
+                {reservationName || 'Reserved'}
+              </Text>
+              {reservationTime ? (
+                <Text className="shrink-0 font-mono text-pos-xs text-pos-text-muted">{reservationTime}</Text>
+              ) : null}
+            </View>
+            {/* Placeholder to match occupied card height */}
+            <Text className="text-pos-xs text-transparent" numberOfLines={1}>.</Text>
           </View>
         ) : isMaintenance ? (
-          <Text className="text-pos-xs text-pos-text-faint">Maintenance</Text>
+          <View className="gap-0.5">
+            <Text className="text-pos-xs text-pos-text-faint">Maintenance</Text>
+            <Text className="text-pos-xs text-transparent" numberOfLines={1}>.</Text>
+          </View>
         ) : (
-          <Text className="text-pos-xs font-medium text-pos-success">+ New Order</Text>
+          <View className="gap-0.5">
+            <Text className="text-pos-xs font-medium text-pos-success">+ New Order</Text>
+            {/* Placeholder to match occupied card height */}
+            <Text className="text-pos-xs text-transparent" numberOfLines={1}>.</Text>
+          </View>
         )}
       </View>
     </Pressable>
