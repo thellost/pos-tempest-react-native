@@ -301,32 +301,26 @@ export const OrderPanel = memo(function OrderPanel({
   return (
     <View className="flex-1 border-r border-border bg-surface-soft">
       <View className="border-b border-border bg-surface-card px-4 py-3">
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="font-mono text-pos-lg font-bold text-pos-text">
-              {order?.order_number ?? 'New Order'}
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Pressable
-              className={`px-3 py-1.5 rounded-sm ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
-            >
-              <Text className={`text-pos-xs font-semibold ${isDineIn ? 'text-white' : 'text-pos-text-muted'}`}>
-                Dine-in
-              </Text>
-            </Pressable>
-            <Pressable
-              className={`px-3 py-1.5 rounded-sm ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
-            >
-              <Text className={`text-pos-xs font-semibold ${isTakeaway ? 'text-white' : 'text-pos-text-muted'}`}>
-                Takeaway
-              </Text>
-            </Pressable>
-          </View>
-        </View>
+        <Text className="font-mono text-pos-lg font-bold text-pos-text">
+          {order?.order_number ?? 'New Order'}
+        </Text>
 
-        {onMoveTable && order && order.order_type === ORDER_TYPE.DINE_IN && (
-          <View className="mt-2 flex-row justify-end">
+        <View className="mt-2 flex-row flex-wrap items-center gap-2">
+          <Pressable
+            className={`px-3 py-1.5 rounded-sm ${isDineIn ? 'bg-brand' : 'border border-border bg-transparent'}`}
+          >
+            <Text className={`text-pos-xs font-semibold ${isDineIn ? 'text-white' : 'text-pos-text-muted'}`}>
+              Dine-in
+            </Text>
+          </Pressable>
+          <Pressable
+            className={`px-3 py-1.5 rounded-sm ${isTakeaway ? 'bg-brand' : 'border border-border bg-transparent'}`}
+          >
+            <Text className={`text-pos-xs font-semibold ${isTakeaway ? 'text-white' : 'text-pos-text-muted'}`}>
+              Takeaway
+            </Text>
+          </Pressable>
+          {onMoveTable && order && order.order_type === ORDER_TYPE.DINE_IN && (
             <Pressable
               onPress={onMoveTable}
               className="flex-row items-center gap-1 rounded-sm border border-border bg-surface-raised px-2.5 py-1.5"
@@ -334,8 +328,8 @@ export const OrderPanel = memo(function OrderPanel({
               <ArrowRightLeft size={12} color={ThemeColors.text.muted} />
               <Text className="text-pos-xs font-medium text-pos-text-muted">Move Table</Text>
             </Pressable>
-          </View>
-        )}
+          )}
+        </View>
 
         {onAssignCustomer && onClearCustomer && (
           <CustomerPickerRow
