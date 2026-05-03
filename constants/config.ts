@@ -14,7 +14,7 @@ export const Config = {
   PIN_LOCK_ENABLED: 1 as 0 | 1,
   
   /** Maximum session duration in hours */
-  MAX_SESSION_DURATION_HOURS: 12,
+  MAX_SESSION_DURATION_HOURS: 24,
   
   /** Maximum inactive session duration in milliseconds */
   MAX_INACTIVE_SESSION_MS: 24 * 60 * 60 * 1000, // 24 hours

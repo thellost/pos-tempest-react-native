@@ -645,23 +645,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    // Check session expiration and maximum session duration
+    // Enforce business-logic session limits only.
+    // JWT expiry (session.expires_at) is intentionally NOT checked here —
+    // Supabase's autoRefreshToken handles silent token renewal and fires
+    // onAuthStateChange (TOKEN_REFRESHED) before the token expires. Checking
+    // expires_at directly races against that refresh and causes spurious logouts
+    // when the app resumes from background after >1 hour.
     const checkSessionValidity = () => {
-      const sessionValidation = validateSession(session.expires_at);
-      
-      if (!sessionValidation.valid) {
-        logAuditEvent({
-          type: AuditEventType.SESSION_EXPIRED,
-          userId: session.user.id,
-          metadata: { reason: sessionValidation.reason },
-          timestamp: Date.now(),
-        });
-        addBreadcrumb('auth', 'Session expired', { reason: sessionValidation.reason ?? 'unknown' }, 'warning');
-        signOut();
-        return;
-      }
-
-      // Check max session duration (force re-login after X hours)
+      // Check max session duration (force re-login after X hours of active use)
       if (sessionLoginTime) {
         const sessionDurationMs = Date.now() - sessionLoginTime;
         const maxSessionMs = Config.MAX_SESSION_DURATION_HOURS * 60 * 60 * 1000;
