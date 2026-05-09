@@ -529,9 +529,14 @@ export async function printTestPage(type: PrinterType): Promise<void> {
     row('Time',    now),
     // ── Image ──────────────────────────────────────────────────────
     divider(),
-    text('Image Test', { align: 'center', bold: true }),
+    text('Test Image', { align: 'center', bold: true }),
     space(1),
     image(TEST_IMAGE_BITMAP),
+    // ── Receipt Logo ────────────────────────────────────────────────
+    divider(),
+    text('Receipt Logo', { align: 'center', bold: true }),
+    space(1),
+    image(RECEIPT_LOGO_BITMAP, 2),
     // ── QR Code ────────────────────────────────────────────────────
     divider(),
     text('QR Code Test', { align: 'center', bold: true }),
