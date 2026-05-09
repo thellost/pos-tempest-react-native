@@ -20,6 +20,7 @@ import {
   type ReceiptElement,
 } from '@/lib/escpos';
 import { TEST_IMAGE_BITMAP } from '@/lib/escpos/test-image-data';
+import { RECEIPT_LOGO_BITMAP } from '@/lib/escpos/receipt-logo-data';
 import { addBreadcrumb, captureError } from '@/lib/sentry';
 import { formatReceiptDate } from '@/utils/date';
 
@@ -225,6 +226,7 @@ export function formatBill(params: {
     modifiers: string[];
     weight: number | null;
     unitOfMeasure: string;
+    notes: string | null;
   }>;
   subtotal: number;
   discountAmount: number;
@@ -273,6 +275,7 @@ export function formatBill(params: {
       const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
       lines.push(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`);
     }
+    if (item.notes) lines.push(`   ※ ${item.notes}`);
   }
 
   lines.push(L, rowFn('Subtotal', idr(params.subtotal)));
@@ -343,6 +346,8 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
   const isPaid = (params.payments?.length ?? 0) > 0;
   const els: ReceiptElement[] = [
     header(),
+    image(RECEIPT_LOGO_BITMAP, 2),
+    header(),
     text(params.branchName.toUpperCase(), { align: 'center', bold: true, size: { width: 1, height: 2 } }),
   ];
 
@@ -377,6 +382,7 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
       const weightDisplay = item.weight.toLocaleString('id-ID', { maximumFractionDigits: 3 });
       els.push(text(`   ${idr(pricePerUnit)}/${item.unitOfMeasure} x ${weightDisplay} ${item.unitOfMeasure}`));
     }
+    if (item.notes) els.push(text(`   \u203B ${item.notes}`));
   }
 
   els.push(divider(), row('Subtotal', idr(params.subtotal)));
