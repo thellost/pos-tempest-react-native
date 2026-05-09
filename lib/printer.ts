@@ -296,7 +296,9 @@ export function formatBill(params: {
   }
 
   lines.push(H, center(isPaid ? 'LUNAS' : 'BELUM BAYAR', w), H);
-  lines.push('', center('Terima kasih! 🙏', w), center('Sampai jumpa kembali', w), H);
+  lines.push('', center('Terima kasih! 🙏', w), center('Sampai jumpa kembali', w), L);
+  lines.push(center('Follow us on Instagram', w));
+  lines.push(center('@tepianpandanterapung', w), H);
   return lines.join('\n');
 }
 
@@ -409,6 +411,11 @@ function buildBillBytes(params: Parameters<typeof formatBill>[0]): Uint8Array {
     space(),
     text('Terima kasih!',        { align: 'center' }),
     text('Sampai jumpa kembali', { align: 'center' }),
+    space(),
+    divider(),
+    text('Follow us on Instagram', { align: 'center', bold: true }),
+    qr('https://www.instagram.com/tepianpandanterapung?igsh=eDFjajJycnJ5djR0', { size: 4, correction: 'M' }),
+    text('@tepianpandanterapung', { align: 'center' }),
     header(),
   );
 
