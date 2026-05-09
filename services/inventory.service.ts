@@ -9,6 +9,7 @@ import { addBreadcrumb, captureError } from '@/lib/sentry';
 interface OrderItemForDeduction {
   menu_item_id: number;
   quantity: number;
+  weight: number | null;
 }
 
 interface IngredientRow {
@@ -94,8 +95,10 @@ export async function adjustStockForConfirmedOrderItem(
     const movementReason = `${baseReason} (${adjustmentDirection} stock for ${orderItem.menu_item_name}, order item ${orderItem.id}, quantity delta ${signedDelta})`;
     let movementCount = 0;
 
+    const weightMultiplier = orderItem.weight ?? 1;
+
     for (const ingredient of ingredients) {
-      const quantityChange = -quantityDelta * ingredient.quantity_needed;
+      const quantityChange = -quantityDelta * weightMultiplier * ingredient.quantity_needed;
       if (quantityChange === 0) continue;
 
       const inventory = inventoryById.get(ingredient.inventory_id);
@@ -187,7 +190,8 @@ export async function deductStockForItems(
     if (ingredients.length === 0) continue;
 
     for (const ingredient of ingredients) {
-      const totalDeduction = item.quantity * ingredient.quantity_needed;
+      const effectiveMultiplier = item.quantity * (item.weight ?? 1);
+      const totalDeduction = effectiveMultiplier * ingredient.quantity_needed;
 
       // Get current stock
       const inventory = await powersync.getOptional<InventoryRow>(

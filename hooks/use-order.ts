@@ -60,6 +60,7 @@ interface UseOrderReturn {
   cartItems: CartItem[];
   pendingRoundItems: CartItem[];
   isLoading: boolean;
+  isConfirming: boolean;
   currentRound: number;
   isDraft: boolean;
   hasPendingRound: boolean;
@@ -156,12 +157,14 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const [roundSentAt, setRoundSentAt] = useState<Map<number, string>>(new Map());
   const [lastKOT, setLastKOT] = useState<KOTWithItems | null>(null);
   const [lastBill, setLastBill] = useState<BillData | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const lastLoadedOrderIdRef = useRef<string | null | undefined>(undefined);
   const persistedQuantityWritesRef = useRef(new Map<string, {
     isWriting: boolean;
     queuedQuantity: number | null;
   }>());
+  const isConfirmingRef = useRef(false);
 
   // Calculate current round from order items
   const currentRound = useMemo(() => {
@@ -380,7 +383,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
             created_at: '',
             updated_at: '',
           };
-          await addItemToOrder(orderIdNum, menuItem, 1, modifiers, notes, weight);
+          await addItemToOrder(orderIdNum, menuItem, 1, modifiers, notes, weight, undefined, toInt(user.id));
           await reload();
         } catch (error) {
           captureError(error, { module: 'order', operation: 'addItemToOrder', level: 'error' });
@@ -572,6 +575,9 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   // Confirm order (draft → confirmed)
   const confirmOrderCallback = useCallback(async () => {
     if (!user || cartItems.length === 0) return;
+    if (isConfirmingRef.current) return;
+    isConfirmingRef.current = true;
+    setIsConfirming(true);
 
     try {
       const newOrder = await createOrder(
@@ -586,6 +592,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
       );
 
       const orderIdNum = newOrder.id;
+      const userIdNum = toInt(user.id);
 
       const orderFailures: string[] = [];
       for (const cartItem of cartItems) {
@@ -595,7 +602,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
           orderFailures.push(cartItem.menu_item_name);
           continue;
         }
-        await addItemToOrder(orderIdNum, toMenuItem(menuItem), cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight);
+        await addItemToOrder(orderIdNum, toMenuItem(menuItem), cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight, undefined, userIdNum);
       }
       if (orderFailures.length > 0) {
         throw new Error(`Menu items not found: ${orderFailures.join(', ')}`);
@@ -612,16 +619,23 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     } catch (error) {
       captureError(error, { module: 'order', operation: 'confirmOrder', level: 'error' });
       throw error;
+    } finally {
+      isConfirmingRef.current = false;
+      setIsConfirming(false);
     }
   }, [user, cartItems, tableId, orderType, guestCount, guestName, menuItems, shiftId]);
 
   // Confirm round (pending → confirmed)
   const confirmRound = useCallback(async () => {
     if (!order || pendingRoundItems.length === 0) return;
+    if (isConfirmingRef.current) return;
+    isConfirmingRef.current = true;
+    setIsConfirming(true);
 
     try {
       const orderIdNum = order.id;
       const newRound = currentRound + 1;
+      const userIdNum = user ? toInt(user.id) : undefined;
 
       const roundFailures: string[] = [];
       for (const cartItem of pendingRoundItems) {
@@ -631,7 +645,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
           roundFailures.push(cartItem.menu_item_name);
           continue;
         }
-        await addItemToOrder(orderIdNum, toMenuItem(menuItem), cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight, newRound);
+        await addItemToOrder(orderIdNum, toMenuItem(menuItem), cartItem.quantity, cartItem.modifiers, cartItem.notes, cartItem.weight, newRound, userIdNum);
       }
       if (roundFailures.length > 0) {
         throw new Error(`Menu items not found: ${roundFailures.join(', ')}`);
@@ -642,7 +656,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
         const userIdNum = toInt(user.id);
         const itemsForDeduction = pendingRoundItems
           .filter(ci => !roundFailures.includes(ci.menu_item_name))
-          .map(ci => ({ menu_item_id: ci.menu_item_id, quantity: ci.quantity }));
+          .map(ci => ({ menu_item_id: ci.menu_item_id, quantity: ci.quantity, weight: ci.weight ?? null }));
         if (itemsForDeduction.length > 0) {
           await deductStockForItems(itemsForDeduction, userIdNum, orderIdNum);
         }
@@ -653,6 +667,9 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     } catch (error) {
       captureError(error, { module: 'order', operation: 'confirmRound', level: 'error' });
       throw error;
+    } finally {
+      isConfirmingRef.current = false;
+      setIsConfirming(false);
     }
   }, [order, pendingRoundItems, currentRound, menuItems, reload, user]);
 
@@ -810,6 +827,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
     cartItems,
     pendingRoundItems,
     isLoading,
+    isConfirming,
     currentRound,
     isDraft,
     hasPendingRound,

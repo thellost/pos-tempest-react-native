@@ -44,6 +44,7 @@ interface OrderPanelProps {
    * Kept for interface stability; treated as informational only. Defaults to `true`.
    */
   isShiftOpen?: boolean;
+  isConfirming?: boolean;
   /** Optionally assigned customer for this order */
   assignedCustomer?: AssignedCustomer | null;
   onAssignCustomer?: (customer: AssignedCustomer) => void;
@@ -140,6 +141,7 @@ export const OrderPanel = memo(function OrderPanel({
   onPrintBill,
   onMoveTable,
   isShiftOpen = true,
+  isConfirming = false,
   assignedCustomer = null,
   onAssignCustomer,
   onClearCustomer,
@@ -440,6 +442,7 @@ export const OrderPanel = memo(function OrderPanel({
         onConfirmRound={onConfirmRound}
         onCancelRound={onCancelRound}
         onPrintBill={onPrintBill}
+        isConfirming={isConfirming}
       />
     </View>
   );

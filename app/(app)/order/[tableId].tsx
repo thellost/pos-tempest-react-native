@@ -97,6 +97,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
     onCancelRound: screen.handleCancelRound,
     onPrintBill: screen.handlePrintBill,
     onMoveTable: screen.handleMoveTable,
+    isConfirming: screen.isConfirming,
     isShiftOpen: screen.isShiftOpen,
     assignedCustomer: screen.assignedCustomer,
     onAssignCustomer: screen.handleAssignCustomer,

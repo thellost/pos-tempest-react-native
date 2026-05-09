@@ -101,6 +101,7 @@ function TakeawayOrderContent({ orderId }: { orderId?: string }) {
     quantitiesByMenuItemId: screen.quantitiesByMenuItemId,
     onMenuItemPress: screen.handleMenuItemPress,
     onMenuItemDecrement: screen.handleMenuItemDecrement,
+    isConfirming: screen.isConfirming,
   };
 
   return (

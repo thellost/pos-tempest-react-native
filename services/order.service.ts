@@ -316,8 +316,8 @@ export async function confirmOrder(orderId: string, cashierId: number): Promise<
   );
 
   // Deduct inventory stock based on menu_item_ingredients
-  const orderItems = await powersync.getAll<{ menu_item_id: number; quantity: number }>(
-    `SELECT menu_item_id, quantity FROM order_items WHERE order_id = ? AND is_voided = 0`,
+  const orderItems = await powersync.getAll<{ menu_item_id: number; quantity: number; weight: number | null }>(
+    `SELECT menu_item_id, quantity, weight FROM order_items WHERE order_id = ? AND is_voided = 0`,
     [orderId]
   );
   if (orderItems.length > 0) {
@@ -347,7 +347,8 @@ export async function addItemToOrder(
   modifiers: SelectedModifier[],
   notes: string | null = null,
   weight: number | null = null,
-  roundNumber: number = 1
+  roundNumber: number = 1,
+  actingUserId?: number | null
 ): Promise<void> {
   const now = new Date().toISOString();
 
@@ -392,7 +393,7 @@ export async function addItemToOrder(
       const existingIds = existingMods.map(m => String(m.modifier_id));
 
       if (incomingIds.length === existingIds.length && incomingIds.every((id, i) => id === existingIds[i])) {
-        await updateItemQuantity(String(candidate.id), toInt(candidate.quantity) + quantity);
+        await updateItemQuantity(String(candidate.id), toInt(candidate.quantity) + quantity, actingUserId);
         addBreadcrumb('order', 'Item quantity increased', { orderId, menuItemId: menuItem.id, itemName: menuItem.name, qty: quantity });
         console.log('[OrderService] Merged item quantity:', menuItem.name, '+', quantity);
         return;

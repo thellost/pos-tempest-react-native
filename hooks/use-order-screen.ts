@@ -98,6 +98,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     cartItems,
     pendingRoundItems,
     isLoading: orderLoading,
+    isConfirming,
     currentRound,
     roundSentAt,
     guestCount,
@@ -621,6 +622,7 @@ export function useOrderScreen({ orderType, tableId, orderId }: UseOrderScreenOp
     // Order core
     order,
     isShiftOpen,
+    isConfirming,
     currentRound,
     roundSentAt,
     guestCount: orderType === 'takeaway' ? null : guestCount,

@@ -30,6 +30,7 @@ interface OrderActionsProps {
    */
   isShiftOpen?: boolean;
   showConfirmButton?: boolean;
+  isConfirming?: boolean;
 }
 
 /**
@@ -52,6 +53,7 @@ export function OrderActions({
   onPrintBill,
   isShiftOpen = true,
   showConfirmButton = false,
+  isConfirming = false,
 }: OrderActionsProps) {
   const isActiveOrder =
     orderStatus === ORDER_STATUS.CONFIRMED ||
@@ -102,9 +104,9 @@ export function OrderActions({
           </PermissionGate>
         </View>
 
-        <PrimaryButton onPress={handleConfirmRound} className="mt-1">
+        <PrimaryButton onPress={handleConfirmRound} disabled={isConfirming} className="mt-1">
           <Text className="text-pos-sm font-bold text-white">
-            Confirm Round
+            {isConfirming ? 'Confirming...' : 'Confirm Round'}
           </Text>
         </PrimaryButton>
       </View>
@@ -188,12 +190,18 @@ export function OrderActions({
   if (showConfirmButton) {
     return (
       <View className="border-t border-border bg-surface-card p-2">
-        {hasItems ? (
+        {hasItems && !isConfirming ? (
           <PrimaryButton onPress={onConfirmOrder} size="lg">
             <Text className="text-pos-sm font-bold text-white">
               Confirm Order
             </Text>
           </PrimaryButton>
+        ) : hasItems ? (
+          <SecondaryButton onPress={onConfirmOrder} disabled size="lg">
+            <Text className="text-pos-sm font-bold text-pos-text-faint">
+              Confirming...
+            </Text>
+          </SecondaryButton>
         ) : (
           <SecondaryButton onPress={onConfirmOrder} disabled size="lg">
             <Text className="text-pos-sm font-bold text-pos-text-faint">

@@ -29,6 +29,7 @@ export interface OrderScreenSharedProps {
   /** Called when the user wants to move the order to a different table */
   onMoveTable?: () => void;
   isShiftOpen: boolean;
+  isConfirming: boolean;
   assignedCustomer: AssignedCustomer | null;
   onAssignCustomer: (customer: AssignedCustomer) => void;
   onClearCustomer: () => void;

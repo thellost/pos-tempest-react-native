@@ -53,6 +53,7 @@ export function OrderScreenTablet({
   onMenuItemPress,
   onMenuItemDecrement,
   onMoveTable,
+  isConfirming,
 }: OrderScreenSharedProps) {
   return (
     <View className="flex-1 flex-row">
@@ -85,6 +86,7 @@ export function OrderScreenTablet({
             onSetGuestName={onSetGuestName}
             onClearGuestName={onClearGuestName}
             onMoveTable={onMoveTable}
+            isConfirming={isConfirming}
           />
         </PerfProfiler>
       </View>

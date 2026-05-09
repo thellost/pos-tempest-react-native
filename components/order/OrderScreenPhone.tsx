@@ -70,6 +70,7 @@ export function OrderScreenPhone({
   onMenuItemPress,
   onMenuItemDecrement,
   onMoveTable,
+  isConfirming,
 }: OrderScreenSharedProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('menu');
 
@@ -342,6 +343,7 @@ export function OrderScreenPhone({
               onSetGuestName={onSetGuestName}
               onClearGuestName={onClearGuestName}
               onMoveTable={onMoveTable}
+              isConfirming={isConfirming}
             />
           </PerfProfiler>
         )}
