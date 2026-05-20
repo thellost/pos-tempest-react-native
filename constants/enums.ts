@@ -150,9 +150,9 @@ export const CASH_TRANSACTION_TYPE = {
 export type CashTransactionType = (typeof CASH_TRANSACTION_TYPE)[keyof typeof CASH_TRANSACTION_TYPE];
 
 export const CASH_TRANSACTION_REASON = {
-	OWNER_WITHDRAWAL: 'owner_withdrawal',
+	GAJI: 'gaji',
 	SUPPLY_PURCHASE: 'supply_purchase',
-	STAFF_ADVANCE: 'staff_advance',
+	PENGELUARAN_PRIBADI: 'pengeluaran_pribadi',
 	PETTY_CASH: 'petty_cash',
 	ANGSURAN: 'angsuran',
 	CASH_DEPOSIT: 'cash_deposit',

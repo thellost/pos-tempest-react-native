@@ -2,7 +2,7 @@
 
 > **Base URL:** `http://localhost:8080`
 > **Content-Type:** `application/json`
-> **Total Endpoints:** 97
+> **Total Endpoints:** 100
 
 ---
 
@@ -822,10 +822,10 @@ Get the financial summary for a shift.
     "total_tax": 742500.00,
     "total_service": 337500.00,
     "net_revenue": 5420000.00,
-    "opening_cash": 500000.00,
-    "closing_cash": 1850000.00,
-    "expected_cash": 1830000.00,
-    "cash_difference": 20000.00,
+      "opening_cash": 500000.00,
+      "closing_cash": 3650000.00,
+      "expected_cash": 3630000.00,
+      "cash_difference": 20000.00,
     "total_cash_in": 100000.00,
     "total_cash_out": 200000.00,
     "payment_breakdown": [
@@ -859,6 +859,14 @@ Get the financial summary for a shift.
         "note": "Owner took cash for supplies",
         "created_at": "2026-03-03T10:30:00Z",
         "user_name": "Sarah Cashier"
+      }
+    ],
+    "cash_transaction_breakdown": [
+      {
+        "reason": "owner_withdrawal",
+        "type": "cash_out",
+        "count": 1,
+        "total_amount": 200000.00
       }
     ]
   }
@@ -1015,7 +1023,7 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
       "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
       "user_id": 2,
       "type": "cash_in",
-      "reason": "operasional",
+      "reason": "change_refill",
       "amount": 100000.00,
       "note": "Added change supply",
       "created_at": "2026-03-03T11:15:00Z",
@@ -1026,6 +1034,95 @@ List all non-order cash transactions recorded against a shift, ordered chronolog
 ```
 
 **Error `404`:** Shift not found.
+
+---
+
+## 9a. Cash Transactions
+
+Global read-only endpoints for browsing `shift_cash_transactions` across all shifts. Useful for expense detail pages without needing a known shift ID.
+
+> **Roles:** admin, manager, cashier, chef, waiter (all staff)
+
+---
+
+### `GET /api/v1/cash-transactions`
+
+Returns a paginated list of cash transactions across all shifts, with optional filters.
+
+**Query Parameters:**
+
+| Parameter   | Type    | Description                                 |
+|-------------|---------|---------------------------------------------|
+| `shift_id`  | UUID    | Filter to a specific shift                  |
+| `branch_id` | integer | Filter to a specific branch                 |
+| `type`      | string  | `cash_in` or `cash_out`                     |
+| `reason`    | string  | e.g. `owner_withdrawal`, `supply_purchase`  |
+| `date_from` | string  | `YYYY-MM-DD` — filter by transaction date   |
+| `date_to`   | string  | `YYYY-MM-DD` — filter by transaction date   |
+| `page`      | integer | Page number (default: 1)                    |
+| `page_size` | integer | Results per page (default: 20)              |
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": "3f1a2b4c-...",
+      "shift_id": "aabbccdd-...",
+      "user_id": 3,
+      "type": "cash_out",
+      "reason": "supply_purchase",
+      "amount": 250.00,
+      "note": "Bought cleaning supplies",
+      "created_at": "2025-10-01T09:15:00Z",
+      "user_name": "Alice Manager",
+      "shift_branch_id": 1,
+      "shift_branch_name": "Main Branch"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "page_size": 20,
+    "total": 45,
+    "total_pages": 3
+  }
+}
+```
+
+---
+
+### `GET /api/v1/cash-transactions/:id`
+
+Returns a single cash transaction by its UUID.
+
+**Path Parameters:**
+
+| Parameter | Type | Description         |
+|-----------|------|---------------------|
+| `id`      | UUID | Cash transaction ID |
+
+**Response `200`:**
+
+```json
+{
+  "data": {
+    "id": "3f1a2b4c-...",
+    "shift_id": "aabbccdd-...",
+    "user_id": 3,
+    "type": "cash_out",
+    "reason": "supply_purchase",
+    "amount": 250.00,
+    "note": "Bought cleaning supplies",
+    "created_at": "2025-10-01T09:15:00Z",
+    "user_name": "Alice Manager",
+    "shift_branch_id": 1,
+    "shift_branch_name": "Main Branch"
+  }
+}
+```
+
+**Error `404`:** Cash transaction not found.
 
 ---
 
@@ -2408,6 +2505,7 @@ Change reservation status.
 | `date_from` | string | Start date `YYYY-MM-DD` |
 | `date_to` | string | End date `YYYY-MM-DD` |
 | `search` | string | Search by order number |
+| `has_discount` | bool | `true` = orders with discount, `false` = orders without |
 | `page` | int | Page number |
 | `page_size` | int | Items per page |
 
@@ -3757,10 +3855,82 @@ Get the full change history for a specific record.
 | `owner_withdrawal` | Manual cash-out: owner withdrawal |
 | `staff_advance` | Manual cash-out: staff advance |
 | `petty_cash` | Manual cash-out: petty cash |
-| `angsuran` | Manual cash-out: angsuran |
+| `tip_out` | Manual cash-out: tip distribution |
 | `cash_deposit` | Manual cash-out: cash deposit |
-| `operasional` | Manual cash-out: operational expense |
+| `change_refill` | Manual cash-out: change refill |
 | `other` | Manual cash-out: other |
+
+---
+
+### `GET /api/v1/statistics/cash-transaction-breakdown`
+
+> **Roles:** admin, manager, cashier
+
+Breakdown of all `shift_cash_transactions` grouped by `(reason, type)` across a date range. Returns **both `cash_in` and `cash_out`** entries, enabling a full view of non-order cash movements per reason.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `branch_id` | int | Filter by branch |
+| `date_from` | string | Start date `YYYY-MM-DD` |
+| `date_to` | string | End date `YYYY-MM-DD` |
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "reason": "supply_purchase",
+      "type": "cash_out",
+      "count": 8,
+      "total_amount": 650000.00,
+      "percentage": 38.24
+    },
+    {
+      "reason": "owner_withdrawal",
+      "type": "cash_out",
+      "count": 3,
+      "total_amount": 500000.00,
+      "percentage": 29.41
+    },
+    {
+      "reason": "petty_cash",
+      "type": "cash_out",
+      "count": 5,
+      "total_amount": 250000.00,
+      "percentage": 14.71
+    },
+    {
+      "reason": "cash_deposit",
+      "type": "cash_in",
+      "count": 2,
+      "total_amount": 200000.00,
+      "percentage": 11.76
+    },
+    {
+      "reason": "change_refill",
+      "type": "cash_in",
+      "count": 1,
+      "total_amount": 100000.00,
+      "percentage": 5.88
+    }
+  ]
+}
+```
+
+**Field Descriptions:**
+
+| Field | Description |
+|-------|-------------|
+| `reason` | Cash transaction reason enum value |
+| `type` | `cash_in` or `cash_out` |
+| `count` | Number of transactions for this reason + type combination |
+| `total_amount` | Sum of amounts for this reason + type combination |
+| `percentage` | Share of this row's `total_amount` relative to the grand total of **all** rows (both types) |
+
+> **Note:** `percentage` is relative to the combined total of all cash_in and cash_out transactions in the filtered period. Results are ordered by `type` then `total_amount DESC`.
 
 ---
 
@@ -3783,27 +3953,27 @@ Get the full change history for a specific record.
   "data": [
     {
       "date": "2026-03-01",
-      "cash_in": 1800000.00,
-      "cash_out": 350000.00,
+      "cash_in": 1500000.00,
+      "cash_out": 0,
       "shift_cash_in": 100000.00,
       "shift_cash_out": 250000.00,
       "po_expenses": 450000.00,
-      "net_cash": 850000.00,
-      "non_cash_in": 1700000.00,
-      "total_revenue": 3500000.00,
+      "net_cash": 900000.00,
+      "non_cash_in": 1500000.00,
+      "total_revenue": 3000000.00,
       "total_expenses": 700000.00
     },
     {
       "date": "2026-03-02",
-      "cash_in": 2000000.00,
-      "cash_out": 420000.00,
+      "cash_in": 1800000.00,
+      "cash_out": 0,
       "shift_cash_in": 50000.00,
-      "shift_cash_out": 180000.00,
+      "shift_cash_out": 200000.00,
       "po_expenses": 0.00,
-      "net_cash": 1450000.00,
-      "non_cash_in": 1800000.00,
-      "total_revenue": 3800000.00,
-      "total_expenses": 180000.00
+      "net_cash": 1650000.00,
+      "non_cash_in": 1600000.00,
+      "total_revenue": 3400000.00,
+      "total_expenses": 200000.00
     }
   ]
 }
@@ -3813,14 +3983,14 @@ Get the full change history for a specific record.
 
 | Field | Description |
 |-------|-------------|
-| `cash_in` | Cash payments received from orders |
-| `cash_out` | Change given from orders |
+| `cash_in` | Net cash retained from cash orders (`amount − change`) |
+| `cash_out` | Always `0` — change tracking removed; field kept for backwards compatibility |
 | `shift_cash_in` | Non-order cash deposits (`cash_in` shift transactions) |
-| `shift_cash_out` | Non-order cash withdrawals/expenses (`cash_out` shift transactions) |
+| `shift_cash_out` | Non-order cash withdrawals/expenses (`cash_out` shift transactions)  |
 | `po_expenses` | Total of purchase orders with `status = "received"` on this date |
-| `net_cash` | `(cash_in − cash_out) + (shift_cash_in − shift_cash_out) − po_expenses` |
+| `net_cash` | `cash_in + shift_cash_in − shift_cash_out − po_expenses` |
 | `non_cash_in` | Non-cash payments (card, e-wallet, QRIS) |
-| `total_revenue` | Gross revenue from all completed orders |
+| `total_revenue` | `cash_in + non_cash_in` (net revenue from all payments) |
 | `total_expenses` | `shift_cash_out + po_expenses` |
 
 ---
@@ -3862,10 +4032,12 @@ Get a detailed financial report for a specific shift.
     "total_tax": 742500.00,
     "total_service_charge": 337500.00,
     "net_revenue": 5420000.00,
+    "total_order_cash_in": 3300000.00,
+    "total_order_cash_out": 0,
     "total_cash_in": 150000.00,
     "total_cash_out": 320000.00,
     "total_po_expenses": 600000.00,
-    "net_cash_movement": -770000.00,
+    "net_cash_movement": 2530000.00,
     "payment_breakdown": [
       {
         "payment_method": "cash",
@@ -3892,7 +4064,7 @@ Get a detailed financial report for a specific shift.
         "shift_id": "9b1f0d8c-1b2a-4e3f-8c6d-1234567890ab",
         "user_id": 2,
         "type": "cash_in",
-        "reason": "operasional",
+        "reason": "change_refill",
         "amount": 150000.00,
         "note": "Added coins for change",
         "created_at": "2026-03-03T09:30:00Z",
@@ -3952,10 +4124,12 @@ Get a detailed financial report for a specific shift.
 
 | Field | Description |
 |-------|-------------|
+| `total_order_cash_in` | Net cash retained from cash orders (`amount − change`) |
+| `total_order_cash_out` | Always `0` — change tracking removed; field kept for backwards compatibility |
 | `total_cash_in` | Sum of all `cash_in` shift transactions during this shift |
 | `total_cash_out` | Sum of all `cash_out` shift transactions during this shift |
 | `total_po_expenses` | Sum of received POs whose `received_at` falls within the shift window |
-| `net_cash_movement` | `total_cash_in − total_cash_out − total_po_expenses` |
+| `net_cash_movement` | `total_order_cash_in + total_cash_in − total_cash_out − total_po_expenses` |
 | `po_expenses` | List of purchase orders received during this shift (omitted if none) |
 
 > **Shift window for POs:** `received_at >= shift.opened_at AND received_at < shift.closed_at` (or `NOW()` for open shifts).
@@ -4105,7 +4279,7 @@ Get a detailed financial report for a specific shift.
 | `supply_purchase` | Cash paid out for a supply/vendor purchase |
 | `staff_advance` | Cash advance given to a staff member |
 | `petty_cash` | Petty cash disbursement |
-| `angsuran` | Angsuran cash-out |
+| `tip_out` | Tip payout to staff |
 | `cash_deposit` | Cash deposited into drawer |
-| `operasional` | Operational cash-out |
+| `change_refill` | Adding coins/notes for making change |
 | `other` | Other reason (use `note` field for details) |

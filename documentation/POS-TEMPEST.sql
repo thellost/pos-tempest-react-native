@@ -129,7 +129,9 @@ CREATE TYPE "cash_transaction_reason" AS ENUM (
   'angsuran',
   'cash_deposit',
   'operasional',
-  'other'
+  'other',
+  'gaji',
+  'pengeluaran_pribadi'
 );
 
 CREATE TABLE "roles" (
@@ -740,7 +742,7 @@ Examples: owner withdrawal, emergency supply purchase, staff advance, cash depos
 
 COMMENT ON COLUMN "shift_cash_transactions"."type" IS 'cash_in = adding money to drawer, cash_out = removing money from drawer';
 
-COMMENT ON COLUMN "shift_cash_transactions"."reason" IS 'Categorized reason: owner_withdrawal, supply_purchase, staff_advance, petty_cash, angsuran, cash_deposit, operasional, other';
+COMMENT ON COLUMN "shift_cash_transactions"."reason" IS 'Categorized reason: owner_withdrawal, supply_purchase, staff_advance, petty_cash, angsuran, cash_deposit, operasional, other, gaji, pengeluaran_pribadi';
 
 COMMENT ON COLUMN "shift_cash_transactions"."amount" IS 'Always positive. Direction determined by type field.';
 

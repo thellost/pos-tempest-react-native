@@ -2,9 +2,9 @@ import type { CashTransactionReason } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON } from '@/constants/enums';
 
 export const CASH_TRANSACTION_REASON_LABELS: Record<CashTransactionReason, string> = {
-  [CASH_TRANSACTION_REASON.OWNER_WITHDRAWAL]: 'Owner Withdrawal',
+  [CASH_TRANSACTION_REASON.GAJI]: 'Gaji',
   [CASH_TRANSACTION_REASON.SUPPLY_PURCHASE]: 'Supply Purchase',
-  [CASH_TRANSACTION_REASON.STAFF_ADVANCE]: 'Staff Advance',
+  [CASH_TRANSACTION_REASON.PENGELUARAN_PRIBADI]: 'Pengeluaran Pribadi',
   [CASH_TRANSACTION_REASON.PETTY_CASH]: 'Petty Cash',
   [CASH_TRANSACTION_REASON.ANGSURAN]: 'Angsuran',
   [CASH_TRANSACTION_REASON.CASH_DEPOSIT]: 'Cash Deposit',
@@ -15,6 +15,8 @@ export const CASH_TRANSACTION_REASON_LABELS: Record<CashTransactionReason, strin
 const LEGACY_CASH_TRANSACTION_REASON_LABELS: Record<string, string> = {
   tip_out: 'Angsuran',
   change_refill: 'Operasional',
+  owner_withdrawal: 'Pengeluaran Pribadi',
+  staff_advance: 'Gaji',
 };
 
 function formatFallbackReasonLabel(reason: string): string {
