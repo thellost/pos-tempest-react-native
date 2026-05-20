@@ -78,6 +78,8 @@ export interface Branch {
 	auto_shift: boolean;
 	/** Rounding unit for order totals (1=exact, 10=tens, 100=hundreds, 1000=thousands) */
 	rounding_precision: number | null;
+	/** When true the Cash In feature is enabled for this branch */
+	cash_in_flag_feature: boolean;
 	created_at: Timestamp;
 	updated_at: Timestamp;
 }

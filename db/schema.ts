@@ -48,6 +48,7 @@ export const appSchema = new Schema({
 		closing_time: column.text,
 		auto_shift: column.integer,
 		rounding_precision: column.integer,
+		cash_in_flag_feature: column.integer,
 		created_at: column.text,
 		updated_at: column.text,
 	}),

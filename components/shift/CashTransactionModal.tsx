@@ -1,5 +1,5 @@
-import { CASH_TRANSACTION_REASON } from '@/constants/enums';
-import type { CashTransactionReason } from '@/constants/enums';
+import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enums';
+import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { Config } from '@/constants/config';
 import { ThemeColors } from '@/constants/theme';
 import { Delete } from 'lucide-react-native';
@@ -12,12 +12,14 @@ import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/componen
 interface CashTransactionModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (reason: CashTransactionReason, amount: number, note?: string) => Promise<void>;
+  cashInEnabled: boolean;
+  onSubmit: (type: CashTransactionType, reason: CashTransactionReason, amount: number, note?: string) => Promise<void>;
 }
 
 const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
-export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransactionModalProps) {
+export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit }: CashTransactionModalProps) {
+  const [type, setType] = useState<CashTransactionType>(CASH_TRANSACTION_TYPE.CASH_OUT);
   const [reason, setReason] = useState<CashTransactionReason>(CASH_TRANSACTION_REASON.SUPPLY_PURCHASE);
   const [amountInput, setAmountInput] = useState('');
   const [note, setNote] = useState('');
@@ -29,6 +31,8 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
   const amount = useMemo(() => Number(amountInput || '0'), [amountInput]);
 
   const canSubmit = useMemo(() => amount > 0, [amount]);
+
+  const isCashIn = type === CASH_TRANSACTION_TYPE.CASH_IN;
 
   function applyKey(key: string) {
     if (key === 'C') {
@@ -61,7 +65,7 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
     try {
       setSubmitting(true);
       setError('');
-      await onSubmit(reason, amount, note.trim() || undefined);
+      await onSubmit(type, reason, amount, note.trim() || undefined);
       setAmountInput('');
       setNote('');
       setError('');
@@ -91,10 +95,45 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
       >
         {/* Header */}
         <View className="border-b border-border p-5">
-          <Text className="text-pos-xl font-bold text-pos-text">Record Cash Out</Text>
+          <Text className="text-pos-xl font-bold text-pos-text">
+            {isCashIn ? 'Record Cash In' : 'Record Cash Out'}
+          </Text>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 20 }}>
+          {/* Type Toggle */}
+          <Text className="text-pos-sm font-semibold text-pos-text">Transaction Type</Text>
+          <View className="mt-2 flex-row gap-3">
+            <SelectButton
+              selected={type === CASH_TRANSACTION_TYPE.CASH_OUT}
+              selectedClassName="border-pos-danger bg-pos-danger-muted"
+              unselectedClassName="border-border bg-surface"
+              className="flex-1 rounded-xl p-3"
+              onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_OUT)}>
+              <Text
+                className={`text-center text-pos-base font-semibold ${
+                  type === CASH_TRANSACTION_TYPE.CASH_OUT ? 'text-pos-danger' : 'text-pos-text-muted'
+                }`}>
+                Cash Out
+              </Text>
+            </SelectButton>
+            {cashInEnabled && (
+              <SelectButton
+                selected={type === CASH_TRANSACTION_TYPE.CASH_IN}
+                selectedClassName="border-pos-success bg-pos-success-muted"
+                unselectedClassName="border-border bg-surface"
+                className="flex-1 rounded-xl p-3"
+                onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_IN)}>
+                <Text
+                  className={`text-center text-pos-base font-semibold ${
+                    type === CASH_TRANSACTION_TYPE.CASH_IN ? 'text-pos-success' : 'text-pos-text-muted'
+                  }`}>
+                  Cash In
+                </Text>
+              </SelectButton>
+            )}
+          </View>
+
           {/* Reason Selector */}
           <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
@@ -165,7 +204,9 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
           </Button>
           <Button
             className={`flex-1 items-center justify-center rounded-xl p-4 ${
-              canSubmit ? 'bg-pos-danger' : 'bg-surface-soft'
+              canSubmit
+                ? isCashIn ? 'bg-pos-success' : 'bg-pos-danger'
+                : 'bg-surface-soft'
             }`}
             disabled={!canSubmit || submitting}
             onPress={handleSubmit}>
@@ -173,7 +214,7 @@ export function CashTransactionModal({ visible, onClose, onSubmit }: CashTransac
               className={`text-center text-pos-base font-semibold ${
                 canSubmit ? 'text-white' : 'text-pos-text-muted'
               }`}>
-              {submitting ? 'Processing...' : 'Record Cash Out'}
+              {submitting ? 'Processing...' : isCashIn ? 'Record Cash In' : 'Record Cash Out'}
             </Text>
           </Button>
         </View>

@@ -198,6 +198,7 @@ CREATE TABLE "branches" (
   "opening_time" varchar(5) NOT NULL DEFAULT '08:00',
   "closing_time" varchar(5) NOT NULL DEFAULT '22:00',
   "auto_shift" boolean NOT NULL DEFAULT true,
+  "cash_in_flag_feature" boolean NOT NULL DEFAULT false,
   "created_at" timestamp NOT NULL DEFAULT (now()),
   "updated_at" timestamp NOT NULL DEFAULT (now())
 );
@@ -759,6 +760,8 @@ COMMENT ON COLUMN "branches"."opening_time" IS '24h clock HH:MM e.g. 08:00 — u
 COMMENT ON COLUMN "branches"."closing_time" IS '24h clock HH:MM e.g. 23:00 — used by Go scheduler to auto-close shifts';
 
 COMMENT ON COLUMN "branches"."auto_shift" IS 'When true the Go scheduler manages shift open/close automatically using branch timezone';
+
+COMMENT ON COLUMN "branches"."cash_in_flag_feature" IS 'When true the Cash In feature is enabled for this branch';
 
 COMMENT ON TABLE "floor_areas" IS 'Sections / areas within a branch';
 

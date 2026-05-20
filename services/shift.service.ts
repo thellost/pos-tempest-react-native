@@ -627,7 +627,7 @@ function normalizeShiftCashTx(row: ShiftCashTxRow): ShiftCashTransactionRecord {
  * @param shiftId - The shift to add the transaction to
  * @param userId - The user performing the transaction
  * @param type - 'cash_in' or 'cash_out'
- * @param reason - Categorized reason (e.g. 'owner_withdrawal', 'supply_purchase')
+ * @param reason - Categorized reason (e.g. 'gaji', 'supply_purchase')
  * @param amount - Always positive; direction determined by type
  * @param note - Optional free-text description
  * @returns The created transaction record

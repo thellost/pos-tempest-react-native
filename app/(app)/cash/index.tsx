@@ -2,8 +2,7 @@ import { CashTransactionList } from '@/components/shift/CashTransactionList';
 import { CashTransactionModal } from '@/components/shift/CashTransactionModal';
 import { Button } from '@/components/ui';
 import { PermissionGate } from '@/components/ui/PermissionGate';
-import type { CashTransactionReason } from '@/constants/enums';
-import { CASH_TRANSACTION_TYPE } from '@/constants/enums';
+import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
 import { PERMISSION } from '@/constants/permissions';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
@@ -74,12 +73,15 @@ export default function CashScreen() {
   }
 
   async function handleCashTransaction(
+    type: CashTransactionType,
     reason: CashTransactionReason,
     amount: number,
     note?: string,
   ) {
-    await addCashTransaction(CASH_TRANSACTION_TYPE.CASH_OUT, reason, amount, note);
+    await addCashTransaction(type, reason, amount, note);
   }
+
+  const cashInEnabled = registration?.branch?.cash_in_flag_feature ?? false;
 
   return (
     <View className="flex-1 bg-surface">
@@ -101,8 +103,13 @@ export default function CashScreen() {
               <Text className="text-pos-sm text-pos-text-muted">
                 Cash sales: <Text className="font-mono">{formatIDR(summary.cashReceived)}</Text>
               </Text>
-              {(summary.totalCashOut > 0) && (
+              {(summary.totalCashIn > 0 || summary.totalCashOut > 0) && (
                 <View className="mt-2 border-t border-border pt-2">
+                  {summary.totalCashIn > 0 && (
+                    <Text className="text-pos-sm text-pos-success">
+                      + Cash In: <Text className="font-mono">{formatIDR(summary.totalCashIn)}</Text>
+                    </Text>
+                  )}
                   {summary.totalCashOut > 0 && (
                     <Text className="text-pos-sm text-pos-danger">
                       - Cash Out: <Text className="font-mono">{formatIDR(summary.totalCashOut)}</Text>
@@ -121,7 +128,7 @@ export default function CashScreen() {
           <Button
             className="mt-4 items-center justify-center rounded-sm border border-accent bg-accent-muted p-4"
             onPress={() => setShowCashTxModal(true)}>
-            <Text className="text-center text-pos-base font-semibold text-accent">Record Cash Out</Text>
+            <Text className="text-center text-pos-base font-semibold text-accent">Record Transaction</Text>
           </Button>
         </PermissionGate>
 
@@ -130,6 +137,7 @@ export default function CashScreen() {
 
       <CashTransactionModal
         visible={showCashTxModal}
+        cashInEnabled={cashInEnabled}
         onClose={() => setShowCashTxModal(false)}
         onSubmit={handleCashTransaction}
       />

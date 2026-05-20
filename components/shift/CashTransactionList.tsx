@@ -19,14 +19,14 @@ export function CashTransactionList({ transactions }: CashTransactionListProps) 
   if (transactions.length === 0) {
     return (
       <View className="mt-4 rounded-xl border border-border bg-surface p-4">
-        <Text className="text-center text-pos-sm text-pos-text-muted">No cash out records yet</Text>
+        <Text className="text-center text-pos-sm text-pos-text-muted">No transaction records yet</Text>
       </View>
     );
   }
 
   return (
     <View className="mt-4 rounded-xl border border-border bg-surface-card p-4">
-      <Text className="text-pos-base font-semibold text-pos-text">Cash Out History</Text>
+      <Text className="text-pos-base font-semibold text-pos-text">Transaction History</Text>
       <View className="mt-3 gap-3">
         {transactions.map((tx) => {
           const isCashIn = tx.type === CASH_TRANSACTION_TYPE.CASH_IN;
