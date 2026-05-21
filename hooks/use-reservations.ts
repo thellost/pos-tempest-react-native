@@ -10,6 +10,7 @@ import { toIntOrNull } from '@/utils/coerce';
 import { getAppTimezone } from '@/utils/timezone';
 
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 
 /**
  * Reservation with optional customer name resolved from the customers table.
@@ -45,7 +46,8 @@ export interface CreateReservationInput {
  */
 export function useReservations() {
   const { user } = useAuth();
-  const branchId = user?.branch_id ?? 0;
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id ?? 0;
 
   // All active (non-terminal) reservations for the branch
   const { data: activeReservations = [], isLoading } = useQuery<ReservationWithCustomer>(

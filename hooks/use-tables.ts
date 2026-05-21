@@ -6,7 +6,6 @@ import type { DiningTable, FloorArea } from '@/db/models';
 import { powersync } from '@/db/provider';
 import { toInt } from '@/utils/coerce';
 import { getElapsedMinutes } from '@/utils/date';
-import { useAuth } from './use-auth';
 import { useDevice } from './use-device';
 
 /**
@@ -29,9 +28,8 @@ export interface TableWithOrder extends DiningTable {
  * joins with active orders to show occupied status and current bill total.
  */
 export function useTables() {
-  const { user } = useAuth();
-  const branchId = user?.branch_id;
   const { deviceId, registration } = useDevice();
+  const branchId = registration?.branch?.id;
   // DEBUG show all tables statuses
   
   // Query floor areas for the current branch

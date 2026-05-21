@@ -63,7 +63,7 @@ export function useShift(): UseShiftReturn {
 
   const refresh = useCallback(async () => {
     const branch = registration?.branch;
-    if (!user?.id || !user?.branch_id || !branch) {
+    if (!user?.id || !branch) {
       setActiveShift(null);
       setSummary(null);
       setCashTransactions([]);
@@ -110,7 +110,7 @@ export function useShift(): UseShiftReturn {
         }
       }
 
-      const shift = await getActiveShift(user.branch_id);
+      const shift = await getActiveShift(branch.id);
       setActiveShift(shift);
 
       if (shift) {
@@ -130,7 +130,7 @@ export function useShift(): UseShiftReturn {
       isCheckingRef.current = false;
       setLoading(false);
     }
-  }, [user?.id, user?.branch_id, user?.role_name, requiresShift, registration]);
+  }, [user?.id, user?.role_name, requiresShift, registration]);
 
   const refreshRef = useRef(refresh);
   useEffect(() => {

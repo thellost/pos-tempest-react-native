@@ -11,6 +11,7 @@ import { generateLocalId } from '@/components/order/types';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import type { MenuItem, Order, OrderItem, OrderItemModifier } from '@/db/models';
 import { useAuth } from '@/hooks/use-auth';
+import { useDevice } from '@/hooks/use-device';
 import type { MenuItemWithInventory } from '@/hooks/use-menu';
 import { deductStockForItems } from '@/services/inventory.service';
 import type { KOTWithItems } from '@/services/kitchen.service';
@@ -147,6 +148,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
   const { tableId, orderId, orderType = 'dine-in', menuItems = [], isShiftOpen = true, shiftId = null, guestName = null } = options;
   const router = useRouter();
   const { user } = useAuth();
+  const { registration } = useDevice();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItemWithModifiers[]>([]);
@@ -581,7 +583,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
 
     try {
       const newOrder = await createOrder(
-        user.branch_id,
+        registration?.branch?.id ?? 0,
         tableId,
         user.id,              // cashier_id
         shiftId,

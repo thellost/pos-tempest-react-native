@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 
 export interface InventoryItem {
   id: number;
@@ -58,7 +59,8 @@ export interface AdjustStockInput {
  */
 export function useInventory() {
   const { user } = useAuth();
-  const branchId = user?.branch_id ?? 0;
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id ?? 0;
 
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import type { Category, MenuItem, MenuItemModifierGroup, Modifier, ModifierGroup } from '@/db/models';
 import { powersync } from '@/db/provider';
-import { useAuth } from './use-auth';
 
 export interface MenuItemWithModifiers extends MenuItem {
   modifier_groups?: ModifierGroupWithModifiers[];
@@ -92,8 +91,6 @@ export function useMenu() {
     menuItems: nowMs(),
   });
   const queryLoggedRef = useRef<Record<string, boolean>>({});
-  const { user } = useAuth();
-  const branchId = user?.branch_id;
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category>(
     `SELECT * FROM categories ORDER BY parent_id ASC, sort_order ASC`

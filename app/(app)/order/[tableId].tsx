@@ -9,6 +9,7 @@ import { OrderScreenTablet } from '@/components/order/OrderScreenTablet';
 import { ReceiptPreview } from '@/components/print/ReceiptPreview';
 import { ORDER_TYPE } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
+import { useDevice } from '@/hooks/use-device';
 import { useLayout } from '@/hooks/use-layout';
 import { useOrderScreen } from '@/hooks/use-order-screen';
 import { PerfProfiler, useMountTimer } from '@/utils/perf-debug';
@@ -33,6 +34,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
 
   const { isPhone } = useLayout();
   const { user } = useAuth();
+  const { registration } = useDevice();
 
   const screen = useOrderScreen({
     orderType: 'dine-in',
@@ -139,7 +141,7 @@ function OrderScreenContent({ tableId, orderId }: { tableId: string; orderId?: s
             onClose={() => screen.setShowMoveTableModal(false)}
             orderId={screen.order.id}
             currentTableId={toInt(tableId)}
-            branchId={user?.branch_id ? toInt(user.branch_id) : 0}
+            branchId={registration?.branch?.id ? toInt(registration.branch.id) : 0}
             onMoved={screen.handleMoveTableComplete}
           />
         )}

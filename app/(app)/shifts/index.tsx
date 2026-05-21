@@ -51,7 +51,7 @@ export default function ShiftsScreen() {
   const { activeShift, summary, loading, error, autoShiftEnabled } = useShift();
 
   const branch = registration?.branch ?? null;
-  const branchId = user?.branch_id ?? null;
+  const branchId = branch?.id ?? null;
 
   const { data: recentShifts = [] } = useQuery<RecentShiftRow>(
     `SELECT id, opened_at, closed_at, opening_cash, closing_cash, expected_cash, cash_difference, notes
@@ -68,7 +68,7 @@ export default function ShiftsScreen() {
       <View className="rounded-sm border border-border bg-surface-card p-5">
         <Text className="text-pos-2xl font-bold text-pos-text">Cash Management</Text>
         <Text className="mt-2 text-pos-sm text-pos-text-muted">
-          {user?.name ?? 'User'} · Branch {user?.branch_id ?? '-'}
+          {user?.name ?? 'User'} · Branch {branch?.name ?? '-'}
         </Text>
 
         {loading && (

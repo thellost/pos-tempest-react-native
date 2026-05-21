@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ORDER_STATUS, ORDER_TYPE } from '@/constants/enums';
 import { getElapsedMinutes } from '@/utils/date';
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 
 export interface TakeawayOrder {
   id: number | string;
@@ -17,7 +18,8 @@ export interface TakeawayOrder {
 
 export function useTakeaway() {
   const { user } = useAuth();
-  const branchId = user?.branch_id;
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id;
 
   const { data: takeawayOrders = [], isLoading } = useQuery<TakeawayOrder>(
     `SELECT 

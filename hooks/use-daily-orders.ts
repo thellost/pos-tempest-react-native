@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { OrderStatus, PaymentStatus } from '@/constants/enums';
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 import { getAppDateString } from '@/utils/date';
 import { getAppTimezone } from '@/utils/timezone';
 
@@ -61,7 +62,8 @@ function getTodayBoundaries(): { start: string; end: string } {
 
 export function useDailyOrders() {
   const { user } = useAuth();
-  const branchId = user?.branch_id;
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id;
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');

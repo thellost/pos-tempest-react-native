@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { PurchaseStatus, UnitOfMeasure } from '@/constants/enums';
 import { useAuth } from './use-auth';
+import { useDevice } from './use-device';
 
 export interface PurchaseItem {
   id: number;
@@ -55,7 +56,8 @@ export interface CreatePurchaseInput {
 
 export function usePurchases() {
   const { user } = useAuth();
-  const branchId = user?.branch_id ?? 0;
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id ?? 0;
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(false);
