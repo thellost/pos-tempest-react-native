@@ -140,6 +140,7 @@ export interface Reservation {
 
 export interface Category {
 	id: EntityId;
+	branch_id: number;
 	parent_id: EntityId | null;
 	name: string;
 	description: string | null;
@@ -152,6 +153,7 @@ export interface Category {
 
 export interface MenuItem {
 	id: EntityId;
+	branch_id: number;
 	category_id: EntityId | null;
 	name: string;
 	description: string | null;

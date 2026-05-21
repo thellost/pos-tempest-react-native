@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import type { Category, MenuItem, MenuItemModifierGroup, Modifier, ModifierGroup } from '@/db/models';
 import { powersync } from '@/db/provider';
+import { useDevice } from '@/hooks/use-device';
 
 export interface MenuItemWithModifiers extends MenuItem {
   modifier_groups?: ModifierGroupWithModifiers[];
@@ -84,6 +85,9 @@ function logPerf(label: string, valueMs: number, meta?: Record<string, unknown>)
 }
 
 export function useMenu() {
+  const { registration } = useDevice();
+  const branchId = registration?.branch?.id ?? 0;
+
   const bootStartRef = useRef(nowMs());
   const hasLoggedMenuReadyRef = useRef(false);
   const queryTimersRef = useRef<Record<string, number>>({
@@ -93,11 +97,13 @@ export function useMenu() {
   const queryLoggedRef = useRef<Record<string, boolean>>({});
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category>(
-    `SELECT * FROM categories ORDER BY parent_id ASC, sort_order ASC`
+    `SELECT * FROM categories WHERE branch_id = ? ORDER BY parent_id ASC, sort_order ASC`,
+    [branchId]
   );
 
   const { data: menuItems = [], isLoading: menuItemsLoading } = useQuery<MenuItemWithInventoryRow>(
-    `SELECT * FROM menu_items ORDER BY sort_order ASC`
+    `SELECT * FROM menu_items WHERE branch_id = ? ORDER BY sort_order ASC`,
+    [branchId]
   );
 
   // -- Log individual query resolution times --

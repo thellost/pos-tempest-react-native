@@ -125,123 +125,123 @@ INSERT INTO customers (id, name, phone, email, address, loyalty_points, total_vi
 -- =============================
 -- 7. CATEGORIES (with hierarchy)
 -- =============================
-INSERT INTO categories (id, parent_id, name, description, sort_order, is_active) VALUES
+INSERT INTO categories (id, branch_id, parent_id, name, description, sort_order, is_active) VALUES
 -- Top-level
-(1,  NULL, 'Makanan',      'Semua jenis makanan',                      1, true),
-(2,  NULL, 'Minuman',      'Semua jenis minuman',                      2, true),
-(3,  NULL, 'Camilan',      'Snack dan makanan ringan',                 3, true),
+(1, 1, NULL, 'Makanan',      'Semua jenis makanan',                      1, true),
+(2, 1, NULL, 'Minuman',      'Semua jenis minuman',                      2, true),
+(3, 1, NULL, 'Camilan',      'Snack dan makanan ringan',                 3, true),
 -- Sub-categories: Makanan
-(4,  1, 'Nasi & Mie',      'Menu berbasis nasi dan mie',               1, true),
-(5,  1, 'Lauk Pauk',       'Ayam, daging, tahu, tempe',                2, true),
-(6,  1, 'Ikan & Seafood',  'Ikan, udang, cumi, kepiting',              3, true),
-(7,  1, 'Sayuran',         'Aneka sayur dan tumisan',                  4, true),
-(8,  1, 'Sop & Soto',      'Sop, soto, rawon, bakso',                 5, true),
-(9,  1, 'Sambal',          'Berbagai jenis sambal',                    6, true),
+(4, 1, 1, 'Nasi & Mie',      'Menu berbasis nasi dan mie',               1, true),
+(5, 1, 1, 'Lauk Pauk',       'Ayam, daging, tahu, tempe',                2, true),
+(6, 1, 1, 'Ikan & Seafood',  'Ikan, udang, cumi, kepiting',              3, true),
+(7, 1, 1, 'Sayuran',         'Aneka sayur dan tumisan',                  4, true),
+(8, 1, 1, 'Sop & Soto',      'Sop, soto, rawon, bakso',                 5, true),
+(9, 1, 1, 'Sambal',          'Berbagai jenis sambal',                    6, true),
 -- Sub-categories: Minuman
-(10, 2, 'Minuman Dingin',  'Es teh, jus, kelapa muda',                1, true),
-(11, 2, 'Minuman Panas',   'Teh, kopi, wedang',                       2, true),
+(10, 1, 2, 'Minuman Dingin',  'Es teh, jus, kelapa muda',                1, true),
+(11, 1, 2, 'Minuman Panas',   'Teh, kopi, wedang',                       2, true),
 -- Sub-categories: Camilan
-(12, 3, 'Gorengan',        'Tahu goreng, tempe goreng, pisang goreng', 1, true),
-(13, 3, 'Dessert',         'Kue dan makanan penutup',                  2, true);
+(12, 1, 3, 'Gorengan',        'Tahu goreng, tempe goreng, pisang goreng', 1, true),
+(13, 1, 3, 'Dessert',         'Kue dan makanan penutup',                  2, true);
 
 
 -- =============================
 -- 8. MENU ITEMS
 -- =============================
-INSERT INTO menu_items (id, category_id, name, description, sku, pricing_type, unit_of_measure, price, cost, min_order_qty, preparation_time_minutes, is_available, is_active, sort_order) VALUES
+INSERT INTO menu_items (id, branch_id, category_id, name, description, sku, pricing_type, unit_of_measure, price, cost, min_order_qty, preparation_time_minutes, is_available, is_active, sort_order) VALUES
 -- === Nasi & Mie (category 4) ===
-(1,  4, 'Nasi Putih',              'Nasi putih hangat porsi reguler',                      'NSI-001', 'fixed',        'portion', 8000.00,    3000.00,  1,  2,  true, true, 1),
-(2,  4, 'Nasi Goreng Spesial',     'Nasi goreng dengan telur, ayam suwir, dan kerupuk',    'NSI-002', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 2),
-(3,  4, 'Nasi Goreng Seafood',     'Nasi goreng dengan udang, cumi, dan sayuran',          'NSI-003', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 3),
-(4,  4, 'Nasi Goreng Kampung',     'Nasi goreng petai, teri medan, dan sambal terasi',     'NSI-004', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 4),
-(5,  4, 'Mie Goreng Jawa',         'Mie goreng bumbu kecap manis dengan sayuran',          'MIE-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 5),
-(6,  4, 'Mie Goreng Seafood',      'Mie goreng dengan udang dan cumi',                     'MIE-002', 'fixed',        'portion', 35000.00,  15000.00,  1, 12,  true, true, 6),
-(7,  4, 'Kwetiau Goreng',          'Kwetiau goreng dengan tauge dan ayam',                 'MIE-003', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 7),
-(8,  4, 'Nasi Uduk',               'Nasi uduk komplit dengan lauk',                        'NSI-005', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 8),
-(9,  4, 'Nasi Kuning',             'Nasi kuning tumpeng mini',                             'NSI-006', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 9),
-(10, 4, 'Lontong Sayur',           'Lontong dengan sayur labu dan santan',                 'NSI-007', 'fixed',        'portion', 20000.00,   8000.00,  1,  8,  true, true, 10),
+(1, 1, 4, 'Nasi Putih',              'Nasi putih hangat porsi reguler',                      'NSI-001', 'fixed',        'portion', 8000.00,    3000.00,  1,  2,  true, true, 1),
+(2, 1, 4, 'Nasi Goreng Spesial',     'Nasi goreng dengan telur, ayam suwir, dan kerupuk',    'NSI-002', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 2),
+(3, 1, 4, 'Nasi Goreng Seafood',     'Nasi goreng dengan udang, cumi, dan sayuran',          'NSI-003', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 3),
+(4, 1, 4, 'Nasi Goreng Kampung',     'Nasi goreng petai, teri medan, dan sambal terasi',     'NSI-004', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 4),
+(5, 1, 4, 'Mie Goreng Jawa',         'Mie goreng bumbu kecap manis dengan sayuran',          'MIE-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 10,  true, true, 5),
+(6, 1, 4, 'Mie Goreng Seafood',      'Mie goreng dengan udang dan cumi',                     'MIE-002', 'fixed',        'portion', 35000.00,  15000.00,  1, 12,  true, true, 6),
+(7, 1, 4, 'Kwetiau Goreng',          'Kwetiau goreng dengan tauge dan ayam',                 'MIE-003', 'fixed',        'portion', 28000.00,  12000.00,  1, 10,  true, true, 7),
+(8, 1, 4, 'Nasi Uduk',               'Nasi uduk komplit dengan lauk',                        'NSI-005', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 8),
+(9, 1, 4, 'Nasi Kuning',             'Nasi kuning tumpeng mini',                             'NSI-006', 'fixed',        'portion', 22000.00,   9000.00,  1,  8,  true, true, 9),
+(10, 1, 4, 'Lontong Sayur',           'Lontong dengan sayur labu dan santan',                 'NSI-007', 'fixed',        'portion', 20000.00,   8000.00,  1,  8,  true, true, 10),
 
 -- === Lauk Pauk (category 5) ===
-(11, 5, 'Ayam Goreng Kremes',      'Ayam goreng renyah dengan kremesan gurih',             'LUK-001', 'fixed',        'piece',   30000.00,  14000.00,  1, 15,  true, true, 1),
-(12, 5, 'Ayam Bakar Madu',         'Ayam bakar bumbu madu kecap',                         'LUK-002', 'fixed',        'piece',   32000.00,  15000.00,  1, 20,  true, true, 2),
-(13, 5, 'Ayam Penyet',             'Ayam goreng penyet dengan sambal bawang',              'LUK-003', 'fixed',        'piece',   28000.00,  13000.00,  1, 15,  true, true, 3),
-(14, 5, 'Bebek Goreng Sambal Ijo', 'Bebek goreng krispi dengan sambal hijau',              'LUK-004', 'fixed',        'piece',   38000.00,  18000.00,  1, 20,  true, true, 4),
-(15, 5, 'Rendang Sapi',            'Rendang daging sapi empuk bumbu Padang',               'LUK-005', 'fixed',        'portion', 40000.00,  20000.00,  1, 15,  true, true, 5),
-(16, 5, 'Empal Gepuk',             'Daging sapi gepuk goreng berbumbu',                    'LUK-006', 'fixed',        'portion', 35000.00,  17000.00,  1, 15,  true, true, 6),
-(17, 5, 'Telur Dadar Padang',      'Telur dadar tebal isi daun bawang dan cabai',          'LUK-007', 'fixed',        'piece',   12000.00,   4000.00,  1,  8,  true, true, 7),
-(18, 5, 'Tahu Bacem',              'Tahu bacem goreng khas Jogja (2 potong)',              'LUK-008', 'fixed',        'portion', 10000.00,   3000.00,  1,  5,  true, true, 8),
-(19, 5, 'Tempe Goreng Tepung',     'Tempe goreng tepung crispy (4 potong)',                'LUK-009', 'fixed',        'portion', 12000.00,   4000.00,  1,  5,  true, true, 9),
-(20, 5, 'Perkedel Kentang',        'Perkedel kentang goreng (2 buah)',                     'LUK-010', 'fixed',        'portion', 10000.00,   4000.00,  1,  8,  true, true, 10),
+(11, 1, 5, 'Ayam Goreng Kremes',      'Ayam goreng renyah dengan kremesan gurih',             'LUK-001', 'fixed',        'piece',   30000.00,  14000.00,  1, 15,  true, true, 1),
+(12, 1, 5, 'Ayam Bakar Madu',         'Ayam bakar bumbu madu kecap',                         'LUK-002', 'fixed',        'piece',   32000.00,  15000.00,  1, 20,  true, true, 2),
+(13, 1, 5, 'Ayam Penyet',             'Ayam goreng penyet dengan sambal bawang',              'LUK-003', 'fixed',        'piece',   28000.00,  13000.00,  1, 15,  true, true, 3),
+(14, 1, 5, 'Bebek Goreng Sambal Ijo', 'Bebek goreng krispi dengan sambal hijau',              'LUK-004', 'fixed',        'piece',   38000.00,  18000.00,  1, 20,  true, true, 4),
+(15, 1, 5, 'Rendang Sapi',            'Rendang daging sapi empuk bumbu Padang',               'LUK-005', 'fixed',        'portion', 40000.00,  20000.00,  1, 15,  true, true, 5),
+(16, 1, 5, 'Empal Gepuk',             'Daging sapi gepuk goreng berbumbu',                    'LUK-006', 'fixed',        'portion', 35000.00,  17000.00,  1, 15,  true, true, 6),
+(17, 1, 5, 'Telur Dadar Padang',      'Telur dadar tebal isi daun bawang dan cabai',          'LUK-007', 'fixed',        'piece',   12000.00,   4000.00,  1,  8,  true, true, 7),
+(18, 1, 5, 'Tahu Bacem',              'Tahu bacem goreng khas Jogja (2 potong)',              'LUK-008', 'fixed',        'portion', 10000.00,   3000.00,  1,  5,  true, true, 8),
+(19, 1, 5, 'Tempe Goreng Tepung',     'Tempe goreng tepung crispy (4 potong)',                'LUK-009', 'fixed',        'portion', 12000.00,   4000.00,  1,  5,  true, true, 9),
+(20, 1, 5, 'Perkedel Kentang',        'Perkedel kentang goreng (2 buah)',                     'LUK-010', 'fixed',        'portion', 10000.00,   4000.00,  1,  8,  true, true, 10),
 
 -- === Ikan & Seafood — WEIGHT-BASED (category 6) ===
-(21, 6, 'Ikan Gurame',             'Ikan gurame segar — pilih cara masak',                 'IKN-001', 'weight_based', 'kg',      90000.00,  45000.00,  0.3, 25, true, true, 1),
-(22, 6, 'Ikan Nila',               'Ikan nila segar — pilih cara masak',                   'IKN-002', 'weight_based', 'kg',      65000.00,  30000.00,  0.3, 20, true, true, 2),
-(23, 6, 'Ikan Kakap Merah',        'Kakap merah segar — pilih cara masak',                 'IKN-003', 'weight_based', 'kg',     120000.00,  60000.00,  0.3, 25, true, true, 3),
-(24, 6, 'Ikan Bawal Bakar',        'Ikan bawal segar untuk dibakar',                       'IKN-004', 'weight_based', 'kg',      85000.00,  40000.00,  0.3, 25, true, true, 4),
-(25, 6, 'Udang Segar',             'Udang segar pilihan — pilih cara masak',               'IKN-005', 'weight_based', 'ons',     18000.00,   9000.00,  1,   15, true, true, 5),
-(26, 6, 'Cumi Segar',              'Cumi-cumi segar — pilih cara masak',                   'IKN-006', 'weight_based', 'ons',     15000.00,   7000.00,  1,   15, true, true, 6),
-(27, 6, 'Kepiting Saus Padang',    'Kepiting saos Padang pedas (per ekor)',                'IKN-007', 'weight_based', 'kg',     150000.00,  75000.00,  0.5, 30, true, true, 7),
+(21, 1, 6, 'Ikan Gurame',             'Ikan gurame segar — pilih cara masak',                 'IKN-001', 'weight_based', 'kg',      90000.00,  45000.00,  0.3, 25, true, true, 1),
+(22, 1, 6, 'Ikan Nila',               'Ikan nila segar — pilih cara masak',                   'IKN-002', 'weight_based', 'kg',      65000.00,  30000.00,  0.3, 20, true, true, 2),
+(23, 1, 6, 'Ikan Kakap Merah',        'Kakap merah segar — pilih cara masak',                 'IKN-003', 'weight_based', 'kg',     120000.00,  60000.00,  0.3, 25, true, true, 3),
+(24, 1, 6, 'Ikan Bawal Bakar',        'Ikan bawal segar untuk dibakar',                       'IKN-004', 'weight_based', 'kg',      85000.00,  40000.00,  0.3, 25, true, true, 4),
+(25, 1, 6, 'Udang Segar',             'Udang segar pilihan — pilih cara masak',               'IKN-005', 'weight_based', 'ons',     18000.00,   9000.00,  1,   15, true, true, 5),
+(26, 1, 6, 'Cumi Segar',              'Cumi-cumi segar — pilih cara masak',                   'IKN-006', 'weight_based', 'ons',     15000.00,   7000.00,  1,   15, true, true, 6),
+(27, 1, 6, 'Kepiting Saus Padang',    'Kepiting saos Padang pedas (per ekor)',                'IKN-007', 'weight_based', 'kg',     150000.00,  75000.00,  0.5, 30, true, true, 7),
 -- Fixed-price seafood
-(28, 6, 'Udang Goreng Tepung',     'Udang goreng tepung crispy (8 ekor)',                  'IKN-008', 'fixed',        'portion', 45000.00,  22000.00,  1, 12,  true, true, 8),
-(29, 6, 'Cumi Goreng Tepung',      'Cumi goreng tepung (1 porsi)',                         'IKN-009', 'fixed',        'portion', 38000.00,  18000.00,  1, 12,  true, true, 9),
-(30, 6, 'Kerang Saus Tiram',       'Kerang hijau saus tiram (1 porsi)',                    'IKN-010', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 10),
+(28, 1, 6, 'Udang Goreng Tepung',     'Udang goreng tepung crispy (8 ekor)',                  'IKN-008', 'fixed',        'portion', 45000.00,  22000.00,  1, 12,  true, true, 8),
+(29, 1, 6, 'Cumi Goreng Tepung',      'Cumi goreng tepung (1 porsi)',                         'IKN-009', 'fixed',        'portion', 38000.00,  18000.00,  1, 12,  true, true, 9),
+(30, 1, 6, 'Kerang Saus Tiram',       'Kerang hijau saus tiram (1 porsi)',                    'IKN-010', 'fixed',        'portion', 35000.00,  16000.00,  1, 12,  true, true, 10),
 
 -- === Sayuran (category 7) ===
-(31, 7, 'Kangkung Belacan',        'Tumis kangkung dengan belacan/terasi',                 'SYR-001', 'fixed',        'portion', 18000.00,   6000.00,  1,  8, true, true, 1),
-(32, 7, 'Capcay Goreng',           'Capcay sayuran campur dengan saus tiram',              'SYR-002', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 2),
-(33, 7, 'Tumis Tauge Tahu',        'Tumis tauge dan tahu dengan bawang putih',             'SYR-003', 'fixed',        'portion', 15000.00,   5000.00,  1,  8, true, true, 3),
-(34, 7, 'Urap Sayuran',            'Sayuran rebus dengan bumbu kelapa parut',              'SYR-004', 'fixed',        'portion', 15000.00,   5000.00,  1, 10, true, true, 4),
-(35, 7, 'Terong Balado',           'Terong goreng dengan sambal balado',                   'SYR-005', 'fixed',        'portion', 18000.00,   6000.00,  1, 10, true, true, 5),
-(36, 7, 'Gado-Gado',               'Sayuran rebus dengan bumbu kacang, lontong, kerupuk', 'SYR-006', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 6),
+(31, 1, 7, 'Kangkung Belacan',        'Tumis kangkung dengan belacan/terasi',                 'SYR-001', 'fixed',        'portion', 18000.00,   6000.00,  1,  8, true, true, 1),
+(32, 1, 7, 'Capcay Goreng',           'Capcay sayuran campur dengan saus tiram',              'SYR-002', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 2),
+(33, 1, 7, 'Tumis Tauge Tahu',        'Tumis tauge dan tahu dengan bawang putih',             'SYR-003', 'fixed',        'portion', 15000.00,   5000.00,  1,  8, true, true, 3),
+(34, 1, 7, 'Urap Sayuran',            'Sayuran rebus dengan bumbu kelapa parut',              'SYR-004', 'fixed',        'portion', 15000.00,   5000.00,  1, 10, true, true, 4),
+(35, 1, 7, 'Terong Balado',           'Terong goreng dengan sambal balado',                   'SYR-005', 'fixed',        'portion', 18000.00,   6000.00,  1, 10, true, true, 5),
+(36, 1, 7, 'Gado-Gado',               'Sayuran rebus dengan bumbu kacang, lontong, kerupuk', 'SYR-006', 'fixed',        'portion', 22000.00,   8000.00,  1, 10, true, true, 6),
 
 -- === Sop & Soto (category 8) ===
-(37, 8, 'Soto Ayam',               'Soto ayam kuning dengan bihun dan telur',              'SOP-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 12, true, true, 1),
-(38, 8, 'Soto Betawi',             'Soto santan khas Betawi dengan daging sapi',           'SOP-002', 'fixed',        'portion', 35000.00,  16000.00,  1, 15, true, true, 2),
-(39, 8, 'Rawon',                    'Rawon daging sapi hitam khas Jawa Timur',             'SOP-003', 'fixed',        'portion', 38000.00,  18000.00,  1, 15, true, true, 3),
-(40, 8, 'Sop Buntut',              'Sop buntut sapi bening dengan kentang dan wortel',     'SOP-004', 'fixed',        'portion', 55000.00,  28000.00,  1, 20, true, true, 4),
-(41, 8, 'Bakso Sapi',              'Bakso sapi dengan mie, bihun, dan tahu',               'SOP-005', 'fixed',        'portion', 25000.00,  10000.00,  1, 10, true, true, 5),
-(42, 8, 'Tongseng Kambing',        'Tongseng kambing berkuah santan pedas',                 'SOP-006', 'fixed',        'portion', 42000.00,  20000.00,  1, 15, true, true, 6),
+(37, 1, 8, 'Soto Ayam',               'Soto ayam kuning dengan bihun dan telur',              'SOP-001', 'fixed',        'portion', 25000.00,  10000.00,  1, 12, true, true, 1),
+(38, 1, 8, 'Soto Betawi',             'Soto santan khas Betawi dengan daging sapi',           'SOP-002', 'fixed',        'portion', 35000.00,  16000.00,  1, 15, true, true, 2),
+(39, 1, 8, 'Rawon',                    'Rawon daging sapi hitam khas Jawa Timur',             'SOP-003', 'fixed',        'portion', 38000.00,  18000.00,  1, 15, true, true, 3),
+(40, 1, 8, 'Sop Buntut',              'Sop buntut sapi bening dengan kentang dan wortel',     'SOP-004', 'fixed',        'portion', 55000.00,  28000.00,  1, 20, true, true, 4),
+(41, 1, 8, 'Bakso Sapi',              'Bakso sapi dengan mie, bihun, dan tahu',               'SOP-005', 'fixed',        'portion', 25000.00,  10000.00,  1, 10, true, true, 5),
+(42, 1, 8, 'Tongseng Kambing',        'Tongseng kambing berkuah santan pedas',                 'SOP-006', 'fixed',        'portion', 42000.00,  20000.00,  1, 15, true, true, 6),
 
 -- === Sambal (category 9) ===
-(43, 9, 'Sambal Terasi',           'Sambal terasi ulek pedas',                              'SBL-001', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 1),
-(44, 9, 'Sambal Matah',            'Sambal matah khas Bali dengan sereh dan bawang merah',  'SBL-002', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 2),
-(45, 9, 'Sambal Ijo',              'Sambal hijau dari cabai rawit hijau',                   'SBL-003', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 3),
-(46, 9, 'Sambal Dabu-Dabu',        'Sambal segar khas Manado',                              'SBL-004', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 4),
-(47, 9, 'Sambal Mangga Muda',      'Sambal mangga muda asam pedas',                         'SBL-005', 'fixed',       'portion',  8000.00,   3000.00, 1, 5, true, true, 5),
+(43, 1, 9, 'Sambal Terasi',           'Sambal terasi ulek pedas',                              'SBL-001', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 1),
+(44, 1, 9, 'Sambal Matah',            'Sambal matah khas Bali dengan sereh dan bawang merah',  'SBL-002', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 2),
+(45, 1, 9, 'Sambal Ijo',              'Sambal hijau dari cabai rawit hijau',                   'SBL-003', 'fixed',       'portion',  5000.00,   2000.00, 1, 3, true, true, 3),
+(46, 1, 9, 'Sambal Dabu-Dabu',        'Sambal segar khas Manado',                              'SBL-004', 'fixed',       'portion',  7000.00,   3000.00, 1, 5, true, true, 4),
+(47, 1, 9, 'Sambal Mangga Muda',      'Sambal mangga muda asam pedas',                         'SBL-005', 'fixed',       'portion',  8000.00,   3000.00, 1, 5, true, true, 5),
 
 -- === Minuman Dingin (category 10) ===
-(48, 10, 'Es Teh Manis',           'Es teh manis segar',                                    'MNM-001', 'fixed',       'piece',   8000.00,   2000.00, 1, 3, true, true, 1),
-(49, 10, 'Es Jeruk',               'Es jeruk peras segar',                                  'MNM-002', 'fixed',       'piece',  10000.00,   3000.00, 1, 3, true, true, 2),
-(50, 10, 'Es Kelapa Muda',         'Kelapa muda segar dengan es',                           'MNM-003', 'fixed',       'piece',  15000.00,   6000.00, 1, 3, true, true, 3),
-(51, 10, 'Jus Alpukat',            'Jus alpukat dengan susu coklat',                        'MNM-004', 'fixed',       'piece',  18000.00,   7000.00, 1, 5, true, true, 4),
-(52, 10, 'Jus Mangga',             'Jus mangga segar',                                      'MNM-005', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 5),
-(53, 10, 'Es Cendol',              'Es cendol dengan gula merah dan santan',                'MNM-006', 'fixed',       'piece',  12000.00,   4000.00, 1, 5, true, true, 6),
-(54, 10, 'Es Campur',              'Es campur dengan buah-buahan dan sirup',                'MNM-007', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 7),
-(55, 10, 'Air Mineral',            'Air mineral botol 600ml',                                'MNM-008', 'fixed',       'piece',   5000.00,   2000.00, 1, 1, true, true, 8),
+(48, 1, 10, 'Es Teh Manis',           'Es teh manis segar',                                    'MNM-001', 'fixed',       'piece',   8000.00,   2000.00, 1, 3, true, true, 1),
+(49, 1, 10, 'Es Jeruk',               'Es jeruk peras segar',                                  'MNM-002', 'fixed',       'piece',  10000.00,   3000.00, 1, 3, true, true, 2),
+(50, 1, 10, 'Es Kelapa Muda',         'Kelapa muda segar dengan es',                           'MNM-003', 'fixed',       'piece',  15000.00,   6000.00, 1, 3, true, true, 3),
+(51, 1, 10, 'Jus Alpukat',            'Jus alpukat dengan susu coklat',                        'MNM-004', 'fixed',       'piece',  18000.00,   7000.00, 1, 5, true, true, 4),
+(52, 1, 10, 'Jus Mangga',             'Jus mangga segar',                                      'MNM-005', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 5),
+(53, 1, 10, 'Es Cendol',              'Es cendol dengan gula merah dan santan',                'MNM-006', 'fixed',       'piece',  12000.00,   4000.00, 1, 5, true, true, 6),
+(54, 1, 10, 'Es Campur',              'Es campur dengan buah-buahan dan sirup',                'MNM-007', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 7),
+(55, 1, 10, 'Air Mineral',            'Air mineral botol 600ml',                                'MNM-008', 'fixed',       'piece',   5000.00,   2000.00, 1, 1, true, true, 8),
 
 -- === Minuman Panas (category 11) ===
-(56, 11, 'Teh Tawar Panas',        'Teh panas tanpa gula',                                  'MNM-009', 'fixed',       'piece',   5000.00,   1500.00, 1, 3, true, true, 1),
-(57, 11, 'Teh Manis Panas',        'Teh manis panas',                                       'MNM-010', 'fixed',       'piece',   7000.00,   2000.00, 1, 3, true, true, 2),
-(58, 11, 'Kopi Hitam',             'Kopi tubruk hitam panas',                                'MNM-011', 'fixed',       'piece',   8000.00,   2500.00, 1, 5, true, true, 3),
-(59, 11, 'Kopi Susu',              'Kopi susu gula aren panas',                              'MNM-012', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 4),
-(60, 11, 'Wedang Jahe',            'Wedang jahe hangat dengan gula merah',                   'MNM-013', 'fixed',       'piece',  10000.00,   3000.00, 1, 5, true, true, 5),
-(61, 11, 'Wedang Ronde',           'Wedang ronde dengan kacang dan bola ketan',              'MNM-014', 'fixed',       'piece',  12000.00,   4000.00, 1, 8, true, true, 6),
+(56, 1, 11, 'Teh Tawar Panas',        'Teh panas tanpa gula',                                  'MNM-009', 'fixed',       'piece',   5000.00,   1500.00, 1, 3, true, true, 1),
+(57, 1, 11, 'Teh Manis Panas',        'Teh manis panas',                                       'MNM-010', 'fixed',       'piece',   7000.00,   2000.00, 1, 3, true, true, 2),
+(58, 1, 11, 'Kopi Hitam',             'Kopi tubruk hitam panas',                                'MNM-011', 'fixed',       'piece',   8000.00,   2500.00, 1, 5, true, true, 3),
+(59, 1, 11, 'Kopi Susu',              'Kopi susu gula aren panas',                              'MNM-012', 'fixed',       'piece',  15000.00,   5000.00, 1, 5, true, true, 4),
+(60, 1, 11, 'Wedang Jahe',            'Wedang jahe hangat dengan gula merah',                   'MNM-013', 'fixed',       'piece',  10000.00,   3000.00, 1, 5, true, true, 5),
+(61, 1, 11, 'Wedang Ronde',           'Wedang ronde dengan kacang dan bola ketan',              'MNM-014', 'fixed',       'piece',  12000.00,   4000.00, 1, 8, true, true, 6),
 
 -- === Gorengan (category 12) ===
-(62, 12, 'Pisang Goreng',          'Pisang goreng kipas (3 buah)',                           'CMI-001', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 1),
-(63, 12, 'Bakwan Sayur',           'Bakwan sayur goreng (4 buah)',                           'CMI-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 2),
-(64, 12, 'Tahu Isi',               'Tahu isi sayuran goreng (4 buah)',                      'CMI-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
-(65, 12, 'Risoles Mayo',           'Risoles isi ragout dan mayones (3 buah)',                'CMI-004', 'fixed',       'portion', 15000.00,  5000.00, 1, 8, true, true, 4),
-(66, 12, 'Lumpia Semarang',        'Lumpia isi rebung dan udang (3 buah)',                   'CMI-005', 'fixed',       'portion', 18000.00,  7000.00, 1, 8, true, true, 5),
-(67, 12, 'Kerupuk Udang',          'Kerupuk udang (1 porsi)',                                'CMI-006', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 6),
-(68, 12, 'Emping Melinjo',         'Emping melinjo (1 porsi)',                               'CMI-007', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 7),
+(62, 1, 12, 'Pisang Goreng',          'Pisang goreng kipas (3 buah)',                           'CMI-001', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 1),
+(63, 1, 12, 'Bakwan Sayur',           'Bakwan sayur goreng (4 buah)',                           'CMI-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 2),
+(64, 1, 12, 'Tahu Isi',               'Tahu isi sayuran goreng (4 buah)',                      'CMI-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
+(65, 1, 12, 'Risoles Mayo',           'Risoles isi ragout dan mayones (3 buah)',                'CMI-004', 'fixed',       'portion', 15000.00,  5000.00, 1, 8, true, true, 4),
+(66, 1, 12, 'Lumpia Semarang',        'Lumpia isi rebung dan udang (3 buah)',                   'CMI-005', 'fixed',       'portion', 18000.00,  7000.00, 1, 8, true, true, 5),
+(67, 1, 12, 'Kerupuk Udang',          'Kerupuk udang (1 porsi)',                                'CMI-006', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 6),
+(68, 1, 12, 'Emping Melinjo',         'Emping melinjo (1 porsi)',                               'CMI-007', 'fixed',       'portion',  5000.00,  1500.00, 1, 2, true, true, 7),
 
 -- === Dessert (category 13) ===
-(69, 13, 'Klepon',                  'Klepon isi gula merah (5 butir)',                       'DSR-001', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 1),
-(70, 13, 'Dadar Gulung',           'Dadar gulung isi kelapa gula merah (2 buah)',            'DSR-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 2),
-(71, 13, 'Kolak Pisang',           'Kolak pisang dengan ubi dan santan',                     'DSR-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
-(72, 13, 'Bubur Sumsum',           'Bubur sumsum dengan kuah gula merah',                    'DSR-004', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 4),
-(73, 13, 'Es Krim Kelapa',         'Es krim rasa kelapa buatan sendiri',                     'DSR-005', 'fixed',       'piece',  15000.00,  5000.00, 1, 3, true, true, 5);
+(69, 1, 13, 'Klepon',                  'Klepon isi gula merah (5 butir)',                       'DSR-001', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 1),
+(70, 1, 13, 'Dadar Gulung',           'Dadar gulung isi kelapa gula merah (2 buah)',            'DSR-002', 'fixed',       'portion', 10000.00,  3000.00, 1, 5, true, true, 2),
+(71, 1, 13, 'Kolak Pisang',           'Kolak pisang dengan ubi dan santan',                     'DSR-003', 'fixed',       'portion', 12000.00,  4000.00, 1, 8, true, true, 3),
+(72, 1, 13, 'Bubur Sumsum',           'Bubur sumsum dengan kuah gula merah',                    'DSR-004', 'fixed',       'portion', 10000.00,  3000.00, 1, 8, true, true, 4),
+(73, 1, 13, 'Es Krim Kelapa',         'Es krim rasa kelapa buatan sendiri',                     'DSR-005', 'fixed',       'piece',  15000.00,  5000.00, 1, 3, true, true, 5);
 
 
 -- =============================

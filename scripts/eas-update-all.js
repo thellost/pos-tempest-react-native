@@ -20,7 +20,7 @@ const path = require('path');
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 /** All runtime versions (app versions) that have live installs. */
-const RUNTIME_VERSIONS = ['1.0.7', '1.0.8'];
+const RUNTIME_VERSIONS = ['1.0.8', '1.0.9'];
 
 // ─── Args ────────────────────────────────────────────────────────────────────
 

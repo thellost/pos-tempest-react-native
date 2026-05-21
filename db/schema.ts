@@ -99,6 +99,7 @@ export const appSchema = new Schema({
 		updated_at: column.text,
 	}),
 	categories: new Table({
+		branch_id: column.integer,
 		parent_id: column.integer,
 		name: column.text,
 		description: column.text,
@@ -109,10 +110,11 @@ export const appSchema = new Schema({
 		updated_at: column.text,
 	}, {
 		indexes: {
-			by_parent_sort: ['parent_id', 'sort_order'],
+			by_branch_parent_sort: ['branch_id', 'parent_id', 'sort_order'],
 		},
 	}),
 	menu_items: new Table({
+		branch_id: column.integer,
 		category_id: column.integer,
 		name: column.text,
 		description: column.text,
@@ -132,8 +134,8 @@ export const appSchema = new Schema({
 		updated_at: column.text,
 	}, {
 		indexes: {
-			by_sort: ['sort_order'],
-			by_category: ['category_id'],
+			by_branch_sort: ['branch_id', 'sort_order'],
+			by_branch_category: ['branch_id', 'category_id'],
 		},
 	}),
 	modifier_groups: new Table({

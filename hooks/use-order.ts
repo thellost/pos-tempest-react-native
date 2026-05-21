@@ -120,6 +120,7 @@ interface UseOrderReturn {
 function toMenuItem(item: MenuItemWithInventory): MenuItem {
   return {
     id: item.id,
+    branch_id: item.branch_id,
     category_id: item.category_id,
     name: item.name,
     description: item.description,
@@ -367,6 +368,7 @@ export function useOrder(options: UseOrderOptions): UseOrderReturn {
           const orderIdNum = order.id;
           const menuItem: MenuItem = {
             id: item.id,
+            branch_id: item.branch_id,
             category_id: item.category_id,
             name: item.name,
             description: item.description,
