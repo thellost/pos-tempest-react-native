@@ -57,7 +57,7 @@ export interface CreatePurchaseInput {
 export function usePurchases() {
   const { user } = useAuth();
   const { registration } = useDevice();
-  const branchId = registration?.branch?.id ?? 0;
+  const branchId = Number(registration?.branch?.id ?? 0);
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(false);
