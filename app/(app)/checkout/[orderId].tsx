@@ -98,7 +98,7 @@ function CheckoutContent({
   const [kots, setKots] = useState<KOTWithItems[]>([]);
   const [kotIndex, setKotIndex] = useState(0);
 
-  const canComplete = payment.totalTendered >= orderTotal && orderTotal > 0 && !isProcessing;
+  const canComplete = payment.totalTendered >= orderTotal && !isProcessing;
 
   // Recalculate totals on mount to apply current branch tax/service-charge rates
   useEffect(() => {

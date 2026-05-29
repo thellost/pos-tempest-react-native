@@ -43,7 +43,7 @@ export function useCheckoutPayment(orderTotal: number, roundingPrecision?: numbe
 
   const onAddPayment = useCallback(() => {
     const amount = isCash ? parseFloat(cashInput) || 0 : remainingBalance;
-    if (amount <= 0) {
+    if (amount < 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
       return;
     }
