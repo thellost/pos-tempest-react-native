@@ -1,6 +1,5 @@
 import type {
     AuditAction,
-    CashTransactionReason,
     CashTransactionType,
     DeviceStatus,
     DiscountType,
@@ -438,9 +437,21 @@ export interface ShiftCashTransaction {
 	shift_id: string;
 	user_id: EntityId;
 	type: CashTransactionType;
-	reason: CashTransactionReason;
+	reason: string;
 	amount: number;
 	note: string | null;
 	created_at: Timestamp;
+}
+
+export interface CashTransactionReasonRow {
+	id: EntityId;
+	branch_id: number;
+	key: string;
+	label: string;
+	type: CashTransactionType | null;
+	is_active: boolean;
+	sort_order: number;
+	created_at: Timestamp;
+	updated_at: Timestamp;
 }
 

@@ -388,6 +388,16 @@ export const appSchema = new Schema({
 		note: column.text,
 		created_at: column.text,
 	}),
+	cash_transaction_reasons: new Table({
+		branch_id: column.integer,
+		key: column.text,
+		label: column.text,
+		type: column.text,
+		is_active: column.integer,
+		sort_order: column.integer,
+		created_at: column.text,
+		updated_at: column.text,
+	}),
 });
 
 export type AppSchema = typeof appSchema;

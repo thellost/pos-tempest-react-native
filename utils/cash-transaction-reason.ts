@@ -1,5 +1,6 @@
 import type { CashTransactionReason } from '@/constants/enums';
 import { CASH_TRANSACTION_REASON } from '@/constants/enums';
+import type { CashTransactionReasonRow } from '@/db/models';
 
 export const CASH_TRANSACTION_REASON_LABELS: Record<CashTransactionReason, string> = {
   [CASH_TRANSACTION_REASON.GAJI]: 'Gaji',
@@ -26,10 +27,34 @@ function formatFallbackReasonLabel(reason: string): string {
     .join(' ');
 }
 
-export function getCashTransactionReasonLabel(reason: string): string {
+export function getCashTransactionReasonLabel(
+  reason: string,
+  dbReasons?: Pick<CashTransactionReasonRow, 'key' | 'label'>[],
+): string {
+  if (dbReasons && dbReasons.length > 0) {
+    const match = dbReasons.find((r) => r.key === reason);
+    if (match) return match.label;
+  }
+
   return (
     CASH_TRANSACTION_REASON_LABELS[reason as CashTransactionReason] ??
     LEGACY_CASH_TRANSACTION_REASON_LABELS[reason] ??
     formatFallbackReasonLabel(reason)
   );
+}
+
+export function buildReasonLabelMap(
+  dbReasons: Pick<CashTransactionReasonRow, 'key' | 'label'>[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const r of dbReasons) {
+    map[r.key] = r.label;
+  }
+  for (const [key, label] of Object.entries(CASH_TRANSACTION_REASON_LABELS)) {
+    if (!map[key]) map[key] = label;
+  }
+  for (const [key, label] of Object.entries(LEGACY_CASH_TRANSACTION_REASON_LABELS)) {
+    if (!map[key]) map[key] = label;
+  }
+  return map;
 }

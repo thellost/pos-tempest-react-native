@@ -1,4 +1,4 @@
-import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import type { CashTransactionType } from '@/constants/enums';
 import { ROLE_TYPE } from '@/constants/enums';
 import { useAuth } from '@/hooks/use-auth';
 import { useDevice } from '@/hooks/use-device';
@@ -35,7 +35,7 @@ type UseShiftReturn = {
   closeShift: (closingCash: number) => Promise<ShiftRecord>;
   addCashTransaction: (
     type: CashTransactionType,
-    reason: CashTransactionReason,
+    reason: string,
     amount: number,
     note?: string | null,
   ) => Promise<ShiftCashTransactionRecord>;
@@ -140,7 +140,7 @@ export function useShift(): UseShiftReturn {
   const addCashTransaction = useCallback(
     async (
       type: CashTransactionType,
-      reason: CashTransactionReason,
+      reason: string,
       amount: number,
       note?: string | null,
     ) => {

@@ -2,13 +2,15 @@ import { CashTransactionList } from '@/components/shift/CashTransactionList';
 import { CashTransactionModal } from '@/components/shift/CashTransactionModal';
 import { Button } from '@/components/ui';
 import { PermissionGate } from '@/components/ui/PermissionGate';
-import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import type { CashTransactionType } from '@/constants/enums';
 import { PERMISSION } from '@/constants/permissions';
+import { useCashReasons } from '@/hooks/use-cash-reasons';
 import { useDevice } from '@/hooks/use-device';
 import { useShift } from '@/hooks/use-shift';
+import { buildReasonLabelMap } from '@/utils/cash-transaction-reason';
 import { formatIDR } from '@/utils/currency';
 import { Banknote } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 function formatTimestamp(value: string | null): string {
@@ -25,7 +27,10 @@ function formatTimestamp(value: string | null): string {
 export default function CashScreen() {
   const { activeShift, summary, cashTransactions, addCashTransaction, loading } = useShift();
   const { registration } = useDevice();
+  const { reasons, dbReasons } = useCashReasons();
   const [showCashTxModal, setShowCashTxModal] = useState(false);
+
+  const reasonLabels = useMemo(() => buildReasonLabelMap(dbReasons), [dbReasons]);
 
   if (loading) {
     return (
@@ -74,7 +79,7 @@ export default function CashScreen() {
 
   async function handleCashTransaction(
     type: CashTransactionType,
-    reason: CashTransactionReason,
+    reason: string,
     amount: number,
     note?: string,
   ) {
@@ -132,12 +137,13 @@ export default function CashScreen() {
           </Button>
         </PermissionGate>
 
-        <CashTransactionList transactions={cashTransactions} />
+        <CashTransactionList transactions={cashTransactions} reasonLabels={reasonLabels} />
       </ScrollView>
 
       <CashTransactionModal
         visible={showCashTxModal}
         cashInEnabled={cashInEnabled}
+        reasons={reasons}
         onClose={() => setShowCashTxModal(false)}
         onSubmit={handleCashTransaction}
       />

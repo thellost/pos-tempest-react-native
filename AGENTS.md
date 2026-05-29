@@ -2,317 +2,178 @@
 
 Guidelines for AI coding agents working in this repository.
 
-## Project Overview
+## Project Summary
 
-This is a **React Native POS (Point of Sale) application** built with:
-- **Expo** (v54) with Expo Router for navigation
-- **NativeWind** (Tailwind CSS for React Native) for styling
-- **PowerSync** for local-first database with cloud sync
-- **Supabase** for backend authentication and data
-- **TypeScript** with strict mode enabled
+React Native POS app. **Expo v54** (Expo Router), **NativeWind** (Tailwind), **PowerSync** (local-first SQLite↔Supabase sync), **Supabase** (auth/backend), **TypeScript** strict. Landscape-first, tablet POS, offline-capable.
+
+**Expo Go will NOT work.** This project uses native modules (op-sqlite, Bluetooth, immersive mode). Always use development builds: `npx expo run:android` / `npx expo run:ios`.
+
+## Commands
+
+```bash
+npm start              # Expo dev server
+npm run android        # development build on Android (expo run:android)
+npm run ios            # development build on iOS (expo run:ios)
+npm run web            # web preview (expo start --web)
+npm run lint           # ESLint (eslint-config-expo)
+npx tsc --noEmit       # type-check
+```
+
+No test framework is configured.
 
 ## Development Roadmap
 
-**IMPORTANT:** Before making any significant changes, read the development plan at:
+Before significant changes, read `.github/prompts/plan-posTempestRoadmap.prompt.md`. The 14-step plan covers floor/table management, menu/order flow, KOT/kitchen display, Bluetooth ESC/POS printing, payments, inventory, and reports.
+
+## Provider Nesting Order (Critical)
+
+The root `_layout.tsx` nests providers in this exact chain — order matters:
+
 ```
-.github/prompts/plan-posTempestRoadmap.prompt.md
-```
-
-This 14-step roadmap covers:
-1. Project Structure & NativeWind Setup
-2. PowerSync Schema & Data Layer
-3. Auth & Session Management (email + PIN)
-4. Device Registration & Management
-5. Shift Management (Device-Scoped)
-6. Floor & Table Management
-7. Menu Display & Order Creation
-8. Kitchen Order Tickets (KOT) & Kitchen Display
-9. Bluetooth Printer Integration (ESC/POS)
-10. Payment & Checkout
-11. Customer & Reservation Management
-12. Inventory Management
-13. Reports & Analytics
-14. Polish, Guards & Edge Cases
-
-**Key Architecture Decisions:**
-- **Shifts scoped to devices, not users** — cash drawer persists when users switch on same terminal
-- **Branch locked per device** — each tablet is registered to a branch on first launch
-- **Toast POS-inspired UI** — dark theme, large touch targets (48dp), grid-based menu, split-panel order view
-- **Offline-first** — PowerSync enables full offline operation with background sync
-- **Email + PIN auth** — Supabase handles email, PIN validated locally for offline quick-unlock
-
-## Build/Lint/Test Commands
-
-```bash
-# Start development server
-npm start
-
-# Run on specific platforms
-npm run android    # Android
-npm run ios        # iOS
-npm run web        # Web
-
-# Linting
-npm run lint       # Run ESLint (uses eslint-config-expo)
-
-# Type checking (run manually)
-npx tsc --noEmit
+AppThemeProvider → ConfigProvider → PowerSyncProvider → AuthProvider → DeviceProvider
 ```
 
-**Note:** No test framework is currently configured. If tests are added, prefer Jest with React Native Testing Library.
+Breaking this chain breaks the app. `AuthProvider` depends on PowerSync being ready; `DeviceProvider` depends on auth session.
+
+## Error Handling & Sentry
+
+**Root wiring** — `_layout.tsx` (`app/_layout.tsx:154`) wraps the entire app in `Sentry.wrap(RootLayout)`. Sentry init sets DSN, environment, release tracking, traces sampling (100% dev, 20% prod), and navigation instrumentation. Authorization headers are scrubbed from outgoing events.
+
+**`AppErrorBoundary`** — wraps both `(app)` and `(auth)` route groups. Uses `Sentry.ErrorBoundary` with a "Try Again" fallback UI. All uncaught render errors are tagged `boundary=app` before capture.
+
+**`@/lib/sentry.ts`** exports the following helper functions. Use these instead of calling `Sentry.*` directly:
+
+```typescript
+// Capture exceptions with tagged module + operation context
+captureError(error, { module: 'powersync', operation: 'uploadData', level: 'error' });
+
+// Add breadcrumbs for debugging event sequences (logs to console in dev)
+addBreadcrumb('sync', 'PowerSync connected', { connected: true });
+// Valid categories: navigation, ui.click, auth, order, payment, kitchen,
+//   inventory, reservation, sync, device, shift, customer, network, print, ota
+
+// Capture non-exception messages
+captureMessage('User logged in', 'info', { userId: 42 });
+
+// Performance instrumentation (re-exported from @sentry/react-native)
+startSpan({ name: 'createOrder', op: 'service' }, async () => { … });
+
+// Set user context on login (called from use-auth.tsx)
+setUserContext({ id, name, email, role_name, branch_id, supabase_auth_id });
+
+// Clear user context on logout
+clearUserContext();
+
+// Set device context on registration (called from use-device.tsx)
+setDeviceContext({ id, name, uid, branch_id });
+```
+
+**Service-level error handling** — services use try/catch with `console.error('[ServiceName] description:', error)` for dev visibility, plus `captureError()` for Sentry. Descriptive Error messages are thrown upward for the UI. See `services/order.service.ts` for the canonical pattern.
+
+**Sync warnings** — `lib/sync-warnings.ts` handles unrecoverable upload errors. When PowerSync connector drops a row that can't sync (type mismatches, FK violations), a one-shot `Alert` asks the user to reset local data via Settings → Danger Zone. Sentry also captures an error event.
+
+## Key Architecture Decisions
+
+- **Shifts scoped to devices, not users** — cash drawer persists across user switches on same terminal
+- **Branch locked per device** — each tablet registers to one branch on first launch
+- **Email + PIN auth** — Supabase handles email login; PIN validated locally for offline quick-unlock
+- **Offline-first** — PowerSync syncs SQLite ↔ Supabase Postgres. `EXPO_PUBLIC_POWERSYNC_URL` is optional; app works fully offline without it
+- **Landscape lock is conditional** — only on tablets (min side ≥ 600px). Phones get unlocked orientation
+- **React Compiler enabled** (`experiments.reactCompiler: true` in app.json) — modifies memoization behavior
+- **Typed routes enabled** (`experiments.typedRoutes: true`) — Expo Router generates `.expo/types/` for type-safe navigation
+- **Android immersive mode** on tablets — hides status/nav bars for kiosk-style POS
 
 ## Project Structure
 
 ```
-app/                    # Expo Router file-based routes
-  (app)/                # Authenticated app routes (floor, order, settings)
-  (auth)/               # Login, PIN screens
-  (tabs)/               # Tab navigation screens
-  _layout.tsx           # Root layout with providers
-components/             # Reusable UI components
-  floor/                # Floor/table management components
-  menu/                 # Menu display components (CategoryTabs, MenuGrid, etc.)
-  order/                # Order panel components
-  ui/                   # Generic UI components (icons, collapsible, etc.)
-hooks/                  # Custom React hooks (use-menu, use-tables, use-auth, etc.)
-services/               # Business logic services (order.service, shift.service, etc.)
-lib/                    # Third-party configurations (supabase, powersync, security)
-db/                     # Database layer
-  models/               # TypeScript interfaces for database entities
-  schema.ts             # PowerSync schema definitions
-  provider.tsx          # PowerSync database provider
-  connector.ts          # PowerSync sync connector
-constants/              # App constants (enums, theme, config)
-utils/                  # Utility functions (currency, date, order-number)
+app/                   # Expo Router file-based routes
+  (app)/               # floor, order, checkout, kitchen, cash, inventory, shifts, settings…
+  (auth)/              # login, pin, forgot-password
+  (tabs)/              # tab navigation
+components/            # Reusable UI — ~20 subdirs: floor/, menu/, order/, ui/, checkout/, kitchen/, …
+hooks/                 # Custom hooks (use-menu, use-auth, use-order, use-shift, use-device…)
+services/              # Business logic (order.service, shift.service, payment.service, …)
+lib/                   # Third-party config: supabase.ts, powersync.ts, sentry.ts, schema.ts, printer.ts
+db/                    # PowerSync layer — schema.ts, models/index.ts, provider.tsx, connector.ts
+constants/             # enums.ts, config.ts, theme.ts
+utils/                 # currency.ts, date.ts, order-number.ts, coerce.ts
 ```
 
-## Code Style Guidelines
+Import with `@/` alias: `import { powersync } from '@/db/provider'`.
 
-### Imports
+## PowerSync — How It Works
 
-Order imports in groups, separated by blank lines:
-1. React/React Native imports
-2. Third-party packages (expo, supabase, etc.)
-3. Internal imports using `@/` path alias
+**Architecture:** PowerSync maintains a local SQLite database (via `@op-engineering/op-sqlite`) and synchronizes it bidirectionally with Supabase Postgres.
+
+1. **Schema** — declared in `db/schema.ts` using PowerSync's `Schema`/`Table`/`column` API. This defines the local tables AND tells the PowerSync service what to replicate from Postgres.
+
+2. **Connector** (`db/connector.ts`) — handles two responsibilities:
+   - `fetchCredentials` — returns the Supabase JWT (refreshing if expiring within 60s) and the PowerSync endpoint URL
+   - `uploadData` — batches pending local changes (up to 100 per batch) and applies them to Supabase via PUT/PATCH/DELETE. Unrecoverable errors (type mismatches, FK violations) cause the local row to be dropped so the queue doesn't stall. A Sentry error + one-shot user warning is surfaced.
+
+3. **Initialization** — `PowerSyncProvider` calls `powersync.init()` then `powersync.connect(connector)`. This is a singleton promise; the provider shows a loading spinner until ready. The `PowerSyncContext.Provider` makes the database instance available to `useQuery` hooks.
+
+4. **Reactive queries** — `useQuery` from `@powersync/react` subscribes to local DB changes. UI re-renders automatically when local data changes (whether from local writes or incoming sync).
+
+5. **Sync direction** — downsync (Postgres → SQLite) is handled by the PowerSync cloud service via WebSocket. Upsync (SQLite → Postgres) happens through the connector's `uploadData`, which reads the CRUD batch from the local DB and pushes changes via Supabase REST.
+
+6. **Reset** — `resetLocalData()` in `db/provider.tsx` calls `disconnectAndClear()` to wipe all local data and re-sync from the backend. Used for recovery after incompatible schema migrations.
+
+### PowerSync Type Mapping (SQLite → TypeScript)
+
+PowerSync columns map to JavaScript types at runtime, regardless of what the TypeScript model interfaces declare:
+
+| PowerSync `column` | SQLite storage | JavaScript runtime | Model interface |
+|---|---|---|---|
+| `column.integer` | INTEGER | `number` | `number` (IDs, counts) |
+| `column.integer` (bool) | INTEGER (0/1) | `number` (0 or 1) | `boolean` |
+| `column.real` | REAL | `number` | `number` |
+| `column.text` | TEXT | `string` | `string` |
+
+**Critical gotcha:** Boolean columns (e.g. `is_active`, `is_available`, `is_voided`, `auto_shift`, `cash_in_flag_feature`) are stored as `column.integer` (0 or 1). At runtime these are **numbers** (0 | 1), NOT `true | false`. The model interfaces type them as `boolean` for developer convenience, but strict equality (`=== true`) will fail. Always use `Boolean(value)`, `!!value`, or truthiness checks.
 
 ```typescript
-import { useEffect, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+// Correct
+items.filter(item => Boolean(item.is_active));
+if (item.is_voided) { … }
 
-import { useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@powersync/react';
-
-import { ORDER_STATUS } from '@/constants/enums';
-import type { Order, OrderItem } from '@/db/models';
-import { useAuth } from '@/hooks/use-auth';
-import { createOrder } from '@/services/order.service';
+// Wrong — these are numbers, not booleans
+if (item.is_active === true) { … }
 ```
 
-### Path Aliases
+**Dates/timestamps** are stored as `column.text` and returned as ISO 8601 strings, never `Date` objects.
 
-Use `@/` for all internal imports:
-```typescript
-import { Colors } from '@/constants/theme';
-import { powersync } from '@/db/provider';
-```
+**Primary key types** — some tables use integer autoincrement IDs (`number`), others use UUID text IDs (`string`):
+- Integer PK: `roles`, `users`, `branches`, `floor_areas`, `tables`, `customers`, `reservations`, `categories`, `menu_items`, `modifier_groups`, `modifiers`, `menu_item_modifier_groups`, `inventories`, `discounts`, `suppliers`, `purchases`, `purchase_items`, `menu_item_ingredients`, `cash_transaction_reasons`
+- UUID PK: `shifts`, `inventory_movements`, `orders`, `order_items`, `order_item_modifiers`, `kitchen_order_tickets`, `kot_items`, `payments`, `order_discounts`, `audit_logs`, `shift_cash_transactions`, `devices`
 
-### TypeScript
+Use `toInt()` and `toFloat()` from `@/utils/coerce` when reading DB values that may come as strings from SQLite.
 
-- **Strict mode is enabled** - ensure all code is fully typed
-- Use `interface` for object shapes, `type` for unions/utility types
-- Explicitly type function parameters and return values for service functions
-- Use `type` imports for types: `import type { Order } from '@/db/models'`
+## Styling & Theming
 
-```typescript
-// Component props
-interface TableCardProps {
-  table: TableWithOrder;
-  elapsedMinutes: number;
-  onPress: () => void;
-}
+- Use NativeWind `className`, not React Native `style` prop
+- Custom theme tokens in `tailwind.config.js`: `bg-surface`, `bg-surface-card`, `bg-brand`, `text-pos-text`, `text-pos-muted`, `text-pos-success/danger/warning`, `min-h-pos-touch` (48px)
+- **Theme is NOT just dark** — full light/dark toggle via NativeWind `vars()`. CSS custom properties are set by `useAppTheme()` from `@/hooks/use-app-theme` and persisted to AsyncStorage. All color classes resolve to CSS vars (`var(--color-surface)`, etc.). Never hardcode colors unless using the `brand`/`accent`/`pos`/`status`/`category` static Tailwind tokens
+- Fonts: **Geist** (loaded via `expo-font` in `_layout.tsx`), not system default
+- Spacing scale uses `pos-` prefix tokens: `p-pos-md`, `gap-pos-lg`, etc.
+- Shared themed wrapper components exist at `components/themed-text.tsx` and `components/themed-view.tsx`
 
-export function TableCard({ table, elapsedMinutes, onPress }: TableCardProps) {
-  // ...
-}
+## Code Conventions
 
-// Service functions
-export async function createOrder(
-  branchId: number,
-  tableId: number,
-  cashierId: number
-): Promise<Order> {
-  // ...
-}
-```
+- **Named exports** for components (`export function TableCard`), not default exports
+- **Enums as const objects** with `as const` and exported type alias (see `constants/enums.ts`)
+- **Config constants** at `constants/config.ts` — PIN length (6), lockout times, bcrypt rounds (6 — lowered for mobile), API timeouts, order prefix. Always reference these, never hardcode
+- **Database import path** — use `@/db/provider` for `powersync`, `@/db/models` for types, `@/lib/powersync` for the convenience re-export
+- **Currency** is IDR — use `formatIDR()` from `@/utils/currency`
+- **Order numbers** — use `generateOrderNumber()` from `@/utils/order-number`, format: `ORD-YYMMDD-{deviceId6}-{seq3}-{rand2}` (e.g. `ORD-260223-A1B2C3-001-7F`). Kitchen tickets use `generateTicketNumber()` (prefix `KOT`)
+- **BCrypt rounds = 6** — intentionally lowered for mobile JS performance. Do not increase
 
-### Components
+## Important Gotchas
 
-- Use functional components with named exports
-- Define props interfaces above the component with `Props` suffix or `ComponentNameProps`
-- Use NativeWind `className` prop for styling (not `style`)
-
-```typescript
-interface MenuItemCardProps {
-  item: MenuItem;
-  onPress: () => void;
-}
-
-export function MenuItemCard({ item, onPress }: MenuItemCardProps) {
-  return (
-    <Pressable onPress={onPress} className="rounded-xl bg-surface-card p-4">
-      {/* ... */}
-    </Pressable>
-  );
-}
-```
-
-### Styling (NativeWind/Tailwind)
-
-Use the custom theme tokens defined in `tailwind.config.js`:
-
-**Colors:**
-- `bg-surface`, `bg-surface-soft`, `bg-surface-card`, `bg-surface-raised`
-- `bg-brand`, `bg-brand-hover`, `bg-brand-press`
-- `text-pos-text`, `text-pos-text-strong`, `text-pos-muted`
-- `text-pos-success`, `text-pos-warning`, `text-pos-danger`
-
-**Font Sizes:**
-- `text-pos-xs`, `text-pos-sm`, `text-pos-base`, `text-pos-lg`, `text-pos-xl`, `text-pos-2xl`, `text-pos-3xl`
-
-**Spacing:**
-- `min-h-pos-touch` (48px minimum touch target)
-
-### Naming Conventions
-
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | PascalCase | `TableCard`, `OrderPanel` |
-| Files (components) | PascalCase | `TableCard.tsx` |
-| Files (hooks, services, utils) | kebab-case | `use-menu.ts`, `order.service.ts` |
-| Hooks | camelCase with `use` prefix | `useMenu`, `useTables` |
-| Constants/enums | SCREAMING_SNAKE_CASE | `ORDER_STATUS`, `TABLE_STATUS` |
-| Functions | camelCase | `createOrder`, `formatIDR` |
-| Interfaces | PascalCase | `OrderItem`, `TableCardProps` |
-
-### Enums
-
-Define enums as const objects with `as const` and export both the object and type:
-
-```typescript
-export const ORDER_STATUS = {
-  PENDING: 'pending',
-  CONFIRMED: 'confirmed',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
-} as const;
-
-export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
-```
-
-### Error Handling
-
-- Use try/catch with typed error checking
-- Log errors with descriptive prefixes using `console.error`
-- Throw descriptive Error messages
-
-```typescript
-try {
-  await someAsyncOperation();
-} catch (error) {
-  console.error('[ServiceName] Error description:', error);
-  throw new Error('User-friendly error message');
-}
-
-// Type checking errors
-if (error instanceof Error) {
-  console.error(error.message);
-}
-```
-
-### Database Operations
-
-Use the PowerSync instance from `@/db/provider`:
-
-```typescript
-import { powersync } from '@/db/provider';
-
-// Query with type
-const order = await powersync.getOptional<Order>(
-  `SELECT * FROM orders WHERE id = ?`,
-  [orderId]
-);
-
-// Execute
-await powersync.execute(
-  `UPDATE orders SET status = ? WHERE id = ?`,
-  [ORDER_STATUS.COMPLETED, orderId]
-);
-
-// Get all rows
-const items = await powersync.getAll<OrderItem>(
-  `SELECT * FROM order_items WHERE order_id = ?`,
-  [orderId]
-);
-```
-
-### React Hooks
-
-- Custom hooks use `use` prefix and are in `hooks/` directory
-- Return objects with named properties for clarity
-- Use `useQuery` from `@powersync/react` for reactive database queries
-
-```typescript
-export function useMenu() {
-  const { data: menuItems, isLoading } = useQuery<MenuItem>(
-    `SELECT * FROM menu_items WHERE is_active = 1 ORDER BY sort_order ASC`
-  );
-
-  return {
-    menuItems,
-    isLoading,
-    getMenuItemsByCategory: (categoryId: number) => { /* ... */ },
-  };
-}
-```
-
-### Environment Variables
-
-Use `EXPO_PUBLIC_` prefix for client-side environment variables:
-
-```typescript
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
-```
-
-### Comments
-
-- Use JSDoc-style comments for functions with `@param` and `@returns`
-- Use `{/* */}` comments in JSX for section headers
-
-```typescript
-/**
- * Creates a new order for a table.
- * @param branchId - The branch ID
- * @param tableId - The table ID
- * @returns The created order
- */
-export async function createOrder(branchId: number, tableId: number): Promise<Order> {
-  // ...
-}
-```
-
-```tsx
-<View>
-  {/* Header Section */}
-  <View className="p-4">
-    {/* ... */}
-  </View>
-</View>
-```
-
-## Important Notes
-
-- **Landscape orientation** is enforced for the POS system
-- **Currency** is Indonesian Rupiah (IDR) - use `formatIDR()` from `@/utils/currency`
-- **Security**: Authentication includes PIN unlock, rate limiting, and session management
-- **Offline-first**: PowerSync enables offline operation with background sync
+- **Active shift required** to create orders — use `getActiveShift()` from `services/shift.service.ts` or auto-open via `openShift()`
+- **Order totals are rounded** — default precision 1000 IDR (configurable per branch via `branch.rounding_precision`). See `Config.DEFAULT_ROUNDING_PRECISION`
+- **Stock is auto-deducted** on order confirmation and restocked on cancellation — see `order.service.ts`
+- **Permissions** — use `hasPermission()` from `@/constants/permissions` and `<PermissionGate>` component for guarded UI
+- **Db schema routing** — Supabase schema name resolves at runtime via `lib/schema.ts`: `pos_tempest` in dev, `pos_tempest_prod` in production. Set via `EXPO_PUBLIC_SUPABASE_DB_SCHEMA` env override
+- **Bluetooth printing** — `react-native-bluetooth-classic` + `react-native-esc-pos-printer`, Android only. Printer logic in `lib/printer.ts`, `lib/bluetooth.ts`, `lib/escpos/`
+- **The `AppThemeProvider` shows a loading modal** during theme transitions (800ms spinner). Don't duplicate this pattern elsewhere

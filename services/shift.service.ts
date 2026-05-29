@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
-import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import type { CashTransactionType } from '@/constants/enums';
 import { AUDIT_ACTION, CASH_TRANSACTION_TYPE, SHIFT_STATUS } from '@/constants/enums';
 import { hasPermission, PERMISSION } from '@/constants/permissions';
 import type { Branch } from '@/db/models';
@@ -65,7 +65,7 @@ export type ShiftCashTransactionRecord = {
   shift_id: string;
   user_id: number;
   type: CashTransactionType;
-  reason: CashTransactionReason;
+  reason: string;
   amount: number;
   note: string | null;
   created_at: string;
@@ -614,7 +614,7 @@ function normalizeShiftCashTx(row: ShiftCashTxRow): ShiftCashTransactionRecord {
     shift_id: String(row.shift_id),
     user_id: toNumber(row.user_id),
     type: row.type as CashTransactionType,
-    reason: row.reason as CashTransactionReason,
+    reason: row.reason,
     amount: toNumber(row.amount),
     note: row.note,
     created_at: row.created_at,
@@ -636,7 +636,7 @@ export async function addCashTransaction(
   shiftId: string,
   userId: number,
   type: CashTransactionType,
-  reason: CashTransactionReason,
+  reason: string,
   amount: number,
   note?: string | null,
 ): Promise<ShiftCashTransactionRecord> {

@@ -884,4 +884,19 @@ SELECT setval('purchases_id_seq',            (SELECT MAX(id) FROM purchases));
 SELECT setval('purchase_items_id_seq',       (SELECT MAX(id) FROM purchase_items));
 SELECT setval('audit_logs_id_seq',           (SELECT MAX(id) FROM audit_logs));
 
+-- =============================
+-- CASH TRANSACTION REASONS
+-- =============================
+INSERT INTO cash_transaction_reasons (branch_id, key, label, type, is_active, sort_order) VALUES
+(1, 'gaji',                'Gaji',                'cash_out', true, 1),
+(1, 'pengeluaran_pribadi', 'Pengeluaran Pribadi', 'cash_out', true, 2),
+(1, 'supply_purchase',     'Supply Purchase',     'cash_out', true, 3),
+(1, 'petty_cash',          'Petty Cash',          'cash_out', true, 4),
+(1, 'angsuran',            'Angsuran',            'cash_in',  true, 5),
+(1, 'cash_deposit',        'Cash Deposit',        'cash_in',  true, 6),
+(1, 'operasional',         'Operasional',         'cash_out', true, 7),
+(1, 'other',               'Other',               NULL,       true, 8);
+
+SELECT setval('cash_transaction_reasons_id_seq', (SELECT MAX(id) FROM cash_transaction_reasons));
+
 COMMIT;

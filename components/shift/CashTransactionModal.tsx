@@ -1,11 +1,11 @@
-import { CASH_TRANSACTION_REASON, CASH_TRANSACTION_TYPE } from '@/constants/enums';
-import type { CashTransactionReason, CashTransactionType } from '@/constants/enums';
+import { CASH_TRANSACTION_TYPE } from '@/constants/enums';
+import type { CashTransactionType } from '@/constants/enums';
 import { Config } from '@/constants/config';
 import { ThemeColors } from '@/constants/theme';
 import { Delete } from 'lucide-react-native';
 import { formatIDR } from '@/utils/currency';
-import { CASH_TRANSACTION_REASON_LABELS } from '@/utils/cash-transaction-reason';
-import { useMemo, useRef, useState } from 'react';
+import type { CashReasonOption } from '@/hooks/use-cash-reasons';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button, SelectButton, ShakeField, type ShakeFieldRef } from '@/components/ui';
 
@@ -13,14 +13,19 @@ interface CashTransactionModalProps {
   visible: boolean;
   onClose: () => void;
   cashInEnabled: boolean;
-  onSubmit: (type: CashTransactionType, reason: CashTransactionReason, amount: number, note?: string) => Promise<void>;
+  reasons: CashReasonOption[];
+  onSubmit: (type: CashTransactionType, reason: string, amount: number, note?: string) => Promise<void>;
 }
 
 const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
 
-export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit }: CashTransactionModalProps) {
+function getVisibleReasons(reasons: CashReasonOption[], type: CashTransactionType): CashReasonOption[] {
+  return reasons.filter((r) => !r.type || r.type === type);
+}
+
+export function CashTransactionModal({ visible, cashInEnabled, reasons, onClose, onSubmit }: CashTransactionModalProps) {
   const [type, setType] = useState<CashTransactionType>(CASH_TRANSACTION_TYPE.CASH_OUT);
-  const [reason, setReason] = useState<CashTransactionReason>(CASH_TRANSACTION_REASON.SUPPLY_PURCHASE);
+  const [reason, setReason] = useState<string>('');
   const [amountInput, setAmountInput] = useState('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +38,18 @@ export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit
   const canSubmit = useMemo(() => amount > 0, [amount]);
 
   const isCashIn = type === CASH_TRANSACTION_TYPE.CASH_IN;
+
+  const typeReasons = useMemo(() => getVisibleReasons(reasons, type), [reasons, type]);
+
+  useEffect(() => {
+    if (typeReasons.length > 0 && !typeReasons.find((r) => r.key === reason)) {
+      setReason(typeReasons[0].key);
+    }
+  }, [typeReasons, reason]);
+
+  function handleTypeChange(newType: CashTransactionType) {
+    setType(newType);
+  }
 
   function applyKey(key: string) {
     if (key === 'C') {
@@ -109,7 +126,8 @@ export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit
               selectedClassName="border-pos-danger bg-pos-danger-muted"
               unselectedClassName="border-border bg-surface"
               className="flex-1 rounded-xl p-3"
-              onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_OUT)}>
+              disabled={submitting}
+              onPress={() => handleTypeChange(CASH_TRANSACTION_TYPE.CASH_OUT)}>
               <Text
                 className={`text-center text-pos-base font-semibold ${
                   type === CASH_TRANSACTION_TYPE.CASH_OUT ? 'text-pos-danger' : 'text-pos-text-muted'
@@ -123,7 +141,8 @@ export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit
                 selectedClassName="border-pos-success bg-pos-success-muted"
                 unselectedClassName="border-border bg-surface"
                 className="flex-1 rounded-xl p-3"
-                onPress={() => setType(CASH_TRANSACTION_TYPE.CASH_IN)}>
+                disabled={submitting}
+                onPress={() => handleTypeChange(CASH_TRANSACTION_TYPE.CASH_IN)}>
                 <Text
                   className={`text-center text-pos-base font-semibold ${
                     type === CASH_TRANSACTION_TYPE.CASH_IN ? 'text-pos-success' : 'text-pos-text-muted'
@@ -137,17 +156,18 @@ export function CashTransactionModal({ visible, cashInEnabled, onClose, onSubmit
           {/* Reason Selector */}
           <Text className="mt-5 text-pos-sm font-semibold text-pos-text">Reason</Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
-            {Object.entries(CASH_TRANSACTION_REASON_LABELS).map(([key, label]) => (
+            {typeReasons.map((r) => (
               <SelectButton
-                key={key}
-                selected={reason === key}
+                key={r.key}
+                selected={reason === r.key}
                 selectedClassName="border-accent bg-accent-muted"
                 unselectedClassName="border-border bg-surface"
                 className="rounded-xl px-4 py-2"
-                onPress={() => setReason(key as CashTransactionReason)}>
+                disabled={submitting}
+                onPress={() => setReason(r.key)}>
                 <Text
-                  className={`text-pos-sm font-medium ${reason === key ? 'text-accent' : 'text-pos-text-muted'}`}>
-                  {label}
+                  className={`text-pos-sm font-medium ${reason === r.key ? 'text-accent' : 'text-pos-text-muted'}`}>
+                  {r.label}
                 </Text>
               </SelectButton>
             ))}

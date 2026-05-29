@@ -6,6 +6,7 @@ import { Text, View } from 'react-native';
 
 interface CashTransactionListProps {
   transactions: ShiftCashTransactionRecord[];
+  reasonLabels?: Record<string, string>;
 }
 
 function formatTimestamp(value: string): string {
@@ -15,7 +16,12 @@ function formatTimestamp(value: string): string {
   });
 }
 
-export function CashTransactionList({ transactions }: CashTransactionListProps) {
+export function CashTransactionList({ transactions, reasonLabels }: CashTransactionListProps) {
+  const getLabel = (key: string): string => {
+    if (reasonLabels && reasonLabels[key]) return reasonLabels[key];
+    return getCashTransactionReasonLabel(key);
+  };
+
   if (transactions.length === 0) {
     return (
       <View className="mt-4 rounded-xl border border-border bg-surface p-4">
@@ -45,7 +51,7 @@ export function CashTransactionList({ transactions }: CashTransactionListProps) 
                   </View>
 
                   <Text className="mt-1 text-pos-sm font-semibold text-pos-text">
-                    {getCashTransactionReasonLabel(tx.reason)}
+                    {getLabel(tx.reason)}
                   </Text>
 
                   {tx.note && <Text className="mt-1 text-pos-xs text-pos-text-muted">{tx.note}</Text>}
