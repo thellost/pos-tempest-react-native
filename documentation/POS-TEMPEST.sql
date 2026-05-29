@@ -1,4 +1,4 @@
--- Schema reflects migrations up to 007_add_cash_transaction_reasons.sql applied
+-- Schema reflects migrations up to 008_add_inventory_stock_trigger.sql applied
 SET search_path TO pos_tempest;
 
 CREATE TYPE "role_type" AS ENUM (
@@ -1081,3 +1081,27 @@ ALTER TABLE "inventory_movements" ALTER COLUMN "reference_id" TYPE text USING re
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO powersync_role;
+
+-- ─── Trigger: authority inventory stock from movement ledger ───────────────────
+-- Every INSERT / UPDATE on inventories recomputes stock_quantity from
+-- SUM(quantity_change) in inventory_movements. This prevents clients from
+-- ever pushing a stale or corrupted stock value. The inventories.stock_quantity
+-- column effectively becomes a denormalized read-only cache of the movement ledger.
+
+CREATE OR REPLACE FUNCTION recompute_stock_quantity()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.stock_quantity = (
+    SELECT COALESCE(SUM(quantity_change), 0)
+    FROM inventory_movements
+    WHERE inventory_id = NEW.id
+  );
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_inventories_stock_quantity ON inventories;
+CREATE TRIGGER trg_inventories_stock_quantity
+BEFORE INSERT OR UPDATE ON inventories
+FOR EACH ROW EXECUTE FUNCTION recompute_stock_quantity();
