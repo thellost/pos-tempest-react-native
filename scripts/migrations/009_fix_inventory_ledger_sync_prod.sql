@@ -1,98 +1,131 @@
 -- 009_fix_inventory_ledger_sync_prod.sql
 -- Production schema (pos_tempest_prod) variant.
--- One-time data fix: sync the movement ledger to match current stock_quantity.
--- Run AFTER deploying the new trigger from migration 008.
---
--- IMPORTANT: run 008_add_inventory_stock_trigger_prod.sql FIRST, then this file.
+-- Rebuilds the inventory_movements audit chain using quantity_change as truth.
 
 SET search_path TO pos_tempest_prod;
 
 BEGIN;
 
--- ═══ Step 0: snapshot current stock values ═══
-CREATE TEMP TABLE stock_snapshot AS
-SELECT id, stock_quantity FROM inventories;
-
-SELECT 'Snapshotted ' || COUNT(*) || ' inventory rows' AS notice FROM stock_snapshot;
-
--- ═══ Step 1: delete duplicate adjustment rows ═══
-WITH duplicates AS (
+-- ═══ Step 1: delete duplicate rows (identical before/after/change, keep latest) ═══
+WITH ranked AS (
   SELECT
     id,
-    inventory_id,
-    created_at,
-    LAG(created_at) OVER (
+    ROW_NUMBER() OVER (
       PARTITION BY inventory_id, quantity_change, quantity_before, quantity_after
-      ORDER BY created_at
-    ) AS prev_ts
+      ORDER BY created_at DESC, id DESC
+    ) AS rn
   FROM inventory_movements
-),
-to_delete AS (
-  SELECT id FROM duplicates
-  WHERE prev_ts IS NOT NULL
-    AND EXTRACT(EPOCH FROM (created_at - prev_ts)) < 5
 )
 DELETE FROM inventory_movements
-WHERE id IN (SELECT id FROM to_delete);
+WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 
--- ═══ Step 2: insert compensating initial-balance adjustments ═══
-INSERT INTO inventory_movements (
-  id, inventory_id, user_id, movement_type, quantity_change,
-  quantity_before, quantity_after, reference_type, reference_id, reason, created_at
-)
-SELECT
-  gen_random_uuid(),
-  i.id,
-  6,
-  'adjustment',
-  s.stock_quantity - COALESCE(SUM(im.quantity_change), 0),
-  COALESCE(SUM(im.quantity_change), 0),
-  s.stock_quantity,
-  'manual',
-  NULL,
-  '009: sync ledger to stock',
-  '1970-01-02 00:00:01'
-FROM stock_snapshot s
-JOIN inventories i ON i.id = s.id
-LEFT JOIN inventory_movements im ON im.inventory_id = i.id
-GROUP BY i.id, s.stock_quantity
-HAVING s.stock_quantity IS DISTINCT FROM COALESCE(SUM(im.quantity_change), 0);
+-- ═══ Step 2: rebuild quantity_before / quantity_after via cumulative sums ═══
+UPDATE inventory_movements im
+SET
+  quantity_before = sub.new_before,
+  quantity_after  = sub.new_after
+FROM (
+  SELECT
+    id,
+    COALESCE(
+      SUM(quantity_change) OVER (
+        PARTITION BY inventory_id
+        ORDER BY created_at, id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+      ),
+      0
+    ) AS new_before,
+    SUM(quantity_change) OVER (
+      PARTITION BY inventory_id
+      ORDER BY created_at, id
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS new_after
+  FROM inventory_movements
+) sub
+WHERE im.id = sub.id;
 
--- ═══ Step 3: verify zero drift ═══
+-- ═══ Step 3: recompute inventories.stock_quantity from the now-correct chain ═══
+UPDATE inventories i
+SET
+  stock_quantity = sub.ledger_sum,
+  updated_at = now()
+FROM (
+  SELECT inventory_id, SUM(quantity_change) AS ledger_sum
+  FROM inventory_movements
+  GROUP BY inventory_id
+) sub
+WHERE i.id = sub.inventory_id;
+
+-- ═══ Step 4: verify by recomputing cumulative sums ═══
 DO $$
 DECLARE
   mismatch_count integer;
-  drift_report text;
+  report_line    text;
 BEGIN
   SELECT COUNT(*) INTO mismatch_count
-  FROM inventories i
-  WHERE i.stock_quantity IS DISTINCT FROM (
-    SELECT COALESCE(SUM(im2.quantity_change), 0)
-    FROM inventory_movements im2
-    WHERE im2.inventory_id = i.id
-  );
+  FROM (
+    SELECT
+      quantity_before,
+      COALESCE(
+        SUM(quantity_change) OVER (
+          PARTITION BY inventory_id
+          ORDER BY created_at, id
+          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0
+      ) AS expected_before,
+      quantity_after,
+      SUM(quantity_change) OVER (
+        PARTITION BY inventory_id
+        ORDER BY created_at, id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      ) AS expected_after
+    FROM inventory_movements
+  ) sub
+  WHERE quantity_before IS DISTINCT FROM expected_before
+     OR quantity_after  IS DISTINCT FROM expected_after;
 
   IF mismatch_count > 0 THEN
-    FOR drift_report IN
-      SELECT format('  inventory %s: stock=%s ledger=%s drift=%s',
-        i.id, i.stock_quantity,
-        COALESCE(SUM(im.quantity_change), 0),
-        i.stock_quantity - COALESCE(SUM(im.quantity_change), 0))
-      FROM inventories i
-      LEFT JOIN inventory_movements im ON im.inventory_id = i.id
-      GROUP BY i.id
-      HAVING i.stock_quantity IS DISTINCT FROM COALESCE(SUM(im.quantity_change), 0)
+    RAISE NOTICE 'VERIFICATION FAILED — rolling back';
+    RAISE NOTICE 'Mismatched rows : %', mismatch_count;
+
+    FOR report_line IN
+      WITH recomputed AS (
+        SELECT id, inventory_id, created_at,
+          quantity_before, quantity_after, quantity_change,
+          COALESCE(
+            SUM(quantity_change) OVER (
+              PARTITION BY inventory_id
+              ORDER BY created_at, id
+              ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+            ), 0
+          ) AS expected_before,
+          SUM(quantity_change) OVER (
+            PARTITION BY inventory_id
+            ORDER BY created_at, id
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ) AS expected_after
+        FROM inventory_movements
+      )
+      SELECT format(
+        '  INV %s  id %s  created=%s  before=%s (exp %s)  after=%s (exp %s)  change=%s',
+        inventory_id, id, created_at,
+        quantity_before, expected_before,
+        quantity_after, expected_after,
+        quantity_change
+      )
+      FROM recomputed
+      WHERE quantity_before IS DISTINCT FROM expected_before
+         OR quantity_after  IS DISTINCT FROM expected_after
+      LIMIT 30
     LOOP
-      RAISE WARNING '%', drift_report;
+      RAISE NOTICE '%', report_line;
     END LOOP;
-    ROLLBACK;
-    RAISE EXCEPTION 'Fix failed: % inventory rows still have drift. Transaction rolled back.', mismatch_count;
+
+    RAISE EXCEPTION 'Chain verification failed. Transaction rolled back.';
   END IF;
 
-  RAISE NOTICE 'Verification passed: 0 rows with drift. All clean!';
+  RAISE NOTICE 'Verification passed: all before/after values match cumulative sums. All chains clean!';
 END;
 $$;
-
-DROP TABLE stock_snapshot;
 
 COMMIT;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -54,9 +54,11 @@ export function StockDetailModal({ item, onClose, onAdjust, onThreshold, getMove
   const [adjustType, setAdjustType] = useState<AdjustmentType>('adjustment');
   const [adjustReason, setAdjustReason] = useState('');
   const [adjusting, setAdjusting] = useState(false);
+  const adjustingRef = useRef(false);
 
   const [newThreshold, setNewThreshold] = useState('');
   const [savingThreshold, setSavingThreshold] = useState(false);
+  const savingThresholdRef = useRef(false);
 
   useEffect(() => {
     if (!item) return;
@@ -71,11 +73,13 @@ export function StockDetailModal({ item, onClose, onAdjust, onThreshold, getMove
   if (!item) return null;
 
   async function handleAdjust() {
+    if (adjustingRef.current) return;
     const qty = parseFloat(adjustQty);
     if (isNaN(qty) || qty === 0) {
       Alert.alert('Invalid Quantity', 'Enter a non-zero quantity. Use negative to remove stock.');
       return;
     }
+    adjustingRef.current = true;
     setAdjusting(true);
     try {
       await onAdjust(item!.id, qty, adjustType, adjustReason);
@@ -86,22 +90,26 @@ export function StockDetailModal({ item, onClose, onAdjust, onThreshold, getMove
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Adjustment failed');
     } finally {
+      adjustingRef.current = false;
       setAdjusting(false);
     }
   }
 
   async function handleThreshold() {
+    if (savingThresholdRef.current) return;
     const val = parseFloat(newThreshold);
     if (isNaN(val) || val < 0) {
       Alert.alert('Invalid Threshold', 'Enter a non-negative number.');
       return;
     }
+    savingThresholdRef.current = true;
     setSavingThreshold(true);
     try {
       await onThreshold(item!.id, val);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update threshold');
     } finally {
+      savingThresholdRef.current = false;
       setSavingThreshold(false);
     }
   }
