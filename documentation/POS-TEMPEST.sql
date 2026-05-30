@@ -1083,25 +1083,32 @@ GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO powersync_role;
 
 -- ─── Trigger: authority inventory stock from movement ledger ───────────────────
--- Every INSERT / UPDATE on inventories recomputes stock_quantity from
--- SUM(quantity_change) in inventory_movements. This prevents clients from
--- ever pushing a stale or corrupted stock value. The inventories.stock_quantity
--- column effectively becomes a denormalized read-only cache of the movement ledger.
+-- Every INSERT / UPDATE / DELETE on inventory_movements recomputes
+-- inventories.stock_quantity from SUM(quantity_change). This fires AFTER the
+-- movement row is committed, so stock always equals the full ledger — unlike the
+-- old approach that fired BEFORE INSERT/UPDATE on inventories (always one row
+-- behind because the movement INSERT hadn't happened yet).
+-- The inventories.stock_quantity column is effectively a read-only cache.
 
-CREATE OR REPLACE FUNCTION recompute_stock_quantity()
+CREATE OR REPLACE FUNCTION recompute_stock_from_movements()
 RETURNS TRIGGER AS $$
+DECLARE
+  target_id integer;
 BEGIN
-  NEW.stock_quantity = (
+  target_id := COALESCE(NEW.inventory_id, OLD.inventory_id);
+  UPDATE inventories
+  SET stock_quantity = (
     SELECT COALESCE(SUM(quantity_change), 0)
     FROM inventory_movements
-    WHERE inventory_id = NEW.id
-  );
-  NEW.updated_at = now();
-  RETURN NEW;
+    WHERE inventory_id = target_id
+  ),
+  updated_at = now()
+  WHERE id = target_id;
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_inventories_stock_quantity ON inventories;
-CREATE TRIGGER trg_inventories_stock_quantity
-BEFORE INSERT OR UPDATE ON inventories
-FOR EACH ROW EXECUTE FUNCTION recompute_stock_quantity();
+DROP TRIGGER IF EXISTS trg_movements_recompute_stock ON inventory_movements;
+CREATE TRIGGER trg_movements_recompute_stock
+AFTER INSERT OR UPDATE OR DELETE ON inventory_movements
+FOR EACH ROW EXECUTE FUNCTION recompute_stock_from_movements();
