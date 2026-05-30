@@ -109,19 +109,7 @@ export async function adjustStockForConfirmedOrderItem(
       }
 
       const quantityBefore = inventory.stock_quantity;
-
-      // Relative UPDATE: immune to sync overwrites between SELECT and UPDATE
-      await powersync.execute(
-        `UPDATE inventories SET stock_quantity = stock_quantity + ?, updated_at = ? WHERE id = ?`,
-        [quantityChange, now, ingredient.inventory_id]
-      );
-
-      const afterSnap = await powersync.getOptional<InventoryRow>(
-        `SELECT id, stock_quantity FROM inventories WHERE id = ?`,
-        [ingredient.inventory_id]
-      );
-
-      const quantityAfter = afterSnap?.stock_quantity ?? (quantityBefore + quantityChange);
+      const quantityAfter = quantityBefore + quantityChange;
 
       const newId = Crypto.randomUUID();
 
@@ -209,21 +197,7 @@ export async function deductStockForItems(
       if (!beforeSnap) continue;
 
       const quantityBefore = beforeSnap.stock_quantity;
-
-      // Relative UPDATE: even if PowerSync changed stock between SELECT and UPDATE,
-      // the delta is applied correctly to whatever the current value is
-      await powersync.execute(
-        `UPDATE inventories SET stock_quantity = stock_quantity - ?, updated_at = ? WHERE id = ?`,
-        [totalDeduction, now, ingredient.inventory_id]
-      );
-
-      // Read actual stock after relative update for the movement record
-      const afterSnap = await powersync.getOptional<InventoryRow>(
-        `SELECT id, stock_quantity FROM inventories WHERE id = ?`,
-        [ingredient.inventory_id]
-      );
-
-      const quantityAfter = afterSnap?.stock_quantity ?? (quantityBefore - totalDeduction);
+      const quantityAfter = quantityBefore - totalDeduction;
 
       const newId = Crypto.randomUUID();
 
@@ -331,19 +305,7 @@ export async function restockForCancelledOrder(
       if (!beforeSnap) continue;
 
       const quantityBefore = beforeSnap.stock_quantity;
-
-      // Relative UPDATE: immune to sync overwrites between SELECT and UPDATE
-      await powersync.execute(
-        `UPDATE inventories SET stock_quantity = stock_quantity + ?, updated_at = ? WHERE id = ?`,
-        [restockAmount, now, ledgerRow.inventory_id]
-      );
-
-      const afterSnap = await powersync.getOptional<InventoryRow>(
-        `SELECT id, stock_quantity FROM inventories WHERE id = ?`,
-        [ledgerRow.inventory_id]
-      );
-
-      const quantityAfter = afterSnap?.stock_quantity ?? (quantityBefore + restockAmount);
+      const quantityAfter = quantityBefore + restockAmount;
 
       const newId = Crypto.randomUUID();
 
@@ -419,19 +381,7 @@ export async function adjustStock(
     }
 
     const quantityBefore = inventory.stock_quantity;
-
-    // Relative UPDATE: immune to sync overwrites between SELECT and UPDATE
-    await powersync.execute(
-      `UPDATE inventories SET stock_quantity = stock_quantity + ?, updated_at = ? WHERE id = ?`,
-      [quantityChange, now, inventoryId]
-    );
-
-    const afterSnap = await powersync.getOptional<InventoryRow>(
-      `SELECT id, stock_quantity FROM inventories WHERE id = ?`,
-      [inventoryId]
-    );
-
-    const quantityAfter = afterSnap?.stock_quantity ?? (quantityBefore + quantityChange);
+    const quantityAfter = quantityBefore + quantityChange;
 
     const newId = Crypto.randomUUID();
 

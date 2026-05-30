@@ -1082,14 +1082,21 @@ GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO service_role;
 GRANT USAGE, SELECT ON SEQUENCE inventory_movements_id_seq TO powersync_role;
 
--- ─── Trigger: authority inventory stock from movement ledger ───────────────────
--- Every INSERT / UPDATE / DELETE on inventory_movements recomputes
--- inventories.stock_quantity from SUM(quantity_change). This fires AFTER the
--- movement row is committed, so stock always equals the full ledger — unlike the
--- old approach that fired BEFORE INSERT/UPDATE on inventories (always one row
--- behind because the movement INSERT hadn't happened yet).
+-- ─── Triggers: authority inventory stock from movement ledger ─────────────
+-- Two triggers work together so inventories.stock_quantity always equals
+-- SUM(quantity_change) from the inventory_movements ledger, regardless of
+-- sync ordering:
+--
+--   Trigger 1 (AFTER inventory_movements): recomputes stock when a movement
+--     row is inserted, updated, or deleted. Catches the normal path.
+--
+--   Trigger 2 (BEFORE inventories): final gatekeeper — overrides whatever
+--     stock value the client pushes with the ledger sum. Catches the stale-
+--     sync path where an UPDATE arrives after the corresponding movement.
+--
 -- The inventories.stock_quantity column is effectively a read-only cache.
 
+-- ─── Trigger 1: recompute stock AFTER any movement change ──────────────────
 CREATE OR REPLACE FUNCTION recompute_stock_from_movements()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -1112,3 +1119,22 @@ DROP TRIGGER IF EXISTS trg_movements_recompute_stock ON inventory_movements;
 CREATE TRIGGER trg_movements_recompute_stock
 AFTER INSERT OR UPDATE OR DELETE ON inventory_movements
 FOR EACH ROW EXECUTE FUNCTION recompute_stock_from_movements();
+
+-- ─── Trigger 2: gatekeeper — override stale inventory UPDATEs ──────────────
+CREATE OR REPLACE FUNCTION recompute_stock_quantity()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.stock_quantity = (
+    SELECT COALESCE(SUM(quantity_change), 0)
+    FROM inventory_movements
+    WHERE inventory_id = NEW.id
+  );
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_inventories_stock_quantity ON inventories;
+CREATE TRIGGER trg_inventories_stock_quantity
+BEFORE INSERT OR UPDATE ON inventories
+FOR EACH ROW EXECUTE FUNCTION recompute_stock_quantity();
