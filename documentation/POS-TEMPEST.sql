@@ -1138,3 +1138,50 @@ DROP TRIGGER IF EXISTS trg_inventories_stock_quantity ON inventories;
 CREATE TRIGGER trg_inventories_stock_quantity
 BEFORE INSERT OR UPDATE ON inventories
 FOR EACH ROW EXECUTE FUNCTION recompute_stock_quantity();
+
+-- ─── pg_cron: periodic inventory cleanup ─────────────────────────────────────
+-- Deletes accidental duplicate movement rows and syncs any inventory that
+-- drifts from its ledger. Runs every 15 minutes.
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+CREATE OR REPLACE FUNCTION cron_inventory_cleanup()
+RETURNS text AS $$
+DECLARE
+  deleted_count  integer;
+  synced_count   integer;
+BEGIN
+  WITH ranked AS (
+    SELECT id,
+      ROW_NUMBER() OVER (
+        PARTITION BY inventory_id, quantity_change, quantity_before, quantity_after
+        ORDER BY created_at DESC, id DESC
+      ) AS rn
+    FROM inventory_movements
+  )
+  DELETE FROM inventory_movements
+  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+
+  WITH drifted AS (
+    UPDATE inventories i
+    SET stock_quantity = sub.ledger_sum, updated_at = now()
+    FROM (
+      SELECT inventory_id, SUM(quantity_change) AS ledger_sum
+      FROM inventory_movements
+      GROUP BY inventory_id
+    ) sub
+    WHERE i.id = sub.inventory_id
+      AND i.stock_quantity IS DISTINCT FROM sub.ledger_sum
+    RETURNING i.id
+  )
+  SELECT COUNT(*) INTO synced_count FROM drifted;
+
+  RETURN format('Cleanup complete: %s duplicate(s) deleted, %s stock(s) synced at %s',
+    deleted_count, synced_count, now());
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$ BEGIN PERFORM cron.unschedule('inventory-cleanup'); EXCEPTION WHEN OTHERS THEN END; $$;
+SELECT cron.schedule('inventory-cleanup', '*/15 * * * *', 'SELECT cron_inventory_cleanup();');

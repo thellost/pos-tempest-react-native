@@ -59,7 +59,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ═══ 2. Schedule to run every 15 minutes ═══
-SELECT cron.unschedule('inventory-cleanup');
+DO $$
+BEGIN
+  PERFORM cron.unschedule('inventory-cleanup');
+EXCEPTION WHEN OTHERS THEN
+  -- job may not exist yet — safe to ignore
+END;
+$$;
 
 SELECT cron.schedule(
   'inventory-cleanup',
@@ -68,6 +74,6 @@ SELECT cron.schedule(
 );
 
 -- ═══ Verify ═══
-SELECT jobid, schedule, command, nodename, nodeport, last_run_time
+SELECT jobid, schedule, command, nodename, nodeport
 FROM cron.job
 WHERE jobname = 'inventory-cleanup';
