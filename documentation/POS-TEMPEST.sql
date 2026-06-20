@@ -182,6 +182,7 @@ CREATE TABLE "shift_cash_transactions" (
   "reason" text NOT NULL,
   "amount" decimal(14,2) NOT NULL,
   "note" text,
+  "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamp NOT NULL DEFAULT (now())
 );
 
@@ -765,6 +766,8 @@ COMMENT ON COLUMN "shift_cash_transactions"."reason" IS 'Reason key (e.g. gaji, 
 COMMENT ON COLUMN "shift_cash_transactions"."amount" IS 'Always positive. Direction determined by type field.';
 
 COMMENT ON COLUMN "shift_cash_transactions"."note" IS 'Free-text details e.g. "Bought ice from nearby store", "Owner took 500k"';
+
+COMMENT ON COLUMN "shift_cash_transactions"."is_active" IS 'Soft-delete flag for admin cancel/reactivate';
 
 COMMENT ON TABLE "cash_transaction_reasons" IS 'Branch-scoped lookup of cash transaction reason keys to display labels. Each branch can define its own reasons for cash-in / cash-out.';
 
