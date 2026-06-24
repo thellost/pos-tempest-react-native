@@ -1,6 +1,6 @@
 import { OPSqliteOpenFactory } from '@powersync/op-sqlite';
 import { PowerSyncContext } from '@powersync/react';
-import { PowerSyncDatabase } from '@powersync/react-native';
+import { createBaseLogger, LogLevel, PowerSyncDatabase } from '@powersync/react-native';
 import { PropsWithChildren, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -13,6 +13,13 @@ export const powersync = new PowerSyncDatabase({
 		dbFilename: 'postempest.db',
 	}),
 	schema: appSchema,
+	// PowerSync SDK internal trace: WebSocket handshake, credential fetch, checkpoint download
+	logger: (() => {
+		const logger = createBaseLogger();
+		logger.useDefaults();
+		logger.setLevel(LogLevel.DEBUG);
+		return logger;
+	})(),
 });
 
 let initPromise: Promise<void> | null = null;
